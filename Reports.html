@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inventory Valuation Report - Fox Control Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #CC79F0;
+      --secondary-color: #3E7EF7;
+      --border-color: #F3F3F3;
+      --success-color: #00B146;
+      --danger-color: #CF2C3A;
+      --warning-color: #FFA300;
+      --main-bg: #FDFFFA;
+      --bg-shadow: #F3F3F3;
+      --table-row1: #F7F5FC;
+      --table-row2: #F1EDF9;
+      --table-bg: #F8F8F8;
+      --bar-graph: #6E62BF;
+      --confirmed: #1979FE;
+      --header-color: #333135;
+      --sub-header: #5F5B62;
+      --tertiary-header: #2E2E38;
+      --body-font: #4A4A4A;
+      --pie-color1: #8979FF;
+      --pie-color2: #FF928A;
+      --pie-color3: #3CC3DF;
+      --pie-color4: #FFAE4C;
+      --pie-color5: #537FF1;
+    }
+
+    body {
+      background-color: var(--main-bg);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+    }
+
+    .sidebar {
+      height: 100vh;
+      background-color: var(--main-bg);
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar .nav-link {
+      color: var(--header-color);
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar .nav-link:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .sidebar .nav-link.active {
+      background-color: var(--secondary-color);
+      color: var(--main-bg);
+    }
+
+    .top-panel {
+      background-color: var(--bg-shadow);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .action-buttons .btn {
+      margin: 0.25rem;
+      min-width: 140px;
+      font-weight: 500;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .action-buttons .btn:hover {
+      background-color: var(--tertiary-header);
+      transform: translateY(-2px);
+    }
+
+    .action-buttons .btn i {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .valuation-card {
+      border: 2px solid var(--secondary-color);
+      border-radius: 15px;
+      padding: 1.5rem;
+      background: var(--main-bg);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .valuation-card h5 {
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: var(--secondary-color);
+    }
+
+    .summary-card {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+      color: white;
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+
+    .summary-item {
+      text-align: center;
+      padding: 1rem;
+    }
+
+    .summary-value {
+      font-size: 2rem;
+      font-weight: bold;
+      margin-bottom: 0.5rem;
+    }
+
+    .summary-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+    }
+
+    .table-container {
+      background: var(--main-bg);
+      border-radius: 10px;
+      padding: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table th {
+      background-color: var(--table-row1);
+      color: var(--sub-header);
+      font-weight: 600;
+      border: none;
+      padding: 1rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .table td {
+      padding: 0.75rem;
+      border-color: var(--border-color);
+      vertical-align: middle;
+    }
+
+    .table tbody tr:hover {
+      background-color: var(--table-row2);
+    }
+
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-active {
+      background-color: var(--confirmed);
+      color: var(--main-bg);
+    }
+
+    .status-inactive {
+      background-color: var(--danger-color);
+      color: var(--main-bg);
+    }
+
+    .value-high {
+      color: var(--success-color);
+      font-weight: 600;
+    }
+
+    .value-medium {
+      color: var(--warning-color);
+      font-weight: 600;
+    }
+
+    .value-low {
+      color: var(--danger-color);
+      font-weight: 600;
+    }
+
+    .search-filter-section {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 10px;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .form-label {
+      font-weight: 600;
+      color: var(--sub-header);
+    }
+
+    /* Top Navigation */
+    .top-navbar {
+      background: linear-gradient(135deg, var(--main-bg) 0%, var(--bg-shadow) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .top-navbar .navbar-brand {
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 1.25rem;
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background-color: var(--danger-color);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .dropdown-menu {
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 0.5rem 0;
+      min-width: 200px;
+    }
+
+    .dropdown-item {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .dropdown-divider {
+      margin: 0.5rem 0;
+    }
+
+    .notification-item {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    .notification-item:hover {
+      background-color: var(--bg-shadow);
+    }
+
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+
+    .notification-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--sub-header);
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-text {
+      font-size: 0.75rem;
+      color: var(--body-font);
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-time {
+      font-size: 0.7rem;
+      color: var(--body-font);
+    }
+
+    .notification-unread {
+      background-color: var(--table-row1);
+      border-left: 3px solid var(--primary-color);
+    }
+
+    /* Responsive Design */
+    @media (max-width: 1200px) {
+      .table-responsive {
+        font-size: 0.8rem;
+      }
+      
+      .action-buttons .btn {
+        min-width: 120px;
+        font-size: 0.875rem;
+      }
+    }
+
+    @media (max-width: 992px) {
+      .sidebar {
+        height: auto;
+        position: relative;
+      }
+      
+      .action-buttons .btn {
+        width: 100%;
+        margin: 0.25rem 0;
+        min-width: auto;
+      }
+      
+      .top-panel {
+        padding: 1rem;
+      }
+      
+      .valuation-card {
+        padding: 1rem;
+      }
+      
+      .table th,
+      .table td {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.25rem;
+      }
+      
+      .search-filter-section {
+        padding: 1rem;
+      }
+    }
+
+    @media (max-width: 576px) {
+      .sidebar {
+        padding: 1rem;
+      }
+      
+      .sidebar .nav-link {
+        font-size: 0.875rem;
+        padding: 0.5rem;
+      }
+      
+      .table th,
+      .table td {
+        font-size: 0.7rem;
+        padding: 0.375rem 0.125rem;
+      }
+      
+      .top-navbar {
+        padding: 0.5rem 1rem;
+      }
+      
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+      }
+    }
+
+    /* Custom scrollbar */
+    .table-responsive::-webkit-scrollbar {
+      height: 8px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+      background: var(--primary-color);
+      border-radius: 4px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+      background: var(--tertiary-header);
+    }
+  </style>
+</head>
+<body>
+<!-- Top Navigation -->
+<nav class="navbar navbar-expand-lg top-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <i class="bi bi-boxes me-2"></i>Fox Control Hub
+    </a>
+
+    <!-- Right side navigation -->
+    <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+      <!-- Search (hidden on mobile) -->
+      <div class="nav-item me-3 d-none d-lg-block">
+        <div class="input-group" style="width: 250px;">
+          <input type="text" class="form-control form-control-sm" placeholder="Quick search..." id="topSearchInput">
+          <button class="btn btn-outline-secondary btn-sm" type="button">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell fs-5"></i>
+          <span class="notification-badge" id="notificationCount">3</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Notifications</h6>
+            <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
+          </div>
+          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
+            <div class="notification-item notification-unread" data-id="1">
+              <div class="notification-title">Low Stock Alert</div>
+              <div class="notification-text">USB Cable quantity is below minimum threshold (8 remaining)</div>
+              <div class="notification-time">2 minutes ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="2">
+              <div class="notification-title">High Value Item</div>
+              <div class="notification-text">Wireless Earphone has high inventory value ($5,250)</div>
+              <div class="notification-time">1 hour ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="3">
+              <div class="notification-title">Valuation Report</div>
+              <div class="notification-text">Monthly inventory valuation report is ready</div>
+              <div class="notification-time">3 hours ago</div>
+            </div>
+          </div>
+          <div class="text-center py-2 border-top">
+            <a href="#" class="btn btn-sm btn-link">View all notifications</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-chat-dots fs-5"></i>
+          <span class="notification-badge" style="background-color: var(--success-color);">2</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown" style="width: 300px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Messages</h6>
+            <a href="#" class="btn btn-sm btn-link text-primary p-0">View all</a>
+          </div>
+          <div class="notification-list" style="max-height: 250px; overflow-y: auto;">
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">JD</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">John Doe</div>
+                  <div class="notification-text">Can you check the inventory valuation for electronics?</div>
+                  <div class="notification-time">5 minutes ago</div>
+                </div>
+              </div>
+            </div>
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">SM</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">Sarah Miller</div>
+                  <div class="notification-text">Monthly valuation report looks good!</div>
+                  <div class="notification-time">2 hours ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile -->
+      <div class="nav-item dropdown">
+        <a class="nav-link" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar">AD</div>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <div class="px-3 py-2 border-bottom">
+            <h6 class="mb-0">Admin User</h6>
+            <small class="text-muted">admin@foxcontrol.com</small>
+          </div>
+          <a class="dropdown-item" href="#"><i class="bi bi-person me-2"></i>Profile</a>
+          <a class="dropdown-item" href="#"><i class="bi bi-gear me-2"></i>Settings</a>
+          <a class="dropdown-item" href="#"><i class="bi bi-question-circle me-2"></i>Help</a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#"><i class="bi bi-box-arrow-right me-2"></i>Logout</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-2 col-md-3 sidebar p-3">
+      <nav class="nav flex-column">
+        <a class="nav-link" href="Inventory.html"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+        <a class="nav-link" href="Barcode.html"><i class="bi bi-upc-scan me-2"></i>Barcode</a>
+        <a class="nav-link" href="WarehouseLayAndOpti.html"><i class="bi bi-layout-wtf me-2"></i>Layout & Optimization</a>
+        <a class="nav-link" href="MaterialShipments.html"><i class="bi bi-box-arrow-up me-2"></i>Material Shipment</a>
+        <a class="nav-link" href="OrderShipments.html"><i class="bi bi-cart-check me-2"></i>Order Shipment</a>
+        <a class="nav-link" href="StockTracking.html"><i class="bi bi-shop me-2"></i>Stock Tracking</a>
+        <a class="nav-link active" href="Reports.html"><i class="bi bi-graph-up me-2"></i>Reports</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-10 col-md-9 p-3">
+      <!-- Top Panel -->
+      <div class="top-panel">
+        <h4 class="fw-bold mb-3">INVENTORY VALUATION REPORT</h4>
+        <div class="d-flex flex-wrap justify-content-start action-buttons">
+          <button class="btn" onclick="generateReport()">
+            <i class="bi bi-file-earmark-text"></i>Generate Report
+          </button>
+          <button class="btn" onclick="exportToExcel()">
+            <i class="bi bi-file-earmark-excel"></i>Export Excel
+          </button>
+          <button class="btn" onclick="exportToPDF()">
+            <i class="bi bi-file-earmark-pdf"></i>Export PDF
+          </button>
+          <button class="btn" onclick="printReport()">
+            <i class="bi bi-printer"></i>Print
+          </button>
+          <button class="btn" onclick="refreshData()">
+            <i class="bi bi-arrow-clockwise"></i>Refresh
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Cards -->
+      <div class="summary-card">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="summary-item">
+              <div class="summary-value" id="totalValue">$0</div>
+              <div class="summary-label">Total Inventory Value</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-item">
+              <div class="summary-value" id="totalItems">0</div>
+              <div class="summary-label">Total Items</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-item">
+              <div class="summary-value" id="activeItems">0</div>
+              <div class="summary-label">Active Items</div>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="summary-item">
+              <div class="summary-value" id="avgValue">$0</div>
+              <div class="summary-label">Average Item Value</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-filter-section">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label">Search Items</label>
+            <div class="input-group">
+              <input type="text" class="form-control" id="searchInput" placeholder="Search by name, code, or ID...">
+              <button class="btn btn-outline-secondary" type="button" onclick="searchItems()">
+                <i class="bi bi-search"></i>
+              </button>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Status</label>
+            <select class="form-select" id="statusFilter" onchange="filterData()">
+              <option value="">All Status</option>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Warehouse</label>
+            <select class="form-select" id="warehouseFilter" onchange="filterData()">
+              <option value="">All Warehouses</option>
+              <option value="WH001">WH001</option>
+              <option value="WH002">WH002</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Value Range</label>
+            <select class="form-select" id="valueFilter" onchange="filterData()">
+              <option value="">All Values</option>
+              <option value="high">High (>$1000)</option>
+              <option value="medium">Medium ($500-$1000)</option>
+              <option value="low">Low (<$500)</option>
+            </select>
+          </div>
+          <div class="col-md-2">
+            <label class="form-label">Sort By</label>
+            <select class="form-select" id="sortBy" onchange="sortData()">
+              <option value="value_desc">Value (High to Low)</option>
+              <option value="value_asc">Value (Low to High)</option>
+              <option value="name_asc">Name (A-Z)</option>
+              <option value="name_desc">Name (Z-A)</option>
+              <option value="quantity_desc">Quantity (High to Low)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Valuation Table -->
+      <div class="valuation-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5><i class="bi bi-currency-dollar me-2"></i>Inventory Valuation Details</h5>
+          <small class="text-muted">Last Updated: <span id="lastUpdated"></span></small>
+        </div>
+        <div class="table-container">
+          <div class="table-responsive">
+            <table class="table table-hover" id="valuationTable">
+              <thead>
+                <tr>
+                  <th>Item Code</th>
+                  <th>Product Name</th>
+                  <th>Quantity</th>
+                  <th>Unit Cost</th>
+                  <th>Unit Price</th>
+                  <th>Total Cost Value</th>
+                  <th>Total Selling Value</th>
+                  <th>Potential Profit</th>
+                  <th>Warehouse</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="valuationTableBody">
+                <!-- Data will be populated by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Global variables - Connected to inventory data
+let inventoryData = [
+  {
+    id: 1,
+    itemCode: 'ITM001',
+    productName: 'Wireless Earphone',
+    unitOfMeasure: 'PCS',
+    buyPrice: 250.00,
+    sellPrice: 350.00,
+    location: 'Philippines',
+    categoryId: 'CAT001',
+    status: 'active',
+    warehouseId: 'WH001',
+    totalQuantity: 15,
+    updatedAt: '2024-01-15'
+  },
+  {
+    id: 2,
+    itemCode: 'ITM002',
+    productName: 'USB Cable',
+    unitOfMeasure: 'PCS',
+    buyPrice: 50.00,
+    sellPrice: 75.00,
+    location: 'Philippines',
+    categoryId: 'CAT002',
+    status: 'inactive',
+    warehouseId: 'WH002',
+    totalQuantity: 8,
+    updatedAt: '2024-01-14'
+  },
+  {
+    id: 3,
+    itemCode: 'ITM003',
+    productName: 'Bluetooth Speaker',
+    unitOfMeasure: 'PCS',
+    buyPrice: 800.00,
+    sellPrice: 1200.00,
+    location: 'Philippines',
+    categoryId: 'CAT001',
+    status: 'active',
+    warehouseId: 'WH001',
+    totalQuantity: 5,
+    updatedAt: '2024-01-16'
+  },
+  {
+    id: 4,
+    itemCode: 'ITM004',
+    productName: 'Phone Charger',
+    unitOfMeasure: 'PCS',
+    buyPrice: 150.00,
+    sellPrice: 200.00,
+    location: 'Philippines',
+    categoryId: 'CAT002',
+    status: 'active',
+    warehouseId: 'WH001',
+    totalQuantity: 25,
+    updatedAt: '2024-01-17'
+  },
+  {
+    id: 5,
+    itemCode: 'ITM005',
+    productName: 'Laptop Stand',
+    unitOfMeasure: 'PCS',
+    buyPrice: 300.00,
+    sellPrice: 450.00,
+    location: 'Philippines',
+    categoryId: 'CAT003',
+    status: 'active',
+    warehouseId: 'WH002',
+    totalQuantity: 12,
+    updatedAt: '2024-01-18'
+  }
+];
+
+let filteredData = [...inventoryData];
+
+// Initialize the application
+document.addEventListener('DOMContentLoaded', function() {
+  renderTable();
+  updateSummary();
+  updateLastUpdated();
+});
+
+// Calculate valuation metrics
+function calculateValuation(item) {
+  const totalCostValue = item.buyPrice * item.totalQuantity;
+  const totalSellingValue = item.sellPrice * item.totalQuantity;
+  const potentialProfit = totalSellingValue - totalCostValue;
+  const profitMargin = totalCostValue > 0 ? ((potentialProfit / totalCostValue) * 100) : 0;
+  
+  return {
+    totalCostValue,
+    totalSellingValue,
+    potentialProfit,
+    profitMargin
+  };
+}
+
+// Get value class for styling
+function getValueClass(value) {
+  if (value > 1000) return 'value-high';
+  if (value > 500) return 'value-medium';
+  return 'value-low';
+}
+
+// Render the valuation table
+function renderTable(data = filteredData) {
+  const tbody = document.getElementById('valuationTableBody');
+  tbody.innerHTML = '';
+
+  data.forEach(item => {
+    const valuation = calculateValuation(item);
+    const row = document.createElement('tr');
+    
+    row.innerHTML = `
+      <td><strong>${item.itemCode}</strong></td>
+      <td>${item.productName}</td>
+      <td><span class="badge bg-info">${item.totalQuantity} ${item.unitOfMeasure}</span></td>
+      <td>$${item.buyPrice.toFixed(2)}</td>
+      <td>$${item.sellPrice.toFixed(2)}</td>
+      <td class="${getValueClass(valuation.totalCostValue)}">$${valuation.totalCostValue.toFixed(2)}</td>
+      <td class="${getValueClass(valuation.totalSellingValue)}">$${valuation.totalSellingValue.toFixed(2)}</td>
+      <td class="${valuation.potentialProfit >= 0 ? 'value-high' : 'value-low'}">
+        $${valuation.potentialProfit.toFixed(2)}
+        <small class="d-block">(${valuation.profitMargin.toFixed(1)}%)</small>
+      </td>
+      <td><span class="badge bg-secondary">${item.warehouseId}</span></td>
+      <td>
+        <span class="status-badge ${item.status === 'active' ? 'status-active' : 'status-inactive'}">
+          ${item.status}
+        </span>
+      </td>
+    `;
+    
+    tbody.appendChild(row);
+  });
+}
+
+// Update summary cards
+function updateSummary() {
+  const activeItems = inventoryData.filter(item => item.status === 'active');
+  
+  let totalCostValue = 0;
+  let totalSellingValue = 0;
+  
+  inventoryData.forEach(item => {
+    const valuation = calculateValuation(item);
+    totalCostValue += valuation.totalCostValue;
+    totalSellingValue += valuation.totalSellingValue;
+  });
+  
+  const avgValue = inventoryData.length > 0 ? totalSellingValue / inventoryData.length : 0;
+  
+  // Update summary cards
+  document.getElementById('totalValue').textContent = `$${totalSellingValue.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+  document.getElementById('totalItems').textContent = inventoryData.length;
+  document.getElementById('activeItems').textContent = activeItems.length;
+  document.getElementById('avgValue').textContent = `$${avgValue.toFixed(2)}`;
+}
+
+// Update last updated timestamp
+function updateLastUpdated() {
+  const now = new Date();
+  const formatted = now.toLocaleString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+  document.getElementById('lastUpdated').textContent = formatted;
+}
+
+// Search functionality
+function searchItems() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+  
+  if (searchTerm === '') {
+    filteredData = [...inventoryData];
+  } else {
+    filteredData = inventoryData.filter(item => 
+      item.productName.toLowerCase().includes(searchTerm) ||
+      item.itemCode.toLowerCase().includes(searchTerm) ||
+      item.id.toString().includes(searchTerm)
+    );
+  }
+  
+  renderTable();
+}
+
+// Filter data
+function filterData() {
+  const statusFilter = document.getElementById('statusFilter').value;
+  const warehouseFilter = document.getElementById('warehouseFilter').value;
+  const valueFilter = document.getElementById('valueFilter').value;
+  
+  filteredData = inventoryData.filter(item => {
+    let statusMatch = !statusFilter || item.status === statusFilter;
+    let warehouseMatch = !warehouseFilter || item.warehouseId === warehouseFilter;
+    let valueMatch = true;
+    
+    if (valueFilter) {
+      const valuation = calculateValuation(item);
+      switch (valueFilter) {
+        case 'high':
+          valueMatch = valuation.totalSellingValue > 1000;
+          break;
+        case 'medium':
+          valueMatch = valuation.totalSellingValue >= 500 && valuation.totalSellingValue <= 1000;
+          break;
+        case 'low':
+          valueMatch = valuation.totalSellingValue < 500;
+          break;
+      }
+    }
+    
+    return statusMatch && warehouseMatch && valueMatch;
+  });
+  
+  renderTable();
+}
+
+// Sort data
+function sortData() {
+  const sortBy = document.getElementById('sortBy').value;
+  
+  filteredData.sort((a, b) => {
+    switch (sortBy) {
+      case 'value_desc':
+        return calculateValuation(b).totalSellingValue - calculateValuation(a).totalSellingValue;
+      case 'value_asc':
+        return calculateValuation(a).totalSellingValue - calculateValuation(b).totalSellingValue;
+      case 'name_asc':
+        return a.productName.localeCompare(b.productName);
+      case 'name_desc':
+        return b.productName.localeCompare(a.productName);
+      case 'quantity_desc':
+        return b.totalQuantity - a.totalQuantity;
+      default:
+        return 0;
+    }
+  });
+  
+  renderTable();
+}
+
+// Action button functions
+function generateReport() {
+  alert('Generating comprehensive inventory valuation report...');
+  // Here you would implement actual report generation
+}
+
+function exportToExcel() {
+  alert('Exporting inventory valuation data to Excel...');
+  // Here you would implement Excel export functionality
+}
+
+function exportToPDF() {
+  alert('Exporting inventory valuation report to PDF...');
+  // Here you would implement PDF export functionality
+}
+
+function printReport() {
+  window.print();
+}
+
+function refreshData() {
+  // Simulate data refresh
+  updateLastUpdated();
+  renderTable();
+  updateSummary();
+  alert('Data refreshed successfully!');
+}
+
+// Notification functions
+function markAllAsRead() {
+  document.querySelectorAll('.notification-unread').forEach(item => {
+    item.classList.remove('notification-unread');
+  });
+  document.getElementById('notificationCount').textContent = '0';
+}
+
+// Search input event listener
+document.getElementById('searchInput').addEventListener('keyup', function(event) {
+  if (event.key === 'Enter') {
+    searchItems();
+  }
+});
+
+// Auto-search as user types (with debounce)
+let searchTimeout;
+document.getElementById('searchInput').addEventListener('input', function() {
+  clearTimeout(searchTimeout);
+  searchTimeout = setTimeout(searchItems, 300);
+});
+</script>
+
+</body>
+</html>

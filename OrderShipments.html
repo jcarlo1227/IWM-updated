@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Shipment Records - Fox Control Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #CC79F0;
+      --secondary-color: #3E7EF7;
+      --border-color: #F3F3F3;
+      --success-color: #00B146;
+      --danger-color: #CF2C3A;
+      --warning-color: #FFA300;
+      --main-bg: #FDFFFA;
+      --bg-shadow: #F3F3F3;
+      --table-row1: #F7F5FC;
+      --table-row2: #F1EDF9;
+      --table-bg: #F8F8F8;
+      --bar-graph: #6E62BF;
+      --confirmed: #1979FE;
+      --header-color: #333135;
+      --sub-header: #5F5B62;
+      --tertiary-header: #2E2E38;
+      --body-font: #4A4A4A;
+      --pie-color1: #8979FF;
+      --pie-color2: #FF928A;
+      --pie-color3: #3CC3DF;
+      --pie-color4: #FFAE4C;
+      --pie-color5: #537FF1;
+    }
+
+    body {
+      background-color: var(--main-bg);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+    }
+
+    .sidebar {
+      height: 100vh;
+      background-color: var(--main-bg);
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar .nav-link {
+      color: var(--header-color);
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar .nav-link:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .sidebar .nav-link.active {
+      background-color: var(--secondary-color);
+      color: var(--main-bg);
+    }
+
+    .top-panel {
+      background-color: var(--bg-shadow);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .action-buttons .btn {
+      margin: 0.25rem;
+      min-width: 140px;
+      font-weight: 500;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .action-buttons .btn:hover {
+      background-color: var(--tertiary-header);
+      transform: translateY(-2px);
+    }
+
+    .action-buttons .btn i {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .shipment-card {
+      border: 2px solid var(--success-color);
+      border-radius: 15px;
+      padding: 1.5rem;
+      background: var(--main-bg);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .shipment-card h5 {
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: var(--success-color);
+    }
+
+    .table-container {
+      background: var(--main-bg);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table th {
+      background-color: var(--table-row1);
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 600;
+      color: var(--sub-header);
+      padding: 1rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .table td {
+      padding: 0.875rem 0.75rem;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table tbody tr:hover {
+      background-color: var(--table-row2);
+    }
+
+    .status-badge {
+      padding: 0.375rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-delivered {
+      background-color: var(--success-color);
+      color: var(--main-bg);
+    }
+
+    .status-pending {
+      background-color: var(--warning-color);
+      color: var(--main-bg);
+    }
+
+    .status-shipped {
+      background-color: var(--confirmed);
+      color: var(--main-bg);
+    }
+
+    .status-processing {
+      background-color: var(--bg-shadow);
+      color: var(--body-font);
+    }
+
+    .status-cancelled {
+      background-color: var(--danger-color);
+      color: var(--main-bg);
+    }
+
+    .priority-high {
+      background-color: var(--danger-color);
+      color: var(--main-bg);
+    }
+
+    .priority-medium {
+      background-color: var(--warning-color);
+      color: var(--main-bg);
+    }
+
+    .priority-low {
+      background-color: var(--secondary-color);
+      color: var(--main-bg);
+    }
+
+    .item-actions i {
+      cursor: pointer;
+      margin: 0 0.5rem;
+      font-size: 1.1rem;
+      color: var(--body-font);
+      transition: all 0.3s ease;
+    }
+
+    .item-actions i:hover {
+      color: var(--primary-color);
+      transform: scale(1.2);
+    }
+
+    .search-filter-section {
+      background: var(--main-bg);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-group {
+      margin-bottom: 1rem;
+    }
+
+    .filter-group label {
+      font-weight: 600;
+      color: var(--sub-header);
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 992px) {
+      .sidebar {
+        height: auto;
+        position: relative;
+      }
+      
+      .action-buttons {
+        justify-content: center !important;
+      }
+      
+      .action-buttons .btn {
+        min-width: 100px;
+        margin: 0.125rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .action-buttons .btn {
+        width: 100%;
+        margin: 0.25rem 0;
+        min-width: auto;
+      }
+      
+      .top-panel {
+        padding: 1rem;
+      }
+      
+      .shipment-card {
+        padding: 1rem;
+      }
+      
+      .table th,
+      .table td {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.25rem;
+      }
+      
+      .search-filter-section {
+        padding: 1rem;
+      }
+    }
+
+    /* Top Navigation */
+    .top-navbar {
+      background: linear-gradient(135deg, var(--main-bg) 0%, var(--bg-shadow) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .top-navbar .navbar-brand {
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 1.25rem;
+    }
+
+    .top-navbar .navbar-nav .nav-link {
+      color: var(--sub-header);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .top-navbar .navbar-nav .nav-link:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background-color: var(--danger-color);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .dropdown-menu {
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 0.5rem 0;
+      min-width: 200px;
+    }
+
+    .dropdown-item {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .dropdown-divider {
+      margin: 0.5rem 0;
+    }
+
+    .notification-item {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    .notification-item:hover {
+      background-color: var(--bg-shadow);
+    }
+
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+
+    .notification-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--sub-header);
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-text {
+      font-size: 0.75rem;
+      color: var(--body-font);
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-time {
+      font-size: 0.7rem;
+      color: var(--body-font);
+    }
+
+    .notification-unread {
+      background-color: var(--table-row1);
+      border-left: 3px solid var(--primary-color);
+    }
+
+    /* Responsive adjustments for top nav */
+    @media (max-width: 992px) {
+      .top-navbar {
+        padding: 0.5rem 1rem;
+      }
+      
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<!-- Top Navigation -->
+<nav class="navbar navbar-expand-lg top-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <i class="bi bi-boxes me-2"></i>Fox Control Hub
+    </a>
+
+    <!-- Right side navigation -->
+    <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+      <!-- Search (hidden on mobile) -->
+      <div class="nav-item me-3 d-none d-lg-block">
+        <div class="input-group" style="width: 250px;">
+          <input type="text" class="form-control form-control-sm" placeholder="Quick search..." id="topSearchInput">
+          <button class="btn btn-outline-secondary btn-sm" type="button">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell fs-5"></i>
+          <span class="notification-badge" id="notificationCount">3</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Notifications</h6>
+            <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
+          </div>
+          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
+            <div class="notification-item notification-unread" data-id="1">
+              <div class="notification-title">Order Delivered</div>
+              <div class="notification-text">Order ORD-0001 delivered to John Smith</div>
+              <div class="notification-time">2 hours ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="2">
+              <div class="notification-title">Order Shipped</div>
+              <div class="notification-text">Order ORD-0002 shipped via courier</div>
+              <div class="notification-time">1 day ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="3">
+              <div class="notification-title">New Order</div>
+              <div class="notification-text">New order ORD-0003 received from Carlos Rodriguez</div>
+              <div class="notification-time">2 days ago</div>
+            </div>
+          </div>
+          <div class="text-center py-2 border-top">
+            <a href="#" class="btn btn-sm btn-link">View all notifications</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-chat-dots fs-5"></i>
+          <span class="notification-badge" style="background-color: var(--success-color);">2</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown" style="width: 300px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Messages</h6>
+            <a href="#" class="btn btn-sm btn-link text-primary p-0">View all</a>
+          </div>
+          <div class="notification-list" style="max-height: 250px; overflow-y: auto;">
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">JS</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">John Smith</div>
+                  <div class="notification-text">Thank you for the quick delivery!</div>
+                  <div class="notification-time">3 hours ago</div>
+                </div>
+              </div>
+            </div>
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">MG</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">Maria Garcia</div>
+                  <div class="notification-text">When will my order be shipped?</div>
+                  <div class="notification-time">1 day ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile -->
+      <div class="nav-item dropdown">
+        <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar me-2">JD</div>
+          <div class="d-none d-md-block">
+            <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
+            <div style="font-size: 0.75rem; color: var(--body-font); line-height: 1.2;">Administrator</div>
+          </div>
+          <i class="bi bi-chevron-down ms-2"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <div class="px-3 py-2 border-bottom">
+            <div class="fw-bold">John Doe</div>
+            <div class="text-muted small">john.doe@company.com</div>
+          </div>
+          <a class="dropdown-item" href="#" onclick="showProfileModal()">
+            <i class="bi bi-person me-2"></i>My Profile
+          </a>
+          <a class="dropdown-item" href="#" onclick="showSettingsModal()">
+            <i class="bi bi-gear me-2"></i>Settings
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-question-circle me-2"></i>Help & Support
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#" onclick="showActivityLog()">
+            <i class="bi bi-clock-history me-2"></i>Activity Log
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-shield-check me-2"></i>Security
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item text-danger" href="#" onclick="logout()">
+            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-2 col-md-3 sidebar p-4">
+      <nav class="nav flex-column">
+        <a class="nav-link" href="Inventory.html"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+        <a class="nav-link" href="Barcode.html"><i class="bi bi-upc-scan me-2"></i>Barcode</a>
+        <a class="nav-link" href="WarehouseLayAndOpti.html"><i class="bi bi-layout-wtf me-2"></i>Layout & Optimization</a>
+        <a class="nav-link" href="MaterialShipments.html"><i class="bi bi-truck me-2"></i>Material Shipments</a>
+        <a class="nav-link active" href="OrderShipments.html"><i class="bi bi-box-arrow-right me-2"></i>Order Shipments</a>
+        <a class="nav-link" href="StockTracking.html"><i class="bi bi-shop me-2"></i>Stock Tracking</a>
+        <a class="nav-link" href="Reports.html"><i class="bi bi-graph-up me-2"></i>Reports</a>
+
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-10 col-md-9 p-4">
+      <!-- Top Action Panel -->
+      <div class="top-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0">Order Shipment Records</h4>
+          <div class="text-muted">
+            <i class="bi bi-calendar-event me-1"></i>
+            <span id="currentDate"></span>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap justify-content-start action-buttons">
+          <button class="btn" onclick="createNewOrder()">
+            <i class="bi bi-plus-circle"></i>
+            New Order
+          </button>
+          <button class="btn" onclick="bulkShipOrders()">
+            <i class="bi bi-box-arrow-right"></i>
+            Bulk Ship
+          </button>
+          <button class="btn" onclick="printShippingLabels()">
+            <i class="bi bi-printer"></i>
+            Print Labels
+          </button>
+          <button class="btn" onclick="generateReports()">
+            <i class="bi bi-file-earmark-text"></i>
+            Reports
+          </button>
+          <button class="btn" onclick="viewInventoryImpact()">
+            <i class="bi bi-box-seam"></i>
+            Inventory Impact
+          </button>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-filter-section">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="searchOrder">Search Orders</label>
+              <input type="text" class="form-control" id="searchOrder" placeholder="Search by order ID, customer, or product...">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="orderStatusFilter">Status</label>
+              <select class="form-select" id="orderStatusFilter">
+                <option value="">All Status</option>
+                <option value="processing">Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="priorityFilter">Priority</label>
+              <select class="form-select" id="priorityFilter">
+                <option value="">All Priority</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="orderDateRange">Order Date</label>
+              <input type="date" class="form-control" id="orderDateRange">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label>&nbsp;</label>
+              <button class="btn btn-outline-primary w-100" onclick="applyOrderFilters()">
+                <i class="bi bi-funnel"></i> Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Order Shipments Table -->
+      <div class="shipment-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5><i class="bi bi-box-arrow-right me-2"></i>Order Shipment Records</h5>
+          <div class="text-muted">
+            <small>Total Orders: <span id="totalOrders">3</span></small>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-responsive">
+            <table class="table table-hover" id="ordersTable">
+              <thead>
+                <tr>
+                  <th>Order ID</th>
+                  <th>Customer</th>
+                  <th>Product/Item</th>
+                  <th>Quantity</th>
+                  <th>Total Value</th>
+                  <th>Priority</th>
+                  <th>Status</th>
+                  <th>Order Date</th>
+                  <th>Ship Date</th>
+                  <th>Delivery Date</th>
+                  <th>Tracking #</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="row mt-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-box-arrow-right text-success fs-1"></i>
+              <h4 class="mt-2" id="ordersTotalCard">0</h4>
+              <p class="text-muted mb-0">Total Orders</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-check-circle text-success fs-1"></i>
+              <h4 class="mt-2" id="ordersDeliveredCard">0</h4>
+              <p class="text-muted mb-0">Delivered</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-truck text-primary fs-1"></i>
+              <h4 class="mt-2" id="ordersShippedCard">0</h4>
+              <p class="text-muted mb-0">Shipped</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-clock text-warning fs-1"></i>
+              <h4 class="mt-2" id="ordersProcessingCard">0</h4>
+              <p class="text-muted mb-0">Processing</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+              <h6 class="mb-0 fw-bold"><i class="bi bi-activity me-2"></i>Recent Activity</h6>
+            </div>
+            <div class="card-body">
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-success rounded-circle p-2 me-3">
+                  <i class="bi bi-check text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">Order ORD-0001 delivered successfully</div>
+                  <small class="text-muted">2 hours ago</small>
+                </div>
+              </div>
+              <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary rounded-circle p-2 me-3">
+                  <i class="bi bi-truck text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">Order ORD-0002 shipped to customer</div>
+                  <small class="text-muted">1 day ago</small>
+                </div>
+              </div>
+              <div class="d-flex align-items-center">
+                <div class="bg-warning rounded-circle p-2 me-3">
+                  <i class="bi bi-plus text-white"></i>
+                </div>
+                <div>
+                  <div class="fw-bold">New order ORD-0003 received</div>
+                  <small class="text-muted">2 days ago</small>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Order Modal -->
+<div class="modal fade" id="orderModal" tabindex="-1" aria-labelledby="orderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="orderModalLabel">Add New Order</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="orderForm" class="needs-validation" novalidate>
+          <input type="hidden" id="orderHiddenId">
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="orderIdInput" class="form-label">Order ID</label>
+              <input type="text" class="form-control" id="orderIdInput" name="orderIdInput" required>
+            </div>
+            <div class="col-md-8">
+              <label for="customerName" class="form-label">Customer Name</label>
+              <input type="text" class="form-control" id="customerName" name="customerName" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="itemCode" class="form-label">Item Code</label>
+              <input type="text" class="form-control" id="itemCode" name="itemCode" required>
+            </div>
+            <div class="col-md-5">
+              <label for="productName" class="form-label">Product Name</label>
+              <input type="text" class="form-control" id="productName" name="productName" required>
+            </div>
+            <div class="col-md-3">
+              <label for="quantity" class="form-label">Quantity</label>
+              <input type="number" class="form-control" id="quantity" name="quantity" required min="1">
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="totalValue" class="form-label">Total Value</label>
+              <input type="number" step="0.01" class="form-control" id="totalValue" name="totalValue" required>
+            </div>
+            <div class="col-md-4">
+              <label for="priority" class="form-label">Priority</label>
+              <select class="form-select" id="priority" name="priority" required>
+                <option value="high">High</option>
+                <option value="medium" selected>Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label for="status" class="form-label">Status</label>
+              <select class="form-select" id="status" name="status" required>
+                <option value="processing" selected>Processing</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="orderDate" class="form-label">Order Date</label>
+              <input type="date" class="form-control" id="orderDate" name="orderDate">
+            </div>
+            <div class="col-md-4">
+              <label for="shipDate" class="form-label">Ship Date</label>
+              <input type="date" class="form-control" id="shipDate" name="shipDate">
+            </div>
+            <div class="col-md-4">
+              <label for="deliveryDate" class="form-label">Delivery Date</label>
+              <input type="date" class="form-control" id="deliveryDate" name="deliveryDate">
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="trackingNumber" class="form-label">Tracking Number</label>
+              <input type="text" class="form-control" id="trackingNumber" name="trackingNumber">
+            </div>
+            <div class="col-md-6">
+              <label for="orderNotes" class="form-label">Notes</label>
+              <input type="text" class="form-control" id="orderNotes" name="orderNotes">
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveOrderBtn">Save Order</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Order Modal -->
+<div class="modal fade" id="viewOrderModal" tabindex="-1" aria-labelledby="viewOrderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewOrderModalLabel">Order Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="viewOrderBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  // Set current date
+  document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+
+  let ordersData = [];
+  let currentOrderEditId = null;
+
+  document.addEventListener('DOMContentLoaded', () => {
+    loadOrders();
+    loadOrderStats();
+    setupOrderEvents();
+    loadNotifications(); // Load notifications on page load
+    loadNotificationCount(); // Load notification count on page load
+  });
+
+  async function loadOrders(filters = {}) {
+    try {
+      const queryParams = new URLSearchParams();
+      if (filters.search) queryParams.append('search', filters.search);
+      if (filters.status) queryParams.append('status', filters.status);
+      if (filters.priority) queryParams.append('priority', filters.priority);
+      if (filters.date) queryParams.append('date', filters.date);
+
+      const res = await fetch(`/api/order-shipments?${queryParams.toString()}`);
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message || 'Failed to load orders');
+      ordersData = result.data || [];
+      renderOrdersTable(ordersData);
+      document.getElementById('totalOrders').textContent = ordersData.length;
+    } catch (err) {
+      console.error('Error loading orders:', err);
+    }
+  }
+
+  async function loadOrderStats() {
+    try {
+      const res = await fetch('/api/order-shipments/stats');
+      const result = await res.json();
+      if (result.success) {
+        const s = result.data;
+        // Update stat cards if present
+        const totalEl = document.querySelector('#ordersTotalCard');
+        if (totalEl) totalEl.textContent = s.totalOrders;
+        const delEl = document.querySelector('#ordersDeliveredCard');
+        if (delEl) delEl.textContent = s.deliveredOrders;
+        const shEl = document.querySelector('#ordersShippedCard');
+        if (shEl) shEl.textContent = s.shippedOrders;
+        const prEl = document.querySelector('#ordersProcessingCard');
+        if (prEl) prEl.textContent = s.processingOrders;
+      }
+    } catch (e) {
+      console.error('Error loading order stats:', e);
+    }
+  }
+
+  function renderOrdersTable(data = []) {
+    const tbody = document.querySelector('#ordersTable tbody');
+    tbody.innerHTML = '';
+
+    if (!data.length) {
+      tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No orders found</td></tr>`;
+      return;
+    }
+
+    data.forEach(order => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${order.order_id}</strong></td>
+        <td>${order.customer_name}</td>
+        <td>
+          <div class="d-flex align-items-center">
+            <span>${order.product_name}</span>
+            <small class="text-muted ms-2">(${order.item_code})</small>
+          </div>
+          <small class="text-muted" data-item-code="${order.item_code}">Loading stock...</small>
+        </td>
+        <td>${order.quantity}</td>
+        <td>₱${Number(order.total_value).toFixed(2)}</td>
+        <td><span class="status-badge priority-${order.priority}">${capitalize(order.priority)}</span></td>
+        <td><span class="status-badge status-${order.status}">${capitalize(order.status)}</span></td>
+        <td>${order.order_date || '-'}</td>
+        <td>${order.ship_date || '-'}</td>
+        <td>${order.delivery_date || '-'}</td>
+        <td>${order.tracking_number || '-'}</td>
+        <td class="item-actions">
+          <i class="bi bi-eye" title="View Details" onclick="viewOrder(${order.id})"></i>
+          <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('${order.item_code}')"></i>
+          <i class="bi bi-pencil" title="Edit" onclick="editOrder(${order.id})"></i>
+          <i class="bi bi-box-arrow-right" title="Ship Now" onclick="shipOrder(${order.id})"></i>
+          <i class="bi bi-printer" title="Print Label" onclick="printLabel('${order.order_id}')"></i>
+          <i class="bi bi-trash" title="Delete" onclick="deleteOrder(${order.id})"></i>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+
+    // After render, fetch stock info in parallel
+    updateStockBadges();
+  }
+
+  function capitalize(s) { return (s || '').charAt(0).toUpperCase() + (s || '').slice(1); }
+
+  async function updateStockBadges() {
+    const stockBadges = document.querySelectorAll('[data-item-code]');
+    const codes = Array.from(new Set(Array.from(stockBadges).map(el => el.getAttribute('data-item-code'))));
+    // For simplicity, fetch full inventory and map by item_code
+    const res = await fetch('/api/inventory');
+    const result = await res.json();
+    if (!result.success) return;
+    const items = result.data || [];
+    const map = new Map(items.map(i => [i.item_code, i]));
+    stockBadges.forEach(el => {
+      const code = el.getAttribute('data-item-code');
+      const item = map.get(code);
+      if (item) {
+        const qty = Number(item.total_quantity) || 0;
+        el.textContent = qty <= 5 ? `Stock: ${qty} remaining` : `Stock: ${qty} available`;
+        el.classList.toggle('text-warning', qty <= 5);
+        el.classList.toggle('text-info', qty > 5);
+      } else {
+        el.textContent = 'Stock: N/A';
+      }
+    });
+  }
+
+  function setupOrderEvents() {
+    document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
+    document.getElementById('searchOrder').addEventListener('input', () => applyOrderFilters());
+    document.getElementById('orderStatusFilter').addEventListener('change', applyOrderFilters);
+    document.getElementById('priorityFilter').addEventListener('change', applyOrderFilters);
+    document.getElementById('orderDateRange').addEventListener('change', applyOrderFilters);
+  }
+
+  function applyOrderFilters() {
+    const filters = {
+      search: document.getElementById('searchOrder').value,
+      status: document.getElementById('orderStatusFilter').value,
+      priority: document.getElementById('priorityFilter').value,
+      date: document.getElementById('orderDateRange').value
+    };
+    loadOrders(filters);
+  }
+
+  function createNewOrder() {
+    currentOrderEditId = null;
+    document.getElementById('orderModalLabel').textContent = 'Add New Order';
+    document.getElementById('orderForm').reset();
+    new bootstrap.Modal(document.getElementById('orderModal')).show();
+  }
+
+  async function editOrder(id) {
+    try {
+      const res = await fetch(`/api/order-shipments/${id}`);
+      const result = await res.json();
+      if (!result.success) throw new Error(result.message || 'Failed to load order');
+      const o = result.data;
+      currentOrderEditId = id;
+      document.getElementById('orderModalLabel').textContent = 'Edit Order';
+      document.getElementById('orderHiddenId').value = o.id;
+      document.getElementById('orderIdInput').value = o.order_id;
+      document.getElementById('customerName').value = o.customer_name;
+      document.getElementById('itemCode').value = o.item_code;
+      document.getElementById('productName').value = o.product_name;
+      document.getElementById('quantity').value = o.quantity;
+      document.getElementById('totalValue').value = o.total_value;
+      document.getElementById('priority').value = o.priority;
+      document.getElementById('status').value = o.status;
+      document.getElementById('orderDate').value = o.order_date || '';
+      document.getElementById('shipDate').value = o.ship_date || '';
+      document.getElementById('deliveryDate').value = o.delivery_date || '';
+      document.getElementById('trackingNumber').value = o.tracking_number || '';
+      document.getElementById('orderNotes').value = o.notes || '';
+      new bootstrap.Modal(document.getElementById('orderModal')).show();
+    } catch (e) {
+      alert('Failed to load order');
+    }
+  }
+
+  async function saveOrder() {
+    const form = document.getElementById('orderForm');
+    if (!form.checkValidity()) { form.reportValidity(); return; }
+    const fd = new FormData(form);
+    const payload = {
+      order_id: fd.get('orderIdInput'),
+      customer_name: fd.get('customerName'),
+      item_code: fd.get('itemCode'),
+      product_name: fd.get('productName'),
+      quantity: parseInt(fd.get('quantity')),
+      total_value: parseFloat(fd.get('totalValue')),
+      priority: fd.get('priority'),
+      status: fd.get('status'),
+      order_date: fd.get('orderDate') || null,
+      ship_date: fd.get('shipDate') || null,
+      delivery_date: fd.get('deliveryDate') || null,
+      tracking_number: fd.get('trackingNumber') || null,
+      notes: fd.get('orderNotes') || null
+    };
+
+    let res;
+    if (currentOrderEditId) {
+      res = await fetch(`/api/order-shipments/${currentOrderEditId}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    } else {
+      res = await fetch('/api/order-shipments', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    }
+    const result = await res.json();
+    if (result.success) {
+      bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
+      await loadOrders();
+      await loadOrderStats();
+    } else {
+      alert(result.message || 'Failed to save order');
+    }
+  }
+
+  async function viewOrder(id) {
+    try {
+      const res = await fetch(`/api/order-shipments/${id}`);
+      const result = await res.json();
+      if (!result.success) throw new Error('Failed');
+      const o = result.data;
+      const el = document.getElementById('viewOrderBody');
+      el.innerHTML = `
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Order ID:</strong> ${o.order_id}</p>
+            <p><strong>Customer:</strong> ${o.customer_name}</p>
+            <p><strong>Product:</strong> ${o.product_name} <small class="text-muted">(${o.item_code})</small></p>
+            <p><strong>Quantity:</strong> ${o.quantity}</p>
+            <p><strong>Total Value:</strong> ₱${Number(o.total_value).toFixed(2)}</p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Priority:</strong> ${capitalize(o.priority)}</p>
+            <p><strong>Status:</strong> ${capitalize(o.status)}</p>
+            <p><strong>Order Date:</strong> ${o.order_date || 'N/A'}</p>
+            <p><strong>Ship Date:</strong> ${o.ship_date || 'N/A'}</p>
+            <p><strong>Delivery Date:</strong> ${o.delivery_date || 'N/A'}</p>
+            <p><strong>Tracking #:</strong> ${o.tracking_number || '-'}</p>
+          </div>
+        </div>
+        ${o.notes ? `<div class="mt-3"><strong>Notes:</strong><br>${o.notes}</div>` : ''}
+      `;
+      new bootstrap.Modal(document.getElementById('viewOrderModal')).show();
+    } catch {}
+  }
+
+  async function shipOrder(id) {
+    if (!confirm('Mark this order as shipped?')) return;
+    const today = new Date().toISOString().split('T')[0];
+    const res = await fetch(`/api/order-shipments/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) });
+    const result = await res.json();
+    if (result.success) { loadOrders(); loadOrderStats(); }
+  }
+
+  async function deleteOrder(id) {
+    if (!confirm('Delete this order?')) return;
+    const res = await fetch(`/api/order-shipments/${id}`, { method: 'DELETE' });
+    const result = await res.json();
+    if (result.success) { loadOrders(); loadOrderStats(); }
+  }
+
+  function printLabel(orderId) {
+    window.print();
+  }
+
+  function viewInInventory(itemCode) {
+    window.open('Inventory.html?highlight=' + itemCode, '_blank');
+  }
+
+  // Bulk ship all processing orders
+  async function bulkShipOrders() {
+    if (!ordersData.length) return;
+    const toShip = ordersData.filter(o => o.status === 'processing');
+    if (!toShip.length) { alert('No processing orders to ship.'); return; }
+    if (!confirm(`Ship ${toShip.length} processing order(s)?`)) return;
+    const today = new Date().toISOString().split('T')[0];
+    await Promise.allSettled(toShip.map(o => fetch(`/api/order-shipments/${o.id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) })));
+    await loadOrders();
+    await loadOrderStats();
+  }
+
+  function printShippingLabels() {
+    window.print();
+  }
+
+  function generateReports() {
+    const headers = ['Order ID','Customer','Item Code','Product','Quantity','Total Value','Priority','Status','Order Date','Ship Date','Delivery Date','Tracking #'];
+    const rows = ordersData.map(o => [o.order_id,o.customer_name,o.item_code,o.product_name,o.quantity,o.total_value,o.priority,o.status,o.order_date||'',o.ship_date||'',o.delivery_date||'',o.tracking_number||'']);
+    const csv = [headers, ...rows].map(r => r.map(c => '"' + String(c).replaceAll('"','""') + '"').join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `order_shipments_${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+  }
+
+  function viewInventoryImpact() {
+    const totals = new Map();
+    ordersData.forEach(o => {
+      const key = `${o.item_code} ${o.product_name}`;
+      totals.set(key, (totals.get(key) || 0) + (o.quantity || 0));
+    });
+    const lines = Array.from(totals.entries()).map(([k,v]) => `- ${k}: ${v}`);
+    alert(`Inventory Impact (deductions by item):\n\n${lines.join('\n') || 'No data'}`);
+  }
+
+  // Notifications and user helpers
+  async function loadNotifications() {
+    try {
+      const response = await fetch('/api/notifications');
+      const result = await response.json();
+      if (result.success) displayNotifications(result.data);
+    } catch (e) { console.error('Error loading notifications:', e); }
+  }
+  async function loadNotificationCount() {
+    try {
+      const response = await fetch('/api/notifications/unread-count');
+      const result = await response.json();
+      if (result.success) updateNotificationCount(result.count || (result.data && result.data.count) || 0);
+    } catch (e) { console.error('Error loading notification count:', e); }
+  }
+  function displayNotifications(notifications) {
+    const list = document.querySelector('.notification-list');
+    if (!list) return;
+    list.innerHTML = '';
+    (notifications || []).forEach(n => {
+      const div = document.createElement('div');
+      div.className = `notification-item ${n.is_read ? '' : 'notification-unread'}`;
+      div.setAttribute('data-id', n.id);
+      div.innerHTML = `<div class="notification-title">${n.title}</div><div class="notification-text">${n.message}</div><div class="notification-time">${formatTimeAgo(n.created_at)}</div>`;
+      div.addEventListener('click', () => markNotificationAsRead(n.id));
+      list.appendChild(div);
+    });
+  }
+  function updateNotificationCount(count) {
+    const badge = document.getElementById('notificationCount');
+    if (!badge) return;
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+  async function markNotificationAsRead(id) {
+    try {
+      await fetch(`/api/notifications/${id}/read`, { method: 'POST' });
+      await loadNotificationCount();
+      await loadNotifications();
+    } catch (e) { console.error('Error marking read:', e); }
+  }
+  async function markAllAsRead() {
+    try {
+      await fetch('/api/notifications/read-all', { method: 'POST' });
+      await loadNotificationCount();
+      await loadNotifications();
+    } catch (e) { console.error('Error mark all read:', e); }
+  }
+  function formatTimeAgo(dateString) {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} hours ago`;
+    return `${Math.floor(diff / 86400)} days ago`;
+  }
+  async function fetchUser() {
+    try {
+      const response = await fetch('/api/user');
+      if (response.ok) {
+        const user = await response.json();
+        // optionally display
+      }
+    } catch (e) { console.error('fetchUser error', e); }
+  }
+  async function logout() {
+    try {
+      const response = await fetch('/logout', { method: 'POST' });
+      if (response.ok) window.location.href = '/loginpage.html';
+    } catch (e) {
+      window.location.href = '/loginpage.html';
+    }
+  }
+  setInterval(() => { loadNotifications(); loadNotificationCount(); }, 300000);
+</script>
+</body>
+</html>

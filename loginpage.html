@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fox Control Hub - Login</title>
+    <style>
+        :root {
+            --primary-color: #CC79F0;
+            --secondary-color: #3E7EF7;
+            --border-color: #F3F3F3;
+            --success-color: #00B146;
+            --danger-color: #CF2C3A;
+            --warning-color: #FFA300;
+            --main-bg: #FDFFFA;
+            --bg-shadow: #F3F3F3;
+            --table-row1: #F7F5FC;
+            --table-row2: #F1EDF9;
+            --table-bg: #F8F8F8;
+            --bar-graph: #6E62BF;
+            --confirmed: #1979FE;
+            --header-color: #333135;
+            --sub-header: #5F5B62;
+            --tertiary-header: #2E2E38;
+            --body-font: #4A4A4A;
+            --pie-color1: #8979FF;
+            --pie-color2: #FF928A;
+            --pie-color3: #3CC3DF;
+            --pie-color4: #FFAE4C;
+            --pie-color5: #537FF1;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            height: 100vh;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 50%, var(--pie-color4) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .background-shape {
+            position: absolute;
+            width: 60%;
+            height: 80%;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 50% 0% 50% 0%;
+            right: 0;
+            top: 10%;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .left-content {
+            position: absolute;
+            left: 10%;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 2;
+            color: #333;
+        }
+
+        .fox-logo {
+            width: 120px;
+            height: 120px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .fox-icon {
+            font-size: 60px;
+            color: var(--header-color);
+        }
+
+        .welcome-text {
+            font-size: 48px;
+            font-weight: bold;
+            color: var(--header-color);
+            line-height: 1.2;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 24px;
+            color: var(--sub-header);
+            font-weight: 300;
+        }
+
+        .db-status {
+            margin-top: 20px;
+            padding: 10px 15px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+
+        .db-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .db-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--warning-color);
+            animation: pulse 2s infinite;
+        }
+
+        .db-dot.connected {
+            background: var(--success-color);
+            animation: none;
+        }
+
+        .db-dot.error {
+            background: var(--danger-color);
+            animation: none;
+        }
+
+        .db-text {
+            font-size: 14px;
+            color: var(--header-color);
+            font-weight: 500;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .login-container {
+            position: absolute;
+            right: 15%;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 3;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 50px 40px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            min-width: 350px;
+        }
+
+        .user-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--bg-shadow);
+            border-radius: 50%;
+            margin: 0 auto 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: var(--body-font);
+        }
+
+        .login-title {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: var(--header-color);
+            margin-bottom: 40px;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 15px 20px;
+            border: 2px solid #e0e0e0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: rgba(255, 255, 255, 0.8);
+        }
+
+        .form-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 10px rgba(204, 121, 240, 0.2);
+        }
+
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(204, 121, 240, 0.3);
+        }
+
+        .login-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(204, 121, 240, 0.4);
+        }
+
+        .login-btn:active {
+            transform: translateY(0);
+        }
+
+        .error-message {
+            color: var(--danger-color);
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .success-message {
+            color: var(--success-color);
+            text-align: center;
+            margin-top: 15px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .loading {
+            opacity: 0.7;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .background-shape {
+                width: 100%;
+                height: 100%;
+                border-radius: 0;
+                top: 0;
+                right: 0;
+            }
+
+            .left-content {
+                position: relative;
+                left: 0;
+                top: 0;
+                transform: none;
+                text-align: center;
+                margin-bottom: 30px;
+            }
+
+            .login-container {
+                position: relative;
+                right: 0;
+                top: 0;
+                transform: none;
+                margin: 20px;
+                min-width: auto;
+            }
+
+            .container {
+                flex-direction: column;
+                padding: 20px;
+            }
+
+            .welcome-text {
+                font-size: 32px;
+            }
+
+            .subtitle {
+                font-size: 18px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="background-shape"></div>
+        
+        <div class="left-content">
+            <div class="fox-logo">
+                <div class="fox-icon">🦊</div>
+            </div>
+            <div class="welcome-text">Welcome to Fox<br>Control Hub!</div>
+            <div class="subtitle">Inventory Management System</div>
+            <div class="db-status" id="dbStatus">
+                <div class="db-indicator">
+                    <span class="db-dot"></span>
+                    <span class="db-text">Database: Connecting...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="login-container">
+            <div class="user-icon">👤</div>
+            <h2 class="login-title">Admin Login</h2>
+            
+            <form id="loginForm">
+                <div class="form-group">
+                    <input type="text" id="username" name="username" class="form-input" placeholder="Username..." required>
+                </div>
+                
+                <div class="form-group">
+                    <input type="password" id="password" name="password" class="form-input" placeholder="Password..." required>
+                </div>
+                
+                <button type="submit" class="login-btn" id="loginBtn">Log In</button>
+                
+                <div class="error-message" id="errorMessage"></div>
+                <div class="success-message" id="successMessage"></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            const successMessage = document.getElementById('successMessage');
+            
+            // Reset messages
+            errorMessage.style.display = 'none';
+            successMessage.style.display = 'none';
+            
+            // Show loading state
+            loginBtn.textContent = 'Logging in...';
+            loginBtn.classList.add('loading');
+            
+            try {
+                const response = await fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    successMessage.textContent = 'Login successful! Redirecting...';
+                    successMessage.style.display = 'block';
+                    
+                    // Redirect to inventory page after a short delay
+                    setTimeout(() => {
+                        window.location.href = '/inventory.html';
+                    }, 1000);
+                } else {
+                    errorMessage.textContent = data.message || 'Login failed';
+                    errorMessage.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                errorMessage.textContent = 'Network error. Please try again.';
+                errorMessage.style.display = 'block';
+            } finally {
+                // Reset button state
+                loginBtn.textContent = 'Log In';
+                loginBtn.classList.remove('loading');
+            }
+        });
+
+        // Auto-focus username field
+        document.getElementById('username').focus();
+
+        // Check database connection status
+        const checkDatabaseStatus = async () => {
+            const dbDot = document.querySelector('.db-dot');
+            const dbText = document.querySelector('.db-text');
+            
+            try {
+                const response = await fetch('/api/db-status');
+                const data = await response.json();
+                
+                if (data.connected) {
+                    dbDot.className = 'db-dot connected';
+                    dbText.textContent = `Database: Connected to Neon (${data.database})`;
+                } else {
+                    dbDot.className = 'db-dot error';
+                    dbText.textContent = 'Database: Connection Error';
+                }
+            } catch (error) {
+                dbDot.className = 'db-dot error';
+                dbText.textContent = 'Database: Connection Error';
+            }
+        };
+
+        // Check database status on page load
+        checkDatabaseStatus();
+    </script>
+</body>
+</html>

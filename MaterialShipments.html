@@ -1,0 +1,1753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Material Shipment Records - Fox Control Hub</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
+  <style>
+    :root {
+      --primary-color: #CC79F0;
+      --secondary-color: #3E7EF7;
+      --border-color: #F3F3F3;
+      --success-color: #00B146;
+      --danger-color: #CF2C3A;
+      --warning-color: #FFA300;
+      --main-bg: #FDFFFA;
+      --bg-shadow: #F3F3F3;
+      --table-row1: #F7F5FC;
+      --table-row2: #F1EDF9;
+      --table-bg: #F8F8F8;
+      --bar-graph: #6E62BF;
+      --confirmed: #1979FE;
+      --header-color: #333135;
+      --sub-header: #5F5B62;
+      --tertiary-header: #2E2E38;
+      --body-font: #4A4A4A;
+      --pie-color1: #8979FF;
+      --pie-color2: #FF928A;
+      --pie-color3: #3CC3DF;
+      --pie-color4: #FFAE4C;
+      --pie-color5: #537FF1;
+    }
+
+    body {
+      background-color: var(--main-bg);
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      font-size: 14px;
+    }
+
+    .sidebar {
+      height: 100vh;
+      background-color: var(--main-bg);
+      border-right: 1px solid var(--border-color);
+      position: sticky;
+      top: 0;
+      overflow-y: auto;
+    }
+
+    .sidebar .nav-link {
+      color: var(--header-color);
+      font-weight: 500;
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin: 2px 0;
+      transition: all 0.3s ease;
+    }
+
+    .sidebar .nav-link:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .sidebar .nav-link.active {
+      background-color: var(--secondary-color);
+      color: var(--main-bg);
+    }
+
+    .top-panel {
+      background-color: var(--bg-shadow);
+      border-radius: 15px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .action-buttons .btn {
+      margin: 0.25rem;
+      min-width: 140px;
+      font-weight: 500;
+      background-color: var(--primary-color);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.3s ease;
+    }
+
+    .action-buttons .btn:hover {
+      background-color: var(--tertiary-header);
+      transform: translateY(-2px);
+    }
+
+    .action-buttons .btn i {
+      font-size: 1.2rem;
+      margin-right: 0.5rem;
+    }
+
+    .shipment-card {
+      border: 2px solid var(--secondary-color);
+      border-radius: 15px;
+      padding: 1.5rem;
+      background: var(--main-bg);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      margin-bottom: 2rem;
+    }
+
+    .shipment-card h5 {
+      font-weight: bold;
+      margin-bottom: 1.5rem;
+      color: var(--secondary-color);
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table {
+      margin-bottom: 0;
+    }
+
+    .table th {
+      background-color: var(--table-row1);
+      border-bottom: 2px solid var(--border-color);
+      font-weight: 600;
+      color: var(--sub-header);
+      padding: 1rem 0.75rem;
+      font-size: 0.875rem;
+    }
+
+    .table td {
+      padding: 0.875rem 0.75rem;
+      vertical-align: middle;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .table tbody tr:hover {
+      background-color: var(--table-row2);
+    }
+
+    .status-badge {
+      padding: 0.375rem 0.75rem;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-delivered {
+      background-color: var(--success-color);
+      color: var(--main-bg);
+    }
+
+    .status-pending {
+      background-color: var(--warning-color);
+      color: var(--main-bg);
+    }
+
+    .status-shipped {
+      background-color: var(--confirmed);
+      color: var(--main-bg);
+    }
+
+    .item-actions i {
+      cursor: pointer;
+      margin: 0 0.5rem;
+      font-size: 1.1rem;
+      color: var(--body-font);
+      transition: all 0.3s ease;
+    }
+
+    .item-actions i:hover {
+      color: var(--primary-color);
+      transform: scale(1.2);
+    }
+
+    .search-filter-section {
+      background: var(--main-bg);
+      border-radius: 10px;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-group {
+      margin-bottom: 1rem;
+    }
+
+    .filter-group label {
+      font-weight: 600;
+      color: var(--sub-header);
+      margin-bottom: 0.5rem;
+    }
+
+    @media (max-width: 992px) {
+      .sidebar {
+        height: auto;
+        position: relative;
+      }
+      
+      .action-buttons {
+        justify-content: center !important;
+      }
+      
+      .action-buttons .btn {
+        min-width: 100px;
+        margin: 0.125rem;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .action-buttons {
+        flex-direction: column;
+        align-items: stretch;
+      }
+      
+      .action-buttons .btn {
+        width: 100%;
+        margin: 0.25rem 0;
+        min-width: auto;
+      }
+      
+      .top-panel {
+        padding: 1rem;
+      }
+      
+      .shipment-card {
+        padding: 1rem;
+      }
+      
+      .table th,
+      .table td {
+        font-size: 0.75rem;
+        padding: 0.5rem 0.25rem;
+      }
+      
+      .search-filter-section {
+        padding: 1rem;
+      }
+    }
+
+    /* Top Navigation */
+    .top-navbar {
+      background: linear-gradient(135deg, var(--main-bg) 0%, var(--bg-shadow) 100%);
+      border-bottom: 1px solid var(--border-color);
+      padding: 0.75rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1030;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .top-navbar .navbar-brand {
+      font-weight: bold;
+      color: var(--primary-color);
+      font-size: 1.25rem;
+    }
+
+    .top-navbar .navbar-nav .nav-link {
+      color: var(--sub-header);
+      font-weight: 500;
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      transition: all 0.3s ease;
+    }
+
+    .top-navbar .navbar-nav .nav-link:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .notification-badge {
+      position: absolute;
+      top: -2px;
+      right: -2px;
+      background-color: var(--danger-color);
+      color: white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      font-size: 0.7rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+    }
+
+    .user-avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+    }
+
+    .dropdown-menu {
+      border: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      border-radius: 8px;
+      padding: 0.5rem 0;
+      min-width: 200px;
+    }
+
+    .dropdown-item {
+      padding: 0.75rem 1.25rem;
+      font-size: 0.875rem;
+      transition: all 0.3s ease;
+    }
+
+    .dropdown-item:hover {
+      background-color: var(--bg-shadow);
+      color: var(--primary-color);
+    }
+
+    .dropdown-divider {
+      margin: 0.5rem 0;
+    }
+
+    .notification-item {
+      padding: 0.75rem 1.25rem;
+      border-bottom: 1px solid var(--border-color);
+      transition: all 0.3s ease;
+    }
+
+    .notification-item:hover {
+      background-color: var(--bg-shadow);
+    }
+
+    .notification-item:last-child {
+      border-bottom: none;
+    }
+
+    .notification-title {
+      font-weight: 600;
+      font-size: 0.875rem;
+      color: var(--sub-header);
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-text {
+      font-size: 0.75rem;
+      color: var(--body-font);
+      margin-bottom: 0.25rem;
+    }
+
+    .notification-time {
+      font-size: 0.7rem;
+      color: var(--body-font);
+    }
+
+    .notification-unread {
+      background-color: var(--table-row1);
+      border-left: 3px solid var(--primary-color);
+    }
+
+    /* Responsive adjustments for top nav */
+    @media (max-width: 992px) {
+      .top-navbar {
+        padding: 0.5rem 1rem;
+      }
+      
+      .user-avatar {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+<!-- Top Navigation -->
+<nav class="navbar navbar-expand-lg top-navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">
+      <i class="bi bi-boxes me-2"></i>Fox Control Hub
+    </a>
+
+    <!-- Right side navigation -->
+    <div class="navbar-nav ms-auto d-flex flex-row align-items-center">
+      <!-- Search (hidden on mobile) -->
+      <div class="nav-item me-3 d-none d-lg-block">
+        <div class="input-group" style="width: 250px;">
+          <input type="text" class="form-control form-control-sm" placeholder="Quick search..." id="topSearchInput">
+          <button class="btn btn-outline-secondary btn-sm" type="button">
+            <i class="bi bi-search"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-bell fs-5"></i>
+          <span class="notification-badge" id="notificationCount">2</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Notifications</h6>
+            <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
+          </div>
+          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
+            <div class="notification-item notification-unread" data-id="1">
+              <div class="notification-title">Shipment Delivered</div>
+              <div class="notification-text">MAT-0001 Aluminum Sheets delivered successfully</div>
+              <div class="notification-time">1 hour ago</div>
+            </div>
+            <div class="notification-item notification-unread" data-id="2">
+              <div class="notification-title">New Shipment</div>
+              <div class="notification-text">New material shipment created: MAT-0002</div>
+              <div class="notification-time">3 hours ago</div>
+            </div>
+          </div>
+          <div class="text-center py-2 border-top">
+            <a href="#" class="btn btn-sm btn-link">View all notifications</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Messages -->
+      <div class="nav-item dropdown me-3">
+        <a class="nav-link position-relative" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <i class="bi bi-chat-dots fs-5"></i>
+          <span class="notification-badge" style="background-color: var(--success-color);">1</span>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown" style="width: 300px;">
+          <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
+            <h6 class="mb-0">Messages</h6>
+            <a href="#" class="btn btn-sm btn-link text-primary p-0">View all</a>
+          </div>
+          <div class="notification-list" style="max-height: 250px; overflow-y: auto;">
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">SM</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">Supply Manager</div>
+                  <div class="notification-text">Aluminum Sheets shipment has been received</div>
+                  <div class="notification-time">2 hours ago</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- User Profile -->
+      <div class="nav-item dropdown">
+        <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+          <div class="user-avatar me-2">JD</div>
+          <div class="d-none d-md-block">
+            <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
+            <div style="font-size: 0.75rem; color: var(--body-font); line-height: 1.2;">Administrator</div>
+          </div>
+          <i class="bi bi-chevron-down ms-2"></i>
+        </a>
+        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+          <div class="px-3 py-2 border-bottom">
+            <div class="fw-bold">John Doe</div>
+            <div class="text-muted small">john.doe@company.com</div>
+          </div>
+          <a class="dropdown-item" href="#" onclick="showProfileModal()">
+            <i class="bi bi-person me-2"></i>My Profile
+          </a>
+          <a class="dropdown-item" href="#" onclick="showSettingsModal()">
+            <i class="bi bi-gear me-2"></i>Settings
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-question-circle me-2"></i>Help & Support
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item" href="#" onclick="showActivityLog()">
+            <i class="bi bi-clock-history me-2"></i>Activity Log
+          </a>
+          <a class="dropdown-item" href="#">
+            <i class="bi bi-shield-check me-2"></i>Security
+          </a>
+          <div class="dropdown-divider"></div>
+          <a class="dropdown-item text-danger" href="#" onclick="logout()">
+            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<div class="container-fluid">
+  <div class="row">
+    <!-- Sidebar -->
+    <div class="col-lg-2 col-md-3 sidebar p-4">
+      <nav class="nav flex-column">
+        <a class="nav-link" href="Inventory.html"><i class="bi bi-box-seam me-2"></i>Inventory</a>
+        <a class="nav-link" href="Barcode.html"><i class="bi bi-upc-scan me-2"></i>Barcode</a>
+        <a class="nav-link" href="WarehouseLayAndOpti.html"><i class="bi bi-layout-wtf me-2"></i>Layout & Optimization</a>
+        <a class="nav-link active" href="MaterialShipments.html"><i class="bi bi-truck me-2"></i>Material Shipments</a>
+        <a class="nav-link" href="OrderShipments.html"><i class="bi bi-box-arrow-right me-2"></i>Order Shipments</a>
+        <a class="nav-link" href="StockTracking.html"><i class="bi bi-shop me-2"></i>Stock Tracking</a>
+        <a class="nav-link" href="Reports.html"><i class="bi bi-graph-up me-2"></i>Reports</a>
+      </nav>
+    </div>
+
+    <!-- Main Content -->
+    <div class="col-lg-10 col-md-9 p-4">
+      <!-- Top Action Panel -->
+      <div class="top-panel">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h4 class="fw-bold mb-0">Material Shipment Records</h4>
+          <div class="text-muted">
+            <i class="bi bi-calendar-event me-1"></i>
+            <span id="currentDate"></span>
+          </div>
+        </div>
+        <div class="d-flex flex-wrap justify-content-start action-buttons">
+          <button class="btn" onclick="addNewShipment()">
+            <i class="bi bi-plus-circle"></i>
+            New Shipment
+          </button>
+          <button class="btn" onclick="importShipments()">
+            <i class="bi bi-upload"></i>
+            Import Data
+          </button>
+          <button class="btn" onclick="exportShipments()">
+            <i class="bi bi-download"></i>
+            Export Report
+          </button>
+          <button class="btn" onclick="trackShipment()">
+            <i class="bi bi-geo-alt"></i>
+            Track Shipment
+          </button>
+          <button class="btn" onclick="viewInventoryImpact()">
+            <i class="bi bi-box-seam"></i>
+            Inventory Impact
+          </button>
+        </div>
+      </div>
+
+      <!-- Search and Filter Section -->
+      <div class="search-filter-section">
+        <div class="row">
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="searchShipment">Search Shipments</label>
+              <input type="text" class="form-control" id="searchShipment" placeholder="Search by ID, material, or supplier...">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="statusFilter">Status</label>
+              <select class="form-select" id="statusFilter">
+                <option value="">All Status</option>
+                <option value="delivered">Delivered</option>
+                <option value="shipped">Shipped</option>
+                <option value="pending">Pending</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="typeFilter">Type</label>
+              <select class="form-select" id="typeFilter">
+                <option value="">All Types</option>
+                <option value="inbound">Inbound</option>
+                <option value="outbound">Outbound</option>
+              </select>
+            </div>
+          </div>
+          <div class="col-md-3">
+            <div class="filter-group">
+              <label for="dateRange">Date Range</label>
+              <input type="date" class="form-control" id="dateRange">
+            </div>
+          </div>
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label>&nbsp;</label>
+              <button class="btn btn-outline-primary w-100" onclick="applyFilters()">
+                <i class="bi bi-funnel"></i> Filter
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Material Shipments Table -->
+      <div class="shipment-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5><i class="bi bi-truck me-2"></i>Material Shipment Records</h5>
+          <div class="text-muted">
+            <small>Total Records: <span id="totalRecords">3</span></small>
+          </div>
+        </div>
+        <div class="table-container">
+          <div class="table-responsive">
+            <table class="table" id="shipmentsTable">
+            <thead>
+              <tr>
+                <th>Shipment ID</th>
+                <th>BOM ID</th>
+                <th>Category ID</th>
+                <th>Material Name</th>
+                <th>Quantity</th>
+                <th>Unit</th>
+                <th>Type</th>
+                <th>Status</th>
+                <th>Source</th>
+                <th>Destination</th>
+                <th>Date Shipped</th>
+                <th>Estimated Delivery</th>
+                <th>Received Date</th>
+                <th>Handled By</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Statistics Cards -->
+      <div class="row mt-4">
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-truck text-primary fs-1"></i>
+              <h4 class="mt-2" id="totalShipments">0</h4>
+              <p class="text-muted mb-0">Total Shipments</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-check-circle text-success fs-1"></i>
+              <h4 class="mt-2" id="deliveredShipments">0</h4>
+              <p class="text-muted mb-0">Delivered</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-clock text-warning fs-1"></i>
+              <h4 class="mt-2" id="pendingShipments">0</h4>
+              <p class="text-muted mb-0">Pending</p>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+              <i class="bi bi-box-arrow-right text-info fs-1"></i>
+              <h4 class="mt-2" id="inboundShipments">0</h4>
+              <p class="text-muted mb-0">Inbound</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Inventory Impact Section -->
+      <div class="row mt-4">
+        <div class="col-12">
+          <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+              <div class="d-flex justify-content-between align-items-center">
+                <h6 class="mb-0 fw-bold"><i class="bi bi-box-seam me-2"></i>Inventory Impact Summary</h6>
+                <button class="btn btn-sm btn-outline-primary" onclick="refreshInventoryImpact()">
+                  <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                </button>
+              </div>
+            </div>
+            <div class="card-body">
+              <div class="row">
+                <div class="col-md-4">
+                  <div class="text-center p-3 border rounded">
+                    <i class="bi bi-arrow-up-circle text-success fs-2"></i>
+                    <h5 class="mt-2">Inbound Items</h5>
+                    <p class="text-muted mb-1">Expected to increase inventory</p>
+                    <div class="fw-bold">
+                      <span class="text-success" id="inboundUnits">+0 units</span>
+                    </div>
+                    <small class="text-muted" id="inboundDetails">Loading...</small>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="text-center p-3 border rounded">
+                    <i class="bi bi-arrow-down-circle text-warning fs-2"></i>
+                    <h5 class="mt-2">Outbound Items</h5>
+                    <p class="text-muted mb-1">Will decrease inventory</p>
+                    <div class="fw-bold">
+                      <span class="text-warning" id="outboundUnits">-0 units</span>
+                    </div>
+                    <small class="text-muted" id="outboundDetails">Loading...</small>
+                  </div>
+                </div>
+                <div class="col-md-4">
+                  <div class="text-center p-3 border rounded">
+                    <i class="bi bi-calculator text-info fs-2"></i>
+                    <h5 class="mt-2">Net Impact</h5>
+                    <p class="text-muted mb-1">Overall inventory change</p>
+                    <div class="fw-bold">
+                      <span class="text-success" id="netImpact">+0 units</span>
+                    </div>
+                    <small class="text-muted" id="netImpactDetails">Loading...</small>
+                  </div>
+                </div>
+              </div>
+              <div class="mt-3">
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="fw-bold">Quick Actions:</span>
+                  <div>
+                    <button class="btn btn-sm btn-outline-primary me-2" onclick="window.open('Inventory.html', '_blank')">
+                      <i class="bi bi-box-seam me-1"></i>View Full Inventory
+                    </button>
+                    <button class="btn btn-sm btn-outline-success" onclick="filterByType('inbound')">
+                      <i class="bi bi-arrow-up me-1"></i>View Inbound Only
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Add/Edit Shipment Modal -->
+<div class="modal fade" id="shipmentModal" tabindex="-1" aria-labelledby="shipmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="shipmentModalLabel">Add New Shipment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="shipmentForm" class="needs-validation" novalidate>
+          <input type="hidden" id="shipmentId">
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="shipmentIdInput" class="form-label">Shipment ID</label>
+              <input type="text" class="form-control" id="shipmentIdInput" name="shipmentIdInput" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="bomId" class="form-label">BOM ID</label>
+              <input type="text" class="form-control" id="bomId" name="bomId">
+            </div>
+            <div class="col-md-6">
+              <label for="categoryId" class="form-label">Category</label>
+              <select class="form-select" id="categoryId" name="categoryId" required>
+                <option value="">Select Category</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="materialName" class="form-label">Material Name</label>
+              <input type="text" class="form-control" id="materialName" name="materialName" required>
+            </div>
+            <div class="col-md-3">
+              <label for="quantity" class="form-label">Quantity</label>
+              <input type="number" class="form-control" id="quantity" name="quantity" required min="1">
+            </div>
+            <div class="col-md-3">
+              <label for="unit" class="form-label">Unit</label>
+              <input type="text" class="form-control" id="unit" name="unit" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="shipmentType" class="form-label">Shipment Type</label>
+              <select class="form-select" id="shipmentType" name="shipmentType" required>
+                <option value="">Select Type</option>
+                <option value="inbound">Inbound</option>
+                <option value="outbound">Outbound</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="status" class="form-label">Status</label>
+              <select class="form-select" id="status" name="status" required>
+                <option value="">Select Status</option>
+                <option value="pending">Pending</option>
+                <option value="shipped">Shipped</option>
+                <option value="delivered">Delivered</option>
+              </select>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="source" class="form-label">Source</label>
+              <input type="text" class="form-control" id="source" name="source" required>
+            </div>
+            <div class="col-md-6">
+              <label for="destination" class="form-label">Destination</label>
+              <input type="text" class="form-control" id="destination" name="destination" required>
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-4">
+              <label for="dateShipped" class="form-label">Date Shipped</label>
+              <input type="date" class="form-control" id="dateShipped" name="dateShipped">
+            </div>
+            <div class="col-md-4">
+              <label for="estimatedDelivery" class="form-label">Estimated Delivery</label>
+              <input type="date" class="form-control" id="estimatedDelivery" name="estimatedDelivery">
+            </div>
+            <div class="col-md-4">
+              <label for="receivedDate" class="form-label">Received Date</label>
+              <input type="date" class="form-control" id="receivedDate" name="receivedDate">
+            </div>
+          </div>
+          <div class="row mb-3">
+            <div class="col-md-6">
+              <label for="handledBy" class="form-label">Handled By</label>
+              <input type="text" class="form-control" id="handledBy" name="handledBy">
+            </div>
+            <div class="col-12">
+              <label for="notes" class="form-label">Notes</label>
+              <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" id="saveShipmentBtn">Save Shipment</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- View Shipment Modal -->
+<div class="modal fade" id="viewShipmentModal" tabindex="-1" aria-labelledby="viewShipmentModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="viewShipmentModalLabel">Shipment Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="viewShipmentBody">
+        <!-- Content will be populated dynamically -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" id="editShipmentBtn">Edit</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Profile Modal -->
+<div class="modal fade" id="profileModal" tabindex="-1" aria-labelledby="profileModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="profileModalLabel">My Profile</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="profileForm">
+          <div class="mb-3">
+            <label for="profileName" class="form-label">Full Name</label>
+            <input type="text" class="form-control" id="profileName" value="John Doe">
+          </div>
+          <div class="mb-3">
+            <label for="profileEmail" class="form-label">Email</label>
+            <input type="email" class="form-control" id="profileEmail" value="john.doe@company.com">
+          </div>
+          <div class="mb-3">
+            <label for="profileRole" class="form-label">Role</label>
+            <input type="text" class="form-control" id="profileRole" value="Administrator" readonly>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveProfile()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Settings Modal -->
+<div class="modal fade" id="settingsModal" tabindex="-1" aria-labelledby="settingsModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="settingsModalLabel">Settings</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="settingsForm">
+          <div class="mb-3">
+            <label for="notificationsEnabled" class="form-label">Notifications</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="notificationsEnabled" checked>
+              <label class="form-check-label" for="notificationsEnabled">Enable notifications</label>
+            </div>
+          </div>
+          <div class="mb-3">
+            <label for="autoRefresh" class="form-label">Auto Refresh</label>
+            <div class="form-check form-switch">
+              <input class="form-check-input" type="checkbox" id="autoRefresh">
+              <label class="form-check-label" for="autoRefresh">Auto refresh data every 5 minutes</label>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Activity Log Modal -->
+<div class="modal fade" id="activityLogModal" tabindex="-1" aria-labelledby="activityLogModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="activityLogModalLabel">Activity Log</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="activity-log">
+          <div class="activity-item">
+            <div class="activity-time">2 hours ago</div>
+            <div class="activity-text">Created new shipment MAT-0001</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">4 hours ago</div>
+            <div class="activity-text">Updated shipment status to 'shipped'</div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-time">1 day ago</div>
+            <div class="activity-text">Logged into system</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Global variables
+let shipmentsData = [];
+let currentEditId = null;
+let inventoryItems = [];
+
+// Initialize the page
+document.addEventListener('DOMContentLoaded', function() {
+  setCurrentDate();
+  loadInitialData();
+  setupEventListeners();
+  loadNotifications();
+  loadNotificationCount();
+  fetchUser();
+});
+
+// Set current date
+function setCurrentDate() {
+  document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
+}
+
+// Load initial data
+async function loadInitialData() {
+  try {
+    showLoading(true);
+    
+    // Load shipments data
+    await loadShipments();
+    
+    // Load inventory items for item code dropdown
+    await loadInventoryItems();
+    
+    // Load statistics
+    await loadStatistics();
+    
+    // Load inventory impact data
+    await loadInventoryImpactData();
+    
+    showLoading(false);
+  } catch (error) {
+    console.error('Error loading initial data:', error);
+    showMessage('Error loading data. Please refresh the page.', 'error');
+    showLoading(false);
+  }
+}
+
+// Load shipments data
+async function loadShipments(filters = {}) {
+  try {
+    const queryParams = new URLSearchParams();
+    if (filters.search) queryParams.append('search', filters.search);
+    if (filters.status) queryParams.append('status', filters.status);
+    if (filters.type) queryParams.append('type', filters.type);
+    if (filters.date) queryParams.append('date', filters.date);
+    
+    const response = await fetch(`/api/material-shipments?${queryParams.toString()}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      shipmentsData = result.data;
+      renderShipmentsTable(shipmentsData);
+      updateTotalRecords();
+    } else {
+      throw new Error(result.message || 'Failed to load shipments');
+    }
+  } catch (error) {
+    console.error('Error loading shipments:', error);
+    showMessage('Error loading shipments data.', 'error');
+  }
+}
+
+// Load inventory items
+async function loadInventoryItems() {
+  try {
+    console.log('Fetching categories...'); // Debug log
+    const response = await fetch('/api/categories');
+    const result = await response.json();
+    
+    console.log('Categories response:', result); // Debug log
+    
+    if (!result.success) {
+      throw new Error(result.message || 'Failed to load categories');
+    }
+    
+    const categories = result.data || [];
+    
+    // Populate category dropdown
+    const categorySelect = document.getElementById('categoryId');
+    categorySelect.innerHTML = '<option value="">Select Category</option>';
+    
+    categories.forEach(category => {
+      const option = document.createElement('option');
+      option.value = category.category_id;
+      option.textContent = `${category.category_id} - ${category.category_name}`;
+      categorySelect.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error loading categories:', error);
+    showMessage('Error loading categories. Please try again.', 'error');
+  }
+}
+
+// Load statistics
+async function loadStatistics() {
+  try {
+    const response = await fetch('/api/material-shipments/stats');
+    const result = await response.json();
+    
+    if (result.success) {
+      const stats = result.data;
+      document.getElementById('totalShipments').textContent = stats.totalShipments;
+      document.getElementById('deliveredShipments').textContent = stats.deliveredShipments;
+      document.getElementById('pendingShipments').textContent = stats.pendingShipments;
+      document.getElementById('inboundShipments').textContent = stats.inboundShipments;
+    }
+  } catch (error) {
+    console.error('Error loading statistics:', error);
+  }
+}
+
+// Setup event listeners
+function setupEventListeners() {
+  // Save shipment button
+  document.getElementById('saveShipmentBtn').addEventListener('click', saveShipment);
+  
+  // Search input
+  document.getElementById('searchShipment').addEventListener('input', function(e) {
+    searchShipments(e.target.value);
+  });
+  
+  // Status filter
+  document.getElementById('statusFilter').addEventListener('change', applyFilters);
+  
+  // Type filter
+  document.getElementById('typeFilter').addEventListener('change', applyFilters);
+  
+  // Date filter
+  document.getElementById('dateRange').addEventListener('change', applyFilters);
+  
+  // Edit shipment button in view modal
+  document.getElementById('editShipmentBtn').addEventListener('click', function() {
+    const modal = bootstrap.Modal.getInstance(document.getElementById('viewShipmentModal'));
+    modal.hide();
+    
+    if (currentEditId) {
+      editShipment(currentEditId);
+    }
+  });
+}
+
+// Render shipments table
+function renderShipmentsTable(data = []) {
+  const tbody = document.querySelector('#shipmentsTable tbody');
+  tbody.innerHTML = '';
+  
+  if (data.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="15" class="text-center text-muted py-4">
+          <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+          No shipments found
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  data.forEach(shipment => {
+    const row = document.createElement('tr');
+    row.innerHTML = `
+      <td><strong>${shipment.shipment_id}</strong></td>
+      <td>${shipment.bom_id || '-'}</td>      
+      <td>${shipment.category_id || '-'}</td>
+      <td>
+        <div class="d-flex align-items-center">
+          <span>${shipment.material_name}</span>
+        </div>
+      </td>
+      <td>${shipment.quantity}</td>
+      <td>${shipment.unit}</td>
+      <td><span class="badge bg-${shipment.shipment_type === 'inbound' ? 'primary' : 'success'}">${shipment.shipment_type}</span></td>
+      <td><span class="status-badge status-${shipment.status}">${shipment.status}</span></td>
+      <td>${shipment.source}</td>
+      <td>${shipment.destination}</td>
+      <td>${shipment.date_shipped || '-'}</td>
+      <td>${shipment.estimated_delivery || '-'}</td>
+      <td>${shipment.received_date || '-'}</td>
+      <td>${shipment.handled_by || '-'}</td>
+      <td class="item-actions">
+        <i class="bi bi-eye" title="View Details" onclick="viewShipment(${shipment.id})"></i>
+        <i class="bi bi-pencil" title="Edit" onclick="editShipment(${shipment.id})"></i>
+        <i class="bi bi-trash" title="Delete" onclick="deleteShipment(${shipment.id})"></i>
+      </td>
+    `;
+    tbody.appendChild(row);
+  });
+}
+// Update total records count
+function updateTotalRecords() {
+  document.getElementById('totalRecords').textContent = shipmentsData.length;
+}
+
+// Search shipments
+function searchShipments(searchTerm) {
+  if (!searchTerm.trim()) {
+    renderShipmentsTable(shipmentsData);
+    return;
+  }
+  
+  const filtered = shipmentsData.filter(shipment => 
+    shipment.shipment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    shipment.bom_id.toLowerCase().includes(searchTerm.toLowerCase()) ||  
+    shipment.category_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    shipment.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    shipment.source.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+  
+  renderShipmentsTable(filtered);
+}
+
+// Apply filters
+function applyFilters() {
+  const searchTerm = document.getElementById('searchShipment').value;
+  const status = document.getElementById('statusFilter').value;
+  const type = document.getElementById('typeFilter').value;
+  const date = document.getElementById('dateRange').value;
+  
+  let filtered = shipmentsData;
+  
+  if (status) {
+    filtered = filtered.filter(s => s.status === status);
+  }
+  
+  if (type) {
+    filtered = filtered.filter(s => s.shipment_type === type);
+  }
+  
+  if (date) {
+    filtered = filtered.filter(s => s.date_shipped === date);
+  }
+  
+  if (searchTerm) {
+    filtered = filtered.filter(s => 
+      s.shipment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.source.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }
+  
+  renderShipmentsTable(filtered);
+}
+
+// Show loading state
+function showLoading(show) {
+  const loadingElement = document.getElementById('loadingIndicator');
+  if (show) {
+    if (!loadingElement) {
+      const loading = document.createElement('div');
+      loading.id = 'loadingIndicator';
+      loading.className = 'text-center py-4';
+      loading.innerHTML = '<div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>';
+      document.querySelector('.shipment-card').appendChild(loading);
+    }
+  } else {
+    if (loadingElement) {
+      loadingElement.remove();
+    }
+  }
+}
+
+// Show message
+function showMessage(message, type = 'info') {
+  const alertDiv = document.createElement('div');
+  alertDiv.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+  alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+  alertDiv.innerHTML = `
+    ${message}
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+  `;
+  
+  document.body.appendChild(alertDiv);
+  
+  setTimeout(() => {
+    alertDiv.remove();
+  }, 5000);
+}
+
+// Add new shipment
+function addNewShipment() {
+  currentEditId = null;
+  document.getElementById('shipmentModalLabel').textContent = 'Add New Shipment';
+  document.getElementById('shipmentForm').reset();
+  document.getElementById('shipmentId').value = '';
+  
+  const modal = new bootstrap.Modal(document.getElementById('shipmentModal'));
+  modal.show();
+}
+
+// Edit shipment
+async function editShipment(id) {
+  try {
+    const response = await fetch(`/api/material-shipments/${id}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const shipment = result.data;
+      currentEditId = id;
+      
+      // Populate form
+      document.getElementById('shipmentModalLabel').textContent = 'Edit Shipment';
+      document.getElementById('shipmentId').value = shipment.id;
+      document.getElementById('shipmentIdInput').value = shipment.shipment_id;
+      document.getElementById('materialId').value = shipment.material_id;
+      document.getElementById('categoryId').value = shipment.category_id;
+      document.getElementById('materialName').value = shipment.material_name;
+      document.getElementById('itemCode').value = shipment.item_code || '';
+      document.getElementById('quantity').value = shipment.quantity;
+      document.getElementById('unit').value = shipment.unit;
+      document.getElementById('shipmentType').value = shipment.shipment_type;
+      document.getElementById('status').value = shipment.status;
+      document.getElementById('source').value = shipment.source;
+      document.getElementById('destination').value = shipment.destination;
+      document.getElementById('dateShipped').value = shipment.date_shipped || '';
+      document.getElementById('estimatedDelivery').value = shipment.estimated_delivery || '';
+      document.getElementById('receivedDate').value = shipment.received_date || '';
+      document.getElementById('handledBy').value = shipment.handled_by || '';
+      document.getElementById('notes').value = shipment.notes || '';
+      
+      const modal = new bootstrap.Modal(document.getElementById('shipmentModal'));
+      modal.show();
+    } else {
+      throw new Error(result.message || 'Failed to load shipment');
+    }
+  } catch (error) {
+    console.error('Error loading shipment for edit:', error);
+    showMessage('Error loading shipment data.', 'error');
+  }
+}
+
+// Save shipment
+async function saveShipment() {
+  try {
+    const form = document.getElementById('shipmentForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    
+    const formData = new FormData(form);
+    const shipmentData = {
+      shipment_id: formData.get('shipmentIdInput'),
+      bom_id: formData.get('bomId'),          
+      category_id: formData.get('categoryId'),
+      material_name: formData.get('materialName'),
+      quantity: parseInt(formData.get('quantity')),
+      unit: formData.get('unit'),
+      shipment_type: formData.get('shipmentType'),
+      source: formData.get('source'),
+      destination: formData.get('destination'),
+      status: formData.get('status'),
+      date_shipped: formData.get('dateShipped') || null,
+      estimated_delivery: formData.get('estimatedDelivery') || null,
+      received_date: formData.get('receivedDate') || null,
+      handled_by: formData.get('handledBy') || null,
+      notes: formData.get('notes') || null
+    };
+    
+    let response;
+    if (currentEditId) {
+      response = await fetch(`/api/material-shipments/${currentEditId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shipmentData)
+      });
+    } else {
+      response = await fetch('/api/material-shipments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(shipmentData)
+      });
+    }
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showMessage(result.message, 'success');
+      const modal = bootstrap.Modal.getInstance(document.getElementById('shipmentModal'));
+      modal.hide();
+      await loadShipments();
+      await loadStatistics();
+    } else {
+      throw new Error(result.message || 'Failed to save shipment');
+    }
+  } catch (error) {
+    console.error('Error saving shipment:', error);
+    showMessage('Error saving shipment: ' + error.message, 'error');
+  }
+}
+
+// View shipment details
+async function viewShipment(id) {
+  try {
+    const response = await fetch(`/api/material-shipments/${id}`);
+    const result = await response.json();
+    
+    if (result.success) {
+      const shipment = result.data;
+      currentEditId = id;
+      
+      const modalBody = document.getElementById('viewShipmentBody');
+      modalBody.innerHTML = `
+        <div class="row">
+          <div class="col-md-6">
+            <p><strong>Shipment ID:</strong> ${shipment.shipment_id}</p>
+            <p><strong>Material Name:</strong> ${shipment.material_name}</p>
+            <p><strong>Item Code:</strong> ${shipment.item_code || 'N/A'}</p>
+            <p><strong>Quantity:</strong> ${shipment.quantity} ${shipment.unit}</p>
+            <p><strong>Type:</strong> <span class="badge bg-${shipment.shipment_type === 'inbound' ? 'primary' : 'success'}">${shipment.shipment_type}</span></p>
+            <p><strong>Status:</strong> <span class="status-badge status-${shipment.status}">${shipment.status}</span></p>
+          </div>
+          <div class="col-md-6">
+            <p><strong>Source:</strong> ${shipment.source}</p>
+            <p><strong>Destination:</strong> ${shipment.destination}</p>
+            <p><strong>Date Shipped:</strong> ${shipment.date_shipped || 'N/A'}</p>
+            <p><strong>Estimated Delivery:</strong> ${shipment.estimated_delivery || 'N/A'}</p>
+            <p><strong>Received Date:</strong> ${shipment.received_date || 'N/A'}</p>
+            <p><strong>Handled By:</strong> ${shipment.handled_by || 'N/A'}</p>
+          </div>
+        </div>
+        ${shipment.notes ? `<div class="mt-3"><strong>Notes:</strong><br>${shipment.notes}</div>` : ''}
+      `;
+      
+      const modal = new bootstrap.Modal(document.getElementById('viewShipmentModal'));
+      modal.show();
+    } else {
+      throw new Error(result.message || 'Failed to load shipment');
+    }
+  } catch (error) {
+    console.error('Error loading shipment details:', error);
+    showMessage('Error loading shipment details.', 'error');
+  }
+}
+
+// Delete shipment
+async function deleteShipment(id) {
+  if (!confirm('Are you sure you want to delete this shipment?')) {
+    return;
+  }
+  
+  try {
+    const response = await fetch(`/api/material-shipments/${id}`, {
+      method: 'DELETE'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      showMessage('Shipment deleted successfully.', 'success');
+      await loadShipments();
+      await loadStatistics();
+    } else {
+      throw new Error(result.message || 'Failed to delete shipment');
+    }
+  } catch (error) {
+    console.error('Error deleting shipment:', error);
+    showMessage('Error deleting shipment: ' + error.message, 'error');
+  }
+}
+
+// View in inventory
+function viewInInventory(itemCode) {
+  // Redirect to inventory page with the specific item highlighted
+  window.open(`Inventory.html?highlight=${itemCode}`, '_blank');
+}
+
+// Import shipments
+function importShipments() {
+  showMessage('Import functionality will be implemented in the next version.', 'info');
+}
+
+// Export shipments
+function exportShipments() {
+  try {
+    const csvContent = generateCSV(shipmentsData);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `material_shipments_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    showMessage('Export completed successfully.', 'success');
+  } catch (error) {
+    console.error('Error exporting shipments:', error);
+    showMessage('Error exporting shipments.', 'error');
+  }
+}
+
+// Generate CSV content
+function generateCSV(data) {
+  const headers = ['Shipment ID', 'Material ID', 'Category ID', 'Material Name', 'Quantity', 'Unit', 'Type', 'Status', 'Source', 'Destination', 'Date Shipped', 'Estimated Delivery', 'Received Date', 'Handled By'];
+  const rows = data.map(item => [
+    item.shipment_id,
+    item.material_id || '',
+    item.category_id || '',
+    item.material_name,
+    item.quantity,
+    item.unit,
+    item.shipment_type,
+    item.status,
+    item.source,
+    item.destination,
+    item.date_shipped || '',
+    item.estimated_delivery || '',
+    item.received_date || '',
+    item.handled_by || ''
+  ]);
+  
+  return [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+}
+
+// Track shipment
+function trackShipment() {
+  showMessage('Shipment tracking functionality will be implemented in the next version.', 'info');
+}
+
+// View inventory impact
+function viewInventoryImpact() {
+  document.querySelector('.card-header h6').scrollIntoView({ behavior: 'smooth' });
+}
+
+// Refresh inventory impact
+async function refreshInventoryImpact() {
+  try {
+    await loadInventoryImpactData();
+    showMessage('Inventory impact data refreshed.', 'success');
+  } catch (error) {
+    console.error('Error refreshing inventory impact:', error);
+    showMessage('Error refreshing inventory impact data.', 'error');
+  }
+}
+
+// Load inventory impact data
+async function loadInventoryImpactData() {
+  try {
+    // Get shipments data for impact calculation
+    const response = await fetch('/api/material-shipments');
+    const result = await response.json();
+    
+    if (result.success) {
+      const shipments = result.data;
+      
+      // Calculate inbound impact
+      const inboundShipments = shipments.filter(s => s.shipment_type === 'inbound' && s.status === 'shipped');
+      const inboundTotal = inboundShipments.reduce((sum, s) => sum + (parseInt(s.quantity) || 0), 0);
+      
+      // Calculate outbound impact
+      const outboundShipments = shipments.filter(s => s.shipment_type === 'outbound' && s.status === 'shipped');
+      const outboundTotal = outboundShipments.reduce((sum, s) => sum + (parseInt(s.quantity) || 0), 0);
+      
+      // Calculate net impact
+      const netImpact = inboundTotal - outboundTotal;
+      
+      // Update UI
+      document.getElementById('inboundUnits').textContent = `+${inboundTotal} units`;
+      document.getElementById('outboundUnits').textContent = `-${outboundTotal} units`;
+      
+      if (netImpact >= 0) {
+        document.getElementById('netImpact').textContent = `+${netImpact} units`;
+        document.getElementById('netImpact').className = 'text-success';
+        document.getElementById('netImpactDetails').textContent = 'Positive inventory growth';
+      } else {
+        document.getElementById('netImpact').textContent = `${netImpact} units`;
+        document.getElementById('netImpact').className = 'text-danger';
+        document.getElementById('netImpactDetails').textContent = 'Negative inventory impact';
+      }
+      
+      // Update details
+      const inboundDetails = inboundShipments.length > 0 
+        ? inboundShipments.slice(0, 3).map(s => `${s.material_name} (+${s.quantity})`).join(', ')
+        : 'No inbound shipments';
+      document.getElementById('inboundDetails').textContent = inboundDetails;
+      
+      const outboundDetails = outboundShipments.length > 0
+        ? outboundShipments.slice(0, 3).map(s => `${s.material_name} (-${s.quantity})`).join(', ')
+        : 'No outbound shipments';
+      document.getElementById('outboundDetails').textContent = outboundDetails;
+    }
+  } catch (error) {
+    console.error('Error loading inventory impact data:', error);
+    throw error;
+  }
+}
+
+// Filter by shipment type
+function filterByType(type) {
+  document.getElementById('typeFilter').value = type;
+  applyFilters();
+}
+
+// Notification functions
+async function loadNotifications() {
+  try {
+    const response = await fetch('/api/notifications');
+    const result = await response.json();
+    
+    if (result.success) {
+      displayNotifications(result.data);
+    }
+  } catch (error) {
+    console.error('Error loading notifications:', error);
+  }
+}
+
+async function loadNotificationCount() {
+  try {
+    const response = await fetch('/api/notifications/unread-count');
+    const result = await response.json();
+    
+    if (result.success) {
+      updateNotificationCount(result.data.count);
+    }
+  } catch (error) {
+    console.error('Error loading notification count:', error);
+  }
+}
+
+function displayNotifications(notifications) {
+  const notificationList = document.querySelector('.notification-list');
+  if (!notificationList) return;
+  
+  notificationList.innerHTML = '';
+  
+  notifications.forEach(notification => {
+    const notificationItem = document.createElement('div');
+    notificationItem.className = `notification-item ${notification.is_read ? '' : 'notification-unread'}`;
+    notificationItem.setAttribute('data-id', notification.id);
+    notificationItem.innerHTML = `
+      <div class="notification-title">${notification.title}</div>
+      <div class="notification-text">${notification.message}</div>
+      <div class="notification-time">${formatTimeAgo(notification.created_at)}</div>
+    `;
+    
+    notificationItem.addEventListener('click', () => markNotificationAsRead(notification.id));
+    notificationList.appendChild(notificationItem);
+  });
+}
+
+function updateNotificationCount(count) {
+  const badge = document.getElementById('notificationCount');
+  if (badge) {
+    badge.textContent = count;
+    badge.style.display = count > 0 ? 'flex' : 'none';
+  }
+}
+
+async function markNotificationAsRead(id) {
+  try {
+    const response = await fetch(`/api/notifications/${id}/read`, {
+      method: 'PATCH'
+    });
+    
+    if (response.ok) {
+      await loadNotificationCount();
+      await loadNotifications();
+    }
+  } catch (error) {
+    console.error('Error marking notification as read:', error);
+  }
+}
+
+async function markAllAsRead() {
+  try {
+    const response = await fetch('/api/notifications/mark-all-read', {
+      method: 'PATCH'
+    });
+    
+    if (response.ok) {
+      await loadNotificationCount();
+      await loadNotifications();
+    }
+  } catch (error) {
+    console.error('Error marking all notifications as read:', error);
+  }
+}
+
+function formatTimeAgo(dateString) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffInSeconds = Math.floor((now - date) / 1000);
+  
+  if (diffInSeconds < 60) return 'Just now';
+  if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} minutes ago`;
+  if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`;
+  return `${Math.floor(diffInSeconds / 86400)} days ago`;
+}
+
+// User profile functions
+function showProfileModal() {
+  const modal = new bootstrap.Modal(document.getElementById('profileModal'));
+  modal.show();
+}
+
+function showSettingsModal() {
+  const modal = new bootstrap.Modal(document.getElementById('settingsModal'));
+  modal.show();
+}
+
+function showActivityLog() {
+  const modal = new bootstrap.Modal(document.getElementById('activityLogModal'));
+  modal.show();
+}
+
+function saveProfile() {
+  showMessage('Profile updated successfully.', 'success');
+  const modal = bootstrap.Modal.getInstance(document.getElementById('profileModal'));
+  modal.hide();
+}
+
+function saveSettings() {
+  showMessage('Settings saved successfully.', 'success');
+  const modal = bootstrap.Modal.getInstance(document.getElementById('settingsModal'));
+  modal.hide();
+}
+
+async function logout() {
+  try {
+    const response = await fetch('/logout', { method: 'POST' });
+    if (response.ok) {
+      window.location.href = '/loginpage.html';
+    } else {
+      throw new Error('Logout failed');
+    }
+  } catch (error) {
+    console.error('Logout error:', error);
+    // Force redirect anyway
+    window.location.href = '/loginpage.html';
+  }
+}
+
+// Search functionality for top navigation
+document.getElementById('topSearchInput').addEventListener('input', function(e) {
+  const searchTerm = e.target.value.toLowerCase();
+  // Implement global search functionality
+  console.log('Global search for:', searchTerm);
+});
+
+// Refresh notifications periodically
+setInterval(refreshNotifications, 300000); // 5 minutes
+
+function refreshNotifications() {
+  loadNotifications();
+  loadNotificationCount();
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+  if (e.ctrlKey || e.metaKey) {
+    switch (e.key) {
+      case 'n':
+        e.preventDefault();
+        addNewShipment();
+        break;
+      case 'f':
+        e.preventDefault();
+        document.getElementById('searchShipment').focus();
+        break;
+      case 'r':
+        e.preventDefault();
+        loadInitialData();
+        break;
+    }
+  }
+});
+
+// Fetch user data
+async function fetchUser() {
+  try {
+    const response = await fetch('/api/user');
+    if (response.ok) {
+      const user = await response.json();
+      displayUser(user);
+    }
+  } catch (error) {
+    console.error('Error fetching user:', error);
+  }
+}
+
+function displayUser(user) {
+  // Update user display if needed
+  console.log('User loaded:', user);
+}
+</script>
+
+</body>
+</html>
