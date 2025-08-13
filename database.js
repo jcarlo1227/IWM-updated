@@ -132,9 +132,8 @@ const initializeDatabase = async () => {
     }
     
     // Initialize inventory tables
-    const { initializeInventoryTable, initializeMaterialShipmentsTable, initializeOrderShipmentsTable } = require('./inventory');
+    const { initializeInventoryTable, initializeOrderShipmentsTable } = require('./inventory');
     await initializeInventoryTable();
-    await initializeMaterialShipmentsTable();
     await initializeOrderShipmentsTable();
     
   } catch (err) {
