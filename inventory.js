@@ -23,15 +23,18 @@ const initializeInventoryTable = async () => {
     `;
     // Ensure FK column exists
     await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_id INTEGER`;
-    // Index for FK
+    await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_pricing_id INTEGER`;
+    // Index for FKs
     await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_id ON inventory_items(product_id)`;
-    // Add FK constraint if missing
+    await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_pricing_id ON inventory_items(product_pricing_id)`;
+    // Add FK constraints if missing
     const fkCheck = await sql`
       SELECT constraint_name FROM information_schema.table_constraints
       WHERE table_schema='public' AND table_name='inventory_items' AND constraint_type='FOREIGN KEY'
     `;
-    const hasFk = fkCheck.some(r => (r.constraint_name || '').includes('product_id'));
-    if (!hasFk) {
+    const hasFkProd = fkCheck.some(r => (r.constraint_name || '').includes('product_id'));
+    const hasFkPricing = fkCheck.some(r => (r.constraint_name || '').includes('product_pricing_id'));
+    if (!hasFkProd) {
       try {
         await sql`
           ALTER TABLE inventory_items
@@ -41,9 +44,19 @@ const initializeInventoryTable = async () => {
           ON UPDATE CASCADE
           ON DELETE SET NULL
         `;
-      } catch (e) {
-        // Ignore if constraint already exists in a race
-      }
+      } catch (e) {}
+    }
+    if (!hasFkPricing) {
+      try {
+        await sql`
+          ALTER TABLE inventory_items
+          ADD CONSTRAINT inventory_items_product_pricing_id_fkey
+          FOREIGN KEY (product_pricing_id)
+          REFERENCES product_pricing(product_id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+        `;
+      } catch (e) {}
     }
     
     console.log('✅ Inventory table created/verified');
@@ -281,6 +294,7 @@ const createInventoryItem = async (itemData) => {
     const {
       item_code,
       product_id,
+      product_pricing_id,
       product_name,
       unit_of_measure,
       buy_price,
@@ -296,10 +310,10 @@ const createInventoryItem = async (itemData) => {
     
     const result = await sql`
       INSERT INTO inventory_items (
-        item_code, product_id, product_name, unit_of_measure, buy_price, sell_price,
+        item_code, product_id, product_pricing_id, product_name, unit_of_measure, buy_price, sell_price,
         location, category_id, status, warehouse_id, total_quantity, updated_at
       ) VALUES (
-        ${item_code}, ${product_id || null}, ${product_name}, ${unit_of_measure}, ${buy_price}, ${sell_price},
+        ${item_code}, ${product_id || null}, ${product_pricing_id || null}, ${product_name}, ${unit_of_measure}, ${buy_price}, ${sell_price},
         ${location}, ${category_id}, ${computedStatus}, ${warehouse_id}, ${total_quantity}, CURRENT_TIMESTAMP
       )
       RETURNING *
@@ -319,6 +333,7 @@ const updateInventoryItem = async (id, itemData) => {
     const {
       item_code,
       product_id,
+      product_pricing_id,
       product_name,
       unit_of_measure,
       buy_price,
@@ -336,6 +351,7 @@ const updateInventoryItem = async (id, itemData) => {
       UPDATE inventory_items SET
         item_code = ${item_code},
         product_id = ${product_id || null},
+        product_pricing_id = ${product_pricing_id || null},
         product_name = ${product_name},
         unit_of_measure = ${unit_of_measure},
         buy_price = ${buy_price},
@@ -957,12 +973,13 @@ const getAllProductsInventory = async () => {
         ORDER BY product_id, effective_date DESC
       ),
       stock_by_product AS (
-        SELECT COALESCE(product_name, '') AS product_name, SUM(total_quantity) AS total_quantity
+        SELECT product_id, SUM(total_quantity) AS total_quantity
         FROM inventory_items
-        GROUP BY product_name
+        GROUP BY product_id
       )
       SELECT 
         p.product_id AS id,
+        p.product_id AS product_id,
         p.product_id::text AS item_code,
         p.product_name,
         'PCS'::varchar(10) AS unit_of_measure,
@@ -977,7 +994,7 @@ const getAllProductsInventory = async () => {
         p.product_image
       FROM products p
       LEFT JOIN latest_pricing lp ON lp.product_id = p.product_id
-      LEFT JOIN stock_by_product s ON s.product_name = p.product_name
+      LEFT JOIN stock_by_product s ON s.product_id = p.product_id
       ORDER BY p.product_id
     `;
 
