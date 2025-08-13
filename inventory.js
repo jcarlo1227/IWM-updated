@@ -8,9 +8,10 @@ const initializeInventoryTable = async () => {
       CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
         item_code VARCHAR(50) UNIQUE NOT NULL,
+        product_id INTEGER,
         product_name VARCHAR(255) NOT NULL,
         unit_of_measure VARCHAR(10) NOT NULL,
-        location VARCHAR(255) NOT NULL,
+        price DECIMAL(10,2),
         category_id VARCHAR(50),
         status VARCHAR(20),
         warehouse_id VARCHAR(50),
@@ -19,20 +20,32 @@ const initializeInventoryTable = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+    // Ensure columns and constraints reflect latest model
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS buy_price`;
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS sell_price`;
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS location`;
+    await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS price DECIMAL(10,2)`;
+    await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_id INTEGER`;
+    // Add FK to products(product_id)
+    try {
+      await sql`ALTER TABLE inventory_items DROP CONSTRAINT IF EXISTS inventory_items_product_id_fkey`;
+      await sql`
+        ALTER TABLE inventory_items
+        ADD CONSTRAINT inventory_items_product_id_fkey
+        FOREIGN KEY (product_id)
+        REFERENCES products(product_id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+      `;
+    } catch (e) {}
     // Remove legacy columns and add new pricing columns
     await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS buy_price`;
     await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS sell_price`;
     await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS price DECIMAL(10,2)`;
     await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_id INTEGER`;
-    await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_pricing_id INTEGER`;
-    // Indexes
-    await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_pricing_id ON inventory_items(product_pricing_id)`;
-    // Determine primary key column of product_pricing for robust FK
-    try {
-      await sql`ALTER TABLE inventory_items DROP CONSTRAINT IF EXISTS inventory_items_product_pricing_id_fkey`;
-    } catch (e) {
-      // Ignore if constraint not present
-    }
+    // Clean any legacy product_pricing FK and column if desired (no-op if absent)
+    try { await sql`ALTER TABLE inventory_items DROP CONSTRAINT IF EXISTS inventory_items_product_pricing_id_fkey`; } catch (e) {}
+    try { await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS product_pricing_id`; } catch (e) {}
     
     console.log('✅ Inventory table created/verified');
     
@@ -269,27 +282,31 @@ const createInventoryItem = async (itemData) => {
     const {
       item_code,
       product_id,
-      product_pricing_id,
-      product_name,
+      price,
       unit_of_measure,
-      buy_price,
-      sell_price,
-      location,
       category_id,
-      status,
       warehouse_id,
       total_quantity
     } = itemData;
+    
+    // Auto fetch product_name from products when product_id provided
+    let productName = itemData.product_name || null;
+    if (product_id && !productName) {
+      const prod = await sql`SELECT product_name FROM products WHERE product_id = ${product_id}`;
+      if (prod && prod[0]) {
+        productName = prod[0].product_name;
+      }
+    }
     
     const computedStatus = total_quantity > 0 ? 'active' : 'out of stock';
     
     const result = await sql`
       INSERT INTO inventory_items (
-        item_code, product_id, product_pricing_id, product_name, unit_of_measure, buy_price, sell_price,
-        location, category_id, status, warehouse_id, total_quantity, updated_at
+        item_code, product_id, product_name, unit_of_measure, price,
+        category_id, status, warehouse_id, total_quantity, updated_at
       ) VALUES (
-        ${item_code}, ${product_id || null}, ${product_pricing_id || null}, ${product_name}, ${unit_of_measure}, ${buy_price}, ${sell_price},
-        ${location}, ${category_id}, ${computedStatus}, ${warehouse_id}, ${total_quantity}, CURRENT_TIMESTAMP
+        ${item_code}, ${product_id || null}, ${productName || itemData.product_name}, ${unit_of_measure}, ${price || null},
+        ${category_id}, ${computedStatus}, ${warehouse_id}, ${total_quantity}, CURRENT_TIMESTAMP
       )
       RETURNING *
     `;
@@ -308,17 +325,20 @@ const updateInventoryItem = async (id, itemData) => {
     const {
       item_code,
       product_id,
-      product_pricing_id,
-      product_name,
+      price,
       unit_of_measure,
-      buy_price,
-      sell_price,
-      location,
       category_id,
-      status,
       warehouse_id,
       total_quantity
     } = itemData;
+    
+    let productName = itemData.product_name || null;
+    if (product_id && !productName) {
+      const prod = await sql`SELECT product_name FROM products WHERE product_id = ${product_id}`;
+      if (prod && prod[0]) {
+        productName = prod[0].product_name;
+      }
+    }
     
     const computedStatus = total_quantity > 0 ? 'active' : 'out of stock';
     
@@ -326,12 +346,9 @@ const updateInventoryItem = async (id, itemData) => {
       UPDATE inventory_items SET
         item_code = ${item_code},
         product_id = ${product_id || null},
-        product_pricing_id = ${product_pricing_id || null},
-        product_name = ${product_name},
+        product_name = ${productName || itemData.product_name},
         unit_of_measure = ${unit_of_measure},
-        buy_price = ${buy_price},
-        sell_price = ${sell_price},
-        location = ${location},
+        price = ${price || null},
         category_id = ${category_id},
         status = ${computedStatus},
         warehouse_id = ${warehouse_id},
@@ -421,7 +438,7 @@ const getInventoryStats = async () => {
     const totalItems = await sql`SELECT COUNT(*) as count FROM inventory_items`;
     const activeItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE status = 'active'`;
     const lowStockItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE total_quantity < 10`;
-    const totalValue = await sql`SELECT COALESCE(SUM(buy_price * total_quantity), 0) as total FROM inventory_items`;
+    const totalValue = await sql`SELECT COALESCE(SUM(price * total_quantity), 0) as total FROM inventory_items`;
     
     return {
       totalItems: parseInt(totalItems[0].count),
@@ -958,9 +975,7 @@ const getAllProductsInventory = async () => {
         p.product_id::text AS item_code,
         p.product_name,
         'PCS'::varchar(10) AS unit_of_measure,
-        NULL::DECIMAL(10,2) AS buy_price,
-        COALESCE(lp.price * (1 - COALESCE(lp.discount_rate, 0)), lp.price) AS sell_price,
-        NULL::varchar(255) AS location,
+        COALESCE(lp.price * (1 - COALESCE(lp.discount_rate, 0)), lp.price) AS price,
         p.product_category AS product_category,
         CASE WHEN COALESCE(s.total_quantity, 0) > 0 THEN 'active' ELSE 'out of stock' END AS status,
         NULL::varchar(50) AS warehouse_id,

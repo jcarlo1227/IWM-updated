@@ -840,5 +840,24 @@ app.get('/api/products/:productId/with-pricing', requireAuth, async (req, res) =
   }
 });
 
+// API: Get one product by id (for auto-fill when adding inventory)
+app.get('/api/products/:productId', requireAuth, async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId, 10);
+    if (Number.isNaN(productId)) {
+      return res.status(400).json({ success: false, message: 'Invalid product_id' });
+    }
+    const sqlConn = await sql();
+    const rows = await sqlConn`SELECT product_id, product_name, product_description, product_category, product_image FROM products WHERE product_id = ${productId}`;
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.json({ success: true, data: rows[0] });
+  } catch (error) {
+    console.error('Get product error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch product' });
+  }
+});
+
 startServer();
 
