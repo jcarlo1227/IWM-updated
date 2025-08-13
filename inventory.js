@@ -267,7 +267,7 @@ const getAllInventoryItems = async (filters = {}) => {
 
     queryText += ` ORDER BY i.updated_at DESC`;
 
-    const result = await sql.unsafe(queryText, params);
+    const result = await sql(queryText, params);
     return result;
   } catch (err) {
     console.error('Error fetching inventory items:', err);
@@ -541,7 +541,7 @@ const getAllMaterialShipments = async (filters = {}) => {
       const whereClause = ` WHERE ${conditions.join(' AND ')}`;
       query = sql`
         SELECT * FROM material_shipments
-        ${sql.unsafe(whereClause)}
+        ${sql(whereClause)}
         ORDER BY created_at DESC
       `;
     } else {
@@ -790,7 +790,7 @@ const getAllOrderShipments = async (filters = {}) => {
       const whereClause = ` WHERE ${conditions.join(' AND ')}`;
       base = sql`
         SELECT * FROM order_shipments
-        ${sql.unsafe(whereClause)}
+        ${sql(whereClause)}
         ORDER BY created_at DESC
       `;
     } else {

@@ -25,7 +25,7 @@ async function getAllMaterialShipments(filters = {}) {
   }
 
   query += ' ORDER BY created_at DESC';
-  return await sql.unsafe(query, params);
+  return await sql(query, params);
 }
 
 async function getMaterialShipmentById(id) {
