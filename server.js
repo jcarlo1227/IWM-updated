@@ -42,7 +42,9 @@ const {
   updateOrderShipment,
   deleteOrderShipment,
   getOrderShipmentStats,
-  updateOrderShipmentStatus
+  updateOrderShipmentStatus,
+  getAllProductsInventory,
+  getProductWithLatestPricing
 } = require('./inventory');
 require('dotenv').config();
 
@@ -806,6 +808,54 @@ app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: 'Failed to update order status' });
+  }
+});
+
+// API: Get products inventory view (products + latest pricing + computed stock)
+app.get('/api/inventory-products', requireAuth, async (req, res) => {
+  try {
+    const items = await getAllProductsInventory();
+    res.json({ success: true, data: items });
+  } catch (err) {
+    console.error('Failed to fetch products inventory:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch products inventory' });
+  }
+});
+
+// API: Get one product with latest pricing (used when selecting a product during add-to-inventory)
+app.get('/api/products/:productId/with-pricing', requireAuth, async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId, 10);
+    if (Number.isNaN(productId)) {
+      return res.status(400).json({ success: false, message: 'Invalid product_id' });
+    }
+    const data = await getProductWithLatestPricing(productId);
+    if (!data) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('Fetch product with pricing error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch product info' });
+  }
+});
+
+// API: Get one product by id (for auto-fill when adding inventory)
+app.get('/api/products/:productId', requireAuth, async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId, 10);
+    if (Number.isNaN(productId)) {
+      return res.status(400).json({ success: false, message: 'Invalid product_id' });
+    }
+    const sqlConn = await sql();
+    const rows = await sqlConn`SELECT product_id, product_name, product_description, product_category, product_image FROM products WHERE product_id = ${productId}`;
+    if (!rows || rows.length === 0) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.json({ success: true, data: rows[0] });
+  } catch (error) {
+    console.error('Get product error:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch product' });
   }
 });
 
