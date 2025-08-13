@@ -42,7 +42,8 @@ const {
   updateOrderShipment,
   deleteOrderShipment,
   getOrderShipmentStats,
-  updateOrderShipmentStatus
+  updateOrderShipmentStatus,
+  getAllProductsInventory
 } = require('./inventory');
 require('dotenv').config();
 
@@ -806,6 +807,17 @@ app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: 'Failed to update order status' });
+  }
+});
+
+// API: Get products inventory view (products + latest pricing + computed stock)
+app.get('/api/inventory-products', requireAuth, async (req, res) => {
+  try {
+    const items = await getAllProductsInventory();
+    res.json({ success: true, data: items });
+  } catch (err) {
+    console.error('Failed to fetch products inventory:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch products inventory' });
   }
 });
 

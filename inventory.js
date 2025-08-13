@@ -900,6 +900,53 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
   }
 };
 
+// Get all products with latest pricing and computed stock for inventory view
+const getAllProductsInventory = async () => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      WITH latest_pricing AS (
+        SELECT DISTINCT ON (product_id)
+          product_id,
+          price,
+          discount_rate,
+          effective_date
+        FROM product_pricings
+        ORDER BY product_id, effective_date DESC
+      ),
+      stock_by_product AS (
+        SELECT
+          COALESCE(product_name, '') AS product_name,
+          SUM(total_quantity) AS total_quantity
+        FROM inventory_items
+        GROUP BY product_name
+      )
+      SELECT 
+        p.product_id AS id,
+        p.product_id::text AS item_code,
+        p.product_name,
+        'PCS'::varchar(10) AS unit_of_measure,
+        NULL::DECIMAL(10,2) AS buy_price,
+        COALESCE(lp.price * (1 - COALESCE(lp.discount_rate, 0)), lp.price) AS sell_price,
+        NULL::varchar(255) AS location,
+        p.product_category AS category_id,
+        CASE WHEN COALESCE(s.total_quantity, 0) > 0 THEN 'active' ELSE 'out of stock' END AS status,
+        NULL::varchar(50) AS warehouse_id,
+        COALESCE(s.total_quantity, 0) AS total_quantity,
+        COALESCE(lp.effective_date, CURRENT_DATE) AS updated_at,
+        p.product_image
+      FROM product p
+      LEFT JOIN latest_pricing lp ON lp.product_id = p.product_id
+      LEFT JOIN stock_by_product s ON s.product_name = p.product_name
+      ORDER BY p.product_id
+    `;
+    return result;
+  } catch (err) {
+    console.error('Error fetching products inventory:', err);
+    throw err;
+  }
+};
+
 
 module.exports = {
   initializeInventoryTable,
@@ -929,5 +976,6 @@ module.exports = {
   updateOrderShipment,
   deleteOrderShipment,
   getOrderShipmentStats,
-  updateOrderShipmentStatus
+  updateOrderShipmentStatus,
+  getAllProductsInventory
 };
