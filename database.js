@@ -40,12 +40,12 @@ async function createMaterialShipment(data) {
   const sql = await getSql();
   const result = await sql`
     INSERT INTO material_shipments (
-      shipment_id, material_id, category_id, material_name,
+      shipment_id, product_id, category_id, material_name,
       quantity, unit, shipment_type, source, destination,
       status, date_shipped, estimated_delivery, received_date,
       handled_by, notes
     ) VALUES (
-      ${data.shipment_id}, ${data.material_id}, ${data.category_id}, ${data.material_name},
+      ${data.shipment_id}, ${data.product_id}, ${data.category_id}, ${data.material_name},
       ${data.quantity}, ${data.unit}, ${data.shipment_type}, ${data.source}, ${data.destination},
       ${data.status}, ${data.date_shipped}, ${data.estimated_delivery}, ${data.received_date},
       ${data.handled_by}, ${data.notes}
@@ -60,7 +60,7 @@ async function updateMaterialShipment(id, data) {
   const result = await sql`
     UPDATE material_shipments SET
       shipment_id = ${data.shipment_id},
-      material_id = ${data.material_id},
+      product_id = ${data.product_id},
       category_id = ${data.category_id},
       material_name = ${data.material_name},
       quantity = ${data.quantity},

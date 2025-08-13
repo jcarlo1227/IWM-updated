@@ -705,12 +705,10 @@
                 <tr>
                   <th><input type="checkbox" id="selectAll" onchange="toggleSelectAll()"></th>
                   <th>Item Code</th>
-                  <th>Product Name</th>
+                  <th>Product</th>
                   <th>ID</th>
                   <th>Unit of Measure</th>
-                  <th>Buy Price</th>
-                  <th>Sell Price</th>
-                  <th>Location</th>
+                  <th>Price</th>
                   <th>Category ID</th>
                   <th>Status</th>
                   <th>Warehouse ID</th>
@@ -746,8 +744,8 @@
               <input type="text" class="form-control" placeholder ="Unique Item code" id="itemCode" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Product Name *</label>
-              <input type="text" class="form-control" id="productName" required>
+              <label class="form-label">Product *</label>
+              <select class="form-select" id="productId" required></select>
             </div>
             <div class="col-md-6">
               <label class="form-label">Unit of Measure *</label>
@@ -760,16 +758,20 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Buy Price *</label>
-              <input type="number" class="form-control" id="buyPrice" step="0.01" required>
+              <label class="form-label">Price</label>
+              <input type="number" class="form-control" id="price" step="0.01" disabled>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Sell Price</label>
-              <input type="number" class="form-control" id="sellPrice" step="0.01">
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Location *</label>
-              <input type="text" class="form-control" id="location" required>
+            <div class="col-md-12" id="productDetails" style="display:none;">
+              <div class="card p-2">
+                <div class="d-flex align-items-center gap-3">
+                  <img id="productImage" src="" alt="" style="width:64px;height:64px;object-fit:cover;border-radius:6px;display:none;" />
+                  <div>
+                    <div><strong id="productNameText"></strong></div>
+                    <div class="text-muted" id="productDescriptionText" style="white-space:pre-wrap"></div>
+                    <div><span class="badge bg-info" id="productCategoryText"></span></div>
+                  </div>
+                </div>
+              </div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Category ID</label>
@@ -1115,6 +1117,7 @@
 let inventoryData = [];
 let categoriesData = [];
 let warehousesData = [];
+let productsData = [];
 let currentEditId = null;
 
 // Initialize the application
@@ -1157,10 +1160,11 @@ async function loadInitialData() {
     document.getElementById('statusFilter').value = '';
     document.getElementById('warehouseFilter').value = '';
     showLoading(true);
-    const [inventoryResponse, categoriesResponse, warehousesResponse] = await Promise.all([
+    const [inventoryResponse, categoriesResponse, warehousesResponse, productsResponse] = await Promise.all([
       apiCall('/inventory'),
       apiCall('/categories'),
-      apiCall('/warehouses')
+      apiCall('/warehouses'),
+      apiCall('/products')
     ]);
     if (inventoryResponse.success) {
       inventoryData = mapInventoryData(inventoryResponse.data);
@@ -1174,6 +1178,10 @@ async function loadInitialData() {
     if (warehousesResponse.success) {
       warehousesData = warehousesResponse.data;
       populateWarehouses();
+    }
+    if (productsResponse.success) {
+      productsData = productsResponse.data || [];
+      populateProducts();
     }
     
   } catch (error) {
@@ -1189,11 +1197,13 @@ function mapInventoryData(rawData) {
   return rawData.map(item => ({
     id: item.id,
     itemCode: item.item_code,
+    productId: item.product_id,
     productName: item.product_name,
+    productDescription: item.product_description,
+    productCategory: item.product_category,
+    productImage: item.product_image,
+    price: item.price,
     unitOfMeasure: item.unit_of_measure,
-    buyPrice: item.buy_price,
-    sellPrice: item.sell_price,
-    location: item.location,
     categoryId: item.category_id,
     status: item.status,
     warehouseId: item.warehouse_id,
@@ -1266,7 +1276,7 @@ function populateWarehouses() {
 function showLoading(show) {
   const tbody = document.getElementById('inventoryTableBody');
   if (show) {
-    tbody.innerHTML = '<tr><td colspan="14" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="12" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
   } else {
     tbody.innerHTML = ''; // Clear spinner when loading is done
   }
@@ -1328,11 +1338,11 @@ async function editItem(id) {
     document.getElementById('modalTitle').textContent = 'Update Item';
     // Populate form fields
     document.getElementById('itemCode').value = item.item_code;
-    document.getElementById('productName').value = item.product_name;
+    ensureProductsLoaded().then(() => {
+      document.getElementById('productId').value = item.product_id;
+      onProductChange();
+    });
     document.getElementById('unitOfMeasure').value = item.unit_of_measure;
-    document.getElementById('buyPrice').value = item.buy_price;
-    document.getElementById('sellPrice').value = item.sell_price || '';
-    document.getElementById('location').value = item.location;
     document.getElementById('categoryId').value = item.category_id || '';
     document.getElementById('status').value = item.status;
     document.getElementById('warehouseId').value = item.warehouse_id || '';
@@ -1350,17 +1360,15 @@ async function saveItem() {
     return;
   }
 
+  const qty = parseInt(document.getElementById('totalQuantity').value);
   const itemData = {
     item_code: document.getElementById('itemCode').value,
-    product_name: document.getElementById('productName').value,
+    product_id: parseInt(document.getElementById('productId').value),
     unit_of_measure: document.getElementById('unitOfMeasure').value,
-    buy_price: parseFloat(document.getElementById('buyPrice').value),
-    sell_price: parseFloat(document.getElementById('sellPrice').value) || 0,
-    location: document.getElementById('location').value,
     category_id: document.getElementById('categoryId').value || null,
-    status: document.getElementById('status').value,
+    status: qty === 0 ? 'out of stock' : document.getElementById('status').value,
     warehouse_id: document.getElementById('warehouseId').value || null,
-    total_quantity: parseInt(document.getElementById('totalQuantity').value)
+    total_quantity: qty
   };
 
   try {
@@ -1454,12 +1462,10 @@ function selectItems() {
     <thead>
       <tr>
         <th>Item Code</th>
-        <th>Product Name</th>
+        <th>Product</th>
         <th>ID</th>
         <th>Unit</th>
-        <th>Buy Price</th>
-        <th>Sell Price</th>
-        <th>Location</th>
+        <th>Price</th>
         <th>Category</th>
         <th>Status</th>
         <th>Warehouse</th>
@@ -1474,9 +1480,7 @@ function selectItems() {
       <td>${item.productName || '-'}</td>
       <td>${item.id || '-'}</td>
       <td>${item.unitOfMeasure || '-'}</td>
-      <td>${item.buyPrice || '-'}</td>
-      <td>${item.sellPrice || '-'}</td>
-      <td>${item.location || '-'}</td>
+      <td>${item.price ?? '-'}</td>
       <td>${item.categoryId || '-'}</td>
       <td>${item.status || '-'}</td>
       <td>${item.warehouseId || '-'}</td>
@@ -1501,12 +1505,10 @@ function showSelectedItemForUpdate(itemId) {
     <thead>
       <tr>
         <th>Item Code</th>
-        <th>Product Name</th>
+        <th>Product</th>
         <th>ID</th>
         <th>Unit</th>
-        <th>Buy Price</th>
-        <th>Sell Price</th>
-        <th>Location</th>
+        <th>Price</th>
         <th>Category</th>
         <th>Status</th>
         <th>Warehouse</th>
@@ -1520,9 +1522,7 @@ function showSelectedItemForUpdate(itemId) {
         <td>${item.productName || '-'}</td>
         <td>${item.id || '-'}</td>
         <td>${item.unitOfMeasure || '-'}</td>
-        <td>${item.buyPrice || '-'}</td>
-        <td>${item.sellPrice || '-'}</td>
-        <td>${item.location || '-'}</td>
+        <td>${item.price ?? '-'}</td>
         <td>${item.categoryId || '-'}</td>
         <td>${item.status || '-'}</td>
         <td>${item.warehouseId || '-'}</td>
@@ -1602,7 +1602,7 @@ function generateCodes(items, codeType) {
         <h6>${item.productName}</h6>
         <div class="barcode-info">
           <strong>Item Code:</strong> ${item.itemCode}<br>
-          <strong>Location:</strong> ${item.location}<br>
+          <strong>Product:</strong> ${item.productName || ''}<br>
           <strong>Quantity:</strong> ${item.totalQuantity}
         </div>
         <canvas id="${canvasId}" class="barcode-canvas"></canvas>
@@ -1767,7 +1767,7 @@ function renderTable(data = inventoryData) {
   if (!data || data.length === 0) {
     tbody.innerHTML = `
       <tr>
-        <td colspan="14" class="text-center text-muted">No items found.</td>
+        <td colspan="12" class="text-center text-muted">No items found.</td>
       </tr>
     `;
     return;
@@ -1781,9 +1781,7 @@ function renderTable(data = inventoryData) {
       <td>${item.productName || '-'}</td>
       <td>${item.id || '-'}</td>
       <td>${item.unitOfMeasure || '-'}</td>
-      <td>${item.buyPrice || '-'}</td>
-      <td>${item.sellPrice || '-'}</td>
-      <td>${item.location || '-'}</td>
+      <td>${item.price ?? '-'}</td>
       <td>${item.categoryId || '-'}</td>
       <td>${item.status || '-'}</td>
       <td>${item.warehouseId || '-'}</td>
@@ -2104,6 +2102,76 @@ function displayUser(user) {
   }
   if (userEmailDropdown) {
     userEmailDropdown.textContent = `${user.username}@foxcontrolhub.com`;
+  }
+}
+
+function populateProducts() {
+  const select = document.getElementById('productId');
+  if (!select) return;
+  const currentValue = select.value;
+  while (select.firstChild) select.removeChild(select.firstChild);
+  const first = document.createElement('option');
+  first.value = '';
+  first.textContent = 'Select Product';
+  select.appendChild(first);
+  productsData.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.product_id;
+    opt.textContent = `${p.product_id} - ${p.product_name}`;
+    opt.dataset.description = p.product_description || '';
+    opt.dataset.category = p.product_category || '';
+    opt.dataset.image = p.product_image || '';
+    select.appendChild(opt);
+  });
+  if (currentValue) select.value = currentValue;
+  select.onchange = onProductChange;
+}
+
+async function ensureProductsLoaded() {
+  if (productsData && productsData.length) return;
+  try {
+    const res = await apiCall('/products');
+    if (res.success) {
+      productsData = res.data || [];
+      populateProducts();
+    }
+  } catch {}
+}
+
+async function onProductChange() {
+  const select = document.getElementById('productId');
+  const productId = parseInt(select.value);
+  const detailsDiv = document.getElementById('productDetails');
+  const nameEl = document.getElementById('productNameText');
+  const descEl = document.getElementById('productDescriptionText');
+  const catEl = document.getElementById('productCategoryText');
+  const imgEl = document.getElementById('productImage');
+  const priceEl = document.getElementById('price');
+  if (!productId) {
+    detailsDiv.style.display = 'none';
+    priceEl.value = '';
+    return;
+  }
+  const option = select.options[select.selectedIndex];
+  nameEl.textContent = option.textContent.split(' - ').slice(1).join(' - ');
+  descEl.textContent = option.dataset.description || '';
+  catEl.textContent = option.dataset.category || '';
+  if (option.dataset.image) {
+    imgEl.src = option.dataset.image;
+    imgEl.style.display = '';
+  } else {
+    imgEl.style.display = 'none';
+  }
+  detailsDiv.style.display = '';
+  try {
+    const priceRes = await apiCall(`/product-pricing/${productId}`);
+    if (priceRes.success && priceRes.data) {
+      priceEl.value = priceRes.data.price || '';
+    } else {
+      priceEl.value = '';
+    }
+  } catch {
+    priceEl.value = '';
   }
 }
 </script>

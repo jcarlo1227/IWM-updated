@@ -8,17 +8,15 @@ const initializeInventoryTable = async () => {
       CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
         item_code VARCHAR(50) UNIQUE NOT NULL,
-        product_name VARCHAR(255) NOT NULL,
+        product_id INTEGER NOT NULL,
         unit_of_measure VARCHAR(10) NOT NULL,
-        buy_price DECIMAL(10,2) NOT NULL,
-        sell_price DECIMAL(10,2),
-        location VARCHAR(255) NOT NULL,
         category_id VARCHAR(50),
         status VARCHAR(20),
         warehouse_id VARCHAR(50),
         total_quantity INTEGER DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_inventory_product FOREIGN KEY (product_id) REFERENCES products(product_id)
       )
     `;
     
@@ -90,7 +88,7 @@ const initializeMaterialShipmentsTable = async () => {
       CREATE TABLE IF NOT EXISTS material_shipments (
         id SERIAL PRIMARY KEY,
         shipment_id VARCHAR(50) UNIQUE NOT NULL,
-        bom_id VARCHAR(50), 
+        product_id INTEGER, 
         category_id VARCHAR(50) NOT NULL,
         material_name VARCHAR(255) NOT NULL,
         quantity INTEGER NOT NULL,
@@ -105,7 +103,8 @@ const initializeMaterialShipmentsTable = async () => {
         handled_by VARCHAR(100),
         notes TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        CONSTRAINT fk_shipment_product FOREIGN KEY (product_id) REFERENCES products(product_id)
       )
     `;  
     console.log('✅ Material shipments table created/verified');
@@ -152,19 +151,35 @@ const getAllInventoryItems = async (filters = {}) => {
     const sql = await database.sql();
     let query = sql`
       SELECT 
-        i.*,
+        i.id,
+        i.item_code,
+        i.product_id,
+        p.product_name,
+        p.product_description,
+        p.product_category,
+        p.product_image,
+        pp.price,
+        i.unit_of_measure,
+        i.category_id,
+        i.status,
+        i.warehouse_id,
+        i.total_quantity,
+        i.created_at,
+        i.updated_at,
         c.category_name,
         w.warehouse_name
       FROM inventory_items i
       LEFT JOIN categories c ON i.category_id = c.category_id
       LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
-    `;
+      LEFT JOIN products p ON p.product_id = i.product_id
+      LEFT JOIN product_pricing pp ON pp.product_id = i.product_id
+    `}
     
     let conditions = [];
     let params = [];
     
     if (filters.search) {
-      conditions.push(`(i.product_name ILIKE $${params.length + 1} OR i.item_code ILIKE $${params.length + 1})`);
+      conditions.push(`(p.product_name ILIKE $${params.length + 1} OR i.item_code ILIKE $${params.length + 1})`);
       params.push(`%${filters.search}%`);
     }
     
@@ -187,24 +202,56 @@ const getAllInventoryItems = async (filters = {}) => {
       const whereClause = ` WHERE ${conditions.join(' AND ')}`;
       query = sql`
         SELECT 
-          i.*,
+          i.id,
+          i.item_code,
+          i.product_id,
+          p.product_name,
+          p.product_description,
+          p.product_category,
+          p.product_image,
+          pp.price,
+          i.unit_of_measure,
+          i.category_id,
+          i.status,
+          i.warehouse_id,
+          i.total_quantity,
+          i.created_at,
+          i.updated_at,
           c.category_name,
           w.warehouse_name
         FROM inventory_items i
         LEFT JOIN categories c ON i.category_id = c.category_id
         LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
+        LEFT JOIN products p ON p.product_id = i.product_id
+        LEFT JOIN product_pricing pp ON pp.product_id = i.product_id
         ${sql.unsafe(whereClause)}
         ORDER BY i.updated_at DESC
       `;
     } else {
       query = sql`
         SELECT 
-          i.*,
+          i.id,
+          i.item_code,
+          i.product_id,
+          p.product_name,
+          p.product_description,
+          p.product_category,
+          p.product_image,
+          pp.price,
+          i.unit_of_measure,
+          i.category_id,
+          i.status,
+          i.warehouse_id,
+          i.total_quantity,
+          i.created_at,
+          i.updated_at,
           c.category_name,
           w.warehouse_name
         FROM inventory_items i
         LEFT JOIN categories c ON i.category_id = c.category_id
         LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
+        LEFT JOIN products p ON p.product_id = i.product_id
+        LEFT JOIN product_pricing pp ON pp.product_id = i.product_id
         ORDER BY i.updated_at DESC
       `;
     }
@@ -223,12 +270,28 @@ const getInventoryItemById = async (id) => {
     const sql = await database.sql();
     const result = await sql`
       SELECT 
-        i.*,
+        i.id,
+        i.item_code,
+        i.product_id,
+        p.product_name,
+        p.product_description,
+        p.product_category,
+        p.product_image,
+        pp.price,
+        i.unit_of_measure,
+        i.category_id,
+        i.status,
+        i.warehouse_id,
+        i.total_quantity,
+        i.created_at,
+        i.updated_at,
         c.category_name,
         w.warehouse_name
       FROM inventory_items i
       LEFT JOIN categories c ON i.category_id = c.category_id
       LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
+      LEFT JOIN products p ON p.product_id = i.product_id
+      LEFT JOIN product_pricing pp ON pp.product_id = i.product_id
       WHERE i.id = ${id}
     `;
     
@@ -245,11 +308,8 @@ const createInventoryItem = async (itemData) => {
     const sql = await database.sql();
     const {
       item_code,
-      product_name,
+      product_id,
       unit_of_measure,
-      buy_price,
-      sell_price,
-      location,
       category_id,
       status,
       warehouse_id,
@@ -258,11 +318,9 @@ const createInventoryItem = async (itemData) => {
     
     const result = await sql`
       INSERT INTO inventory_items (
-        item_code, product_name, unit_of_measure, buy_price, sell_price,
-        location, category_id, status, warehouse_id, total_quantity, updated_at
+        item_code, product_id, unit_of_measure, category_id, status, warehouse_id, total_quantity, updated_at
       ) VALUES (
-        ${item_code}, ${product_name}, ${unit_of_measure}, ${buy_price}, ${sell_price},
-        ${location}, ${category_id}, ${status}, ${warehouse_id}, ${total_quantity}, CURRENT_TIMESTAMP
+        ${item_code}, ${product_id}, ${unit_of_measure}, ${category_id}, ${status}, ${warehouse_id}, ${total_quantity}, CURRENT_TIMESTAMP
       )
       RETURNING *
     `;
@@ -280,11 +338,8 @@ const updateInventoryItem = async (id, itemData) => {
     const sql = await database.sql();
     const {
       item_code,
-      product_name,
+      product_id,
       unit_of_measure,
-      buy_price,
-      sell_price,
-      location,
       category_id,
       status,
       warehouse_id,
@@ -294,11 +349,8 @@ const updateInventoryItem = async (id, itemData) => {
     const result = await sql`
       UPDATE inventory_items SET
         item_code = ${item_code},
-        product_name = ${product_name},
+        product_id = ${product_id},
         unit_of_measure = ${unit_of_measure},
-        buy_price = ${buy_price},
-        sell_price = ${sell_price},
-        location = ${location},
         category_id = ${category_id},
         status = ${status},
         warehouse_id = ${warehouse_id},
@@ -388,7 +440,11 @@ const getInventoryStats = async () => {
     const totalItems = await sql`SELECT COUNT(*) as count FROM inventory_items`;
     const activeItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE status = 'active'`;
     const lowStockItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE total_quantity < 10`;
-    const totalValue = await sql`SELECT COALESCE(SUM(buy_price * total_quantity), 0) as total FROM inventory_items`;
+    const totalValue = await sql`
+      SELECT COALESCE(SUM(COALESCE(pp.price,0) * i.total_quantity), 0) as total
+      FROM inventory_items i
+      LEFT JOIN product_pricing pp ON pp.product_id = i.product_id
+    `;
     
     return {
       totalItems: parseInt(totalItems[0].count),
@@ -514,7 +570,7 @@ const createMaterialShipment = async (shipmentData) => {
     const sql = await database.sql();
     const {
       shipment_id,
-      bom_id,      
+      product_id,      
       category_id,
       material_name,
       quantity,
@@ -532,11 +588,11 @@ const createMaterialShipment = async (shipmentData) => {
     
     const result = await sql`
       INSERT INTO material_shipments (
-        shipment_id, bom_id, category_id, material_name, quantity, unit, 
+        shipment_id, product_id, category_id, material_name, quantity, unit, 
         shipment_type, source, destination, status, date_shipped, 
         estimated_delivery, received_date, handled_by, notes, updated_at
       ) VALUES (
-        ${shipment_id}, ${bom_id}, ${category_id}, ${material_name}, 
+        ${shipment_id}, ${product_id}, ${category_id}, ${material_name}, 
         ${quantity}, ${unit}, ${shipment_type}, ${source}, ${destination}, 
         ${status}, ${date_shipped}, ${estimated_delivery}, ${received_date}, 
         ${handled_by}, ${notes}, CURRENT_TIMESTAMP
@@ -557,7 +613,7 @@ const updateMaterialShipment = async (id, shipmentData) => {
     const sql = await database.sql();
     const {
       shipment_id,
-      bom_id,        // Changed from material_id
+      product_id,
       category_id,
       material_name,
       quantity,
@@ -576,7 +632,7 @@ const updateMaterialShipment = async (id, shipmentData) => {
     const result = await sql`
       UPDATE material_shipments SET
         shipment_id = ${shipment_id},
-        bom_id = ${bom_id},        /* Changed from material_id */
+        product_id = ${product_id},
         category_id = ${category_id},
         material_name = ${material_name},
         quantity = ${quantity},

@@ -602,7 +602,7 @@
             <thead>
               <tr>
                 <th>Shipment ID</th>
-                <th>BOM ID</th>
+                <th>Product ID</th>
                 <th>Category ID</th>
                 <th>Material Name</th>
                 <th>Quantity</th>
@@ -752,8 +752,8 @@
           </div>
           <div class="row mb-3">
             <div class="col-md-6">
-              <label for="bomId" class="form-label">BOM ID</label>
-              <input type="text" class="form-control" id="bomId" name="bomId">
+              <label for="productId" class="form-label">Product</label>
+              <input type="number" class="form-control" id="productId" name="productId">
             </div>
             <div class="col-md-6">
               <label for="categoryId" class="form-label">Category</label>
@@ -1128,7 +1128,7 @@ function renderShipmentsTable(data = []) {
     const row = document.createElement('tr');
     row.innerHTML = `
       <td><strong>${shipment.shipment_id}</strong></td>
-      <td>${shipment.bom_id || '-'}</td>      
+      <td>${shipment.product_id || '-'}</td>      
       <td>${shipment.category_id || '-'}</td>
       <td>
         <div class="d-flex align-items-center">
@@ -1168,7 +1168,7 @@ function searchShipments(searchTerm) {
   
   const filtered = shipmentsData.filter(shipment => 
     shipment.shipment_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    shipment.bom_id.toLowerCase().includes(searchTerm.toLowerCase()) ||  
+    (shipment.product_id && shipment.product_id.toString().includes(searchTerm.toLowerCase())) ||  
     shipment.category_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     shipment.material_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     shipment.source.toLowerCase().includes(searchTerm.toLowerCase())
@@ -1269,7 +1269,7 @@ async function editShipment(id) {
       document.getElementById('shipmentModalLabel').textContent = 'Edit Shipment';
       document.getElementById('shipmentId').value = shipment.id;
       document.getElementById('shipmentIdInput').value = shipment.shipment_id;
-      document.getElementById('materialId').value = shipment.material_id;
+      document.getElementById('productId').value = shipment.product_id || '';
       document.getElementById('categoryId').value = shipment.category_id;
       document.getElementById('materialName').value = shipment.material_name;
       document.getElementById('itemCode').value = shipment.item_code || '';
@@ -1306,23 +1306,23 @@ async function saveShipment() {
     }
     
     const formData = new FormData(form);
-    const shipmentData = {
-      shipment_id: formData.get('shipmentIdInput'),
-      bom_id: formData.get('bomId'),          
-      category_id: formData.get('categoryId'),
-      material_name: formData.get('materialName'),
-      quantity: parseInt(formData.get('quantity')),
-      unit: formData.get('unit'),
-      shipment_type: formData.get('shipmentType'),
-      source: formData.get('source'),
-      destination: formData.get('destination'),
-      status: formData.get('status'),
-      date_shipped: formData.get('dateShipped') || null,
-      estimated_delivery: formData.get('estimatedDelivery') || null,
-      received_date: formData.get('receivedDate') || null,
-      handled_by: formData.get('handledBy') || null,
-      notes: formData.get('notes') || null
-    };
+          const shipmentData = {
+        shipment_id: formData.get('shipmentIdInput'),
+        product_id: formData.get('productId'),          
+        category_id: formData.get('categoryId'),
+        material_name: formData.get('materialName'),
+        quantity: parseInt(formData.get('quantity')),
+        unit: formData.get('unit'),
+        shipment_type: formData.get('shipmentType'),
+        source: formData.get('source'),
+        destination: formData.get('destination'),
+        status: formData.get('status'),
+        date_shipped: formData.get('dateShipped') || null,
+        estimated_delivery: formData.get('estimatedDelivery') || null,
+        received_date: formData.get('receivedDate') || null,
+        handled_by: formData.get('handledBy') || null,
+        notes: formData.get('notes') || null
+      };
     
     let response;
     if (currentEditId) {
@@ -1455,10 +1455,10 @@ function exportShipments() {
 
 // Generate CSV content
 function generateCSV(data) {
-  const headers = ['Shipment ID', 'Material ID', 'Category ID', 'Material Name', 'Quantity', 'Unit', 'Type', 'Status', 'Source', 'Destination', 'Date Shipped', 'Estimated Delivery', 'Received Date', 'Handled By'];
+  const headers = ['Shipment ID', 'Product ID', 'Category ID', 'Material Name', 'Quantity', 'Unit', 'Type', 'Status', 'Source', 'Destination', 'Date Shipped', 'Estimated Delivery', 'Received Date', 'Handled By'];
   const rows = data.map(item => [
     item.shipment_id,
-    item.material_id || '',
+    item.product_id || '',
     item.category_id || '',
     item.material_name,
     item.quantity,

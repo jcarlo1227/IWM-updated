@@ -449,6 +449,37 @@ app.get('/api/warehouses', requireAuth, async (req, res) => {
   }
 });
 
+// Products and Pricing (read-only)
+app.get('/api/products', requireAuth, async (req, res) => {
+  try {
+    const db = require('./database');
+    const sqlConn = await db.sql();
+    const rows = await sqlConn`SELECT product_id, product_name, product_description, product_category, product_image FROM products ORDER BY product_id`;
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Fetch products error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+app.get('/api/product-pricing/:productId', requireAuth, async (req, res) => {
+  try {
+    const db = require('./database');
+    const sqlConn = await db.sql();
+    const rows = await sqlConn`
+      SELECT product_id, price, discount_rate, effective_date
+      FROM product_pricing
+      WHERE product_id = ${req.params.productId}
+      ORDER BY effective_date DESC
+      LIMIT 1
+    `;
+    res.json({ success: true, data: rows[0] || null });
+  } catch (error) {
+    console.error('Fetch product pricing error:', error);
+    res.json({ success: true, data: null });
+  }
+});
+
 // API: Get scan history
 app.get('/api/scan-history', requireAuth, async (req, res) => {
   try {

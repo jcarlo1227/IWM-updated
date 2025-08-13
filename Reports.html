@@ -648,11 +648,8 @@
                   <th>Item Code</th>
                   <th>Product Name</th>
                   <th>Quantity</th>
-                  <th>Unit Cost</th>
                   <th>Unit Price</th>
-                  <th>Total Cost Value</th>
-                  <th>Total Selling Value</th>
-                  <th>Potential Profit</th>
+                  <th>Total Value</th>
                   <th>Warehouse</th>
                   <th>Status</th>
                 </tr>
@@ -679,13 +676,11 @@ let inventoryData = [
     itemCode: 'ITM001',
     productName: 'Wireless Earphone',
     unitOfMeasure: 'PCS',
-    buyPrice: 250.00,
-    sellPrice: 350.00,
-    location: 'Philippines',
+    price: 350.00,
     categoryId: 'CAT001',
     status: 'active',
     warehouseId: 'WH001',
-    totalQuantity: 15,
+    totalQuantity: 150,
     updatedAt: '2024-01-15'
   },
   {
@@ -693,13 +688,11 @@ let inventoryData = [
     itemCode: 'ITM002',
     productName: 'USB Cable',
     unitOfMeasure: 'PCS',
-    buyPrice: 50.00,
-    sellPrice: 75.00,
-    location: 'Philippines',
+    price: 75.00,
     categoryId: 'CAT002',
     status: 'inactive',
     warehouseId: 'WH002',
-    totalQuantity: 8,
+    totalQuantity: 300,
     updatedAt: '2024-01-14'
   },
   {
@@ -707,42 +700,36 @@ let inventoryData = [
     itemCode: 'ITM003',
     productName: 'Bluetooth Speaker',
     unitOfMeasure: 'PCS',
-    buyPrice: 800.00,
-    sellPrice: 1200.00,
-    location: 'Philippines',
+    price: 1200.00,
     categoryId: 'CAT001',
     status: 'active',
     warehouseId: 'WH001',
-    totalQuantity: 5,
-    updatedAt: '2024-01-16'
+    totalQuantity: 45,
+    updatedAt: '2024-01-13'
   },
   {
     id: 4,
     itemCode: 'ITM004',
     productName: 'Phone Charger',
     unitOfMeasure: 'PCS',
-    buyPrice: 150.00,
-    sellPrice: 200.00,
-    location: 'Philippines',
+    price: 200.00,
     categoryId: 'CAT002',
     status: 'active',
     warehouseId: 'WH001',
-    totalQuantity: 25,
-    updatedAt: '2024-01-17'
+    totalQuantity: 500,
+    updatedAt: '2024-01-12'
   },
   {
     id: 5,
     itemCode: 'ITM005',
     productName: 'Laptop Stand',
     unitOfMeasure: 'PCS',
-    buyPrice: 300.00,
-    sellPrice: 450.00,
-    location: 'Philippines',
+    price: 450.00,
     categoryId: 'CAT003',
     status: 'active',
     warehouseId: 'WH002',
-    totalQuantity: 12,
-    updatedAt: '2024-01-18'
+    totalQuantity: 80,
+    updatedAt: '2024-01-11'
   }
 ];
 
@@ -755,18 +742,11 @@ document.addEventListener('DOMContentLoaded', function() {
   updateLastUpdated();
 });
 
-// Calculate valuation metrics
+// Calculate valuation metrics (single price)
 function calculateValuation(item) {
-  const totalCostValue = item.buyPrice * item.totalQuantity;
-  const totalSellingValue = item.sellPrice * item.totalQuantity;
-  const potentialProfit = totalSellingValue - totalCostValue;
-  const profitMargin = totalCostValue > 0 ? ((potentialProfit / totalCostValue) * 100) : 0;
-  
+  const totalValue = (item.price || 0) * item.totalQuantity;
   return {
-    totalCostValue,
-    totalSellingValue,
-    potentialProfit,
-    profitMargin
+    totalValue
   };
 }
 
@@ -790,18 +770,15 @@ function renderTable(data = filteredData) {
       <td><strong>${item.itemCode}</strong></td>
       <td>${item.productName}</td>
       <td><span class="badge bg-info">${item.totalQuantity} ${item.unitOfMeasure}</span></td>
-      <td>$${item.buyPrice.toFixed(2)}</td>
-      <td>$${item.sellPrice.toFixed(2)}</td>
-      <td class="${getValueClass(valuation.totalCostValue)}">$${valuation.totalCostValue.toFixed(2)}</td>
-      <td class="${getValueClass(valuation.totalSellingValue)}">$${valuation.totalSellingValue.toFixed(2)}</td>
-      <td class="${valuation.potentialProfit >= 0 ? 'value-high' : 'value-low'}">
-        $${valuation.potentialProfit.toFixed(2)}
-        <small class="d-block">(${valuation.profitMargin.toFixed(1)}%)</small>
-      </td>
+      <td>$${(item.price || 0).toFixed(2)}</td>
+      <td>-</td>
+      <td class="${getValueClass(valuation.totalValue)}">$${valuation.totalValue.toFixed(2)}</td>
+      <td>-</td>
+      <td>-</td>
       <td><span class="badge bg-secondary">${item.warehouseId}</span></td>
       <td>
         <span class="status-badge ${item.status === 'active' ? 'status-active' : 'status-inactive'}">
-          ${item.status}
+          ${item.status.toUpperCase()}
         </span>
       </td>
     `;
@@ -812,23 +789,17 @@ function renderTable(data = filteredData) {
 
 // Update summary cards
 function updateSummary() {
-  const activeItems = inventoryData.filter(item => item.status === 'active');
-  
-  let totalCostValue = 0;
-  let totalSellingValue = 0;
-  
+  let totalValue = 0;
   inventoryData.forEach(item => {
     const valuation = calculateValuation(item);
-    totalCostValue += valuation.totalCostValue;
-    totalSellingValue += valuation.totalSellingValue;
+    totalValue += valuation.totalValue;
   });
-  
-  const avgValue = inventoryData.length > 0 ? totalSellingValue / inventoryData.length : 0;
+  const avgValue = inventoryData.length > 0 ? totalValue / inventoryData.length : 0;
   
   // Update summary cards
-  document.getElementById('totalValue').textContent = `$${totalSellingValue.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
+  document.getElementById('totalValue').textContent = `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
   document.getElementById('totalItems').textContent = inventoryData.length;
-  document.getElementById('activeItems').textContent = activeItems.length;
+  document.getElementById('activeItems').textContent = inventoryData.filter(item => item.status === 'active').length;
   document.getElementById('avgValue').textContent = `$${avgValue.toFixed(2)}`;
 }
 
@@ -877,13 +848,13 @@ function filterData() {
       const valuation = calculateValuation(item);
       switch (valueFilter) {
         case 'high':
-          valueMatch = valuation.totalSellingValue > 1000;
+          valueMatch = valuation.totalValue > 1000;
           break;
         case 'medium':
-          valueMatch = valuation.totalSellingValue >= 500 && valuation.totalSellingValue <= 1000;
+          valueMatch = valuation.totalValue >= 500 && valuation.totalValue <= 1000;
           break;
         case 'low':
-          valueMatch = valuation.totalSellingValue < 500;
+          valueMatch = valuation.totalValue < 500;
           break;
       }
     }
@@ -901,9 +872,9 @@ function sortData() {
   filteredData.sort((a, b) => {
     switch (sortBy) {
       case 'value_desc':
-        return calculateValuation(b).totalSellingValue - calculateValuation(a).totalSellingValue;
+        return calculateValuation(b).totalValue - calculateValuation(a).totalValue;
       case 'value_asc':
-        return calculateValuation(a).totalSellingValue - calculateValuation(b).totalSellingValue;
+        return calculateValuation(a).totalValue - calculateValuation(b).totalValue;
       case 'name_asc':
         return a.productName.localeCompare(b.productName);
       case 'name_desc':

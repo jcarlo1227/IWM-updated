@@ -778,17 +778,14 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Commission Rate *</label>
-              <input type="number" class="form-control" id="buyPrice" step="0.1" min="0" max="100" required>
+              <label class="form-label">Price *</label>
+              <input type="number" class="form-control" id="buyPrice" step="0.01" min="0" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Monthly Revenue</label>
-              <input type="number" class="form-control" id="sellPrice" step="0.01" min="0">
+              <label class="form-label">Additional Notes</label>
+              <input type="text" class="form-control" id="sellPrice">
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Region *</label>
-              <input type="text" class="form-control" id="location" required>
-            </div>
+            
             <div class="col-md-6">
               <label class="form-label">Category</label>
               <select class="form-select" id="categoryId">
@@ -1066,9 +1063,8 @@ let inventoryData = [
     itemCode: 'CHN001',
     productName: 'Online Store',
     unitOfMeasure: 'E-commerce',
-    buyPrice: 5.5,
-    sellPrice: 125000.00,
-    location: 'Philippines',
+    buyPrice: 125000.00,
+    sellPrice: 0,
     categoryId: 'Retail',
     status: 'active',
     warehouseId: 'Maria Santos',
@@ -1080,9 +1076,8 @@ let inventoryData = [
     itemCode: 'CHN002',
     productName: 'Retail Partners',
     unitOfMeasure: 'B2B',
-    buyPrice: 8.0,
-    sellPrice: 89500.00,
-    location: 'Philippines',
+    buyPrice: 89500.00,
+    sellPrice: 0,
     categoryId: 'Wholesale',
     status: 'active',
     warehouseId: 'John Cruz',
@@ -1094,9 +1089,8 @@ let inventoryData = [
     itemCode: 'CHN003',
     productName: 'Mobile App',
     unitOfMeasure: 'Mobile',
-    buyPrice: 4.5,
-    sellPrice: 67800.00,
-    location: 'Philippines',
+    buyPrice: 67800.00,
+    sellPrice: 0,
     categoryId: 'Digital',
     status: 'inactive',
     warehouseId: 'Lisa Garcia',
@@ -1148,8 +1142,7 @@ function editItem(id) {
   document.getElementById('productName').value = item.productName;
   document.getElementById('unitOfMeasure').value = item.unitOfMeasure;
   document.getElementById('buyPrice').value = item.buyPrice;
-  document.getElementById('sellPrice').value = item.sellPrice;
-  document.getElementById('location').value = item.location;
+  document.getElementById('sellPrice').value = '';
   document.getElementById('categoryId').value = item.categoryId;
   document.getElementById('status').value = item.status;
   document.getElementById('warehouseId').value = item.warehouseId;
@@ -1170,8 +1163,7 @@ function saveItem() {
     productName: document.getElementById('productName').value,
     unitOfMeasure: document.getElementById('unitOfMeasure').value,
     buyPrice: parseFloat(document.getElementById('buyPrice').value),
-    sellPrice: parseFloat(document.getElementById('sellPrice').value) || 0,
-    location: document.getElementById('location').value,
+    sellPrice: 0,
     categoryId: document.getElementById('categoryId').value,
     status: document.getElementById('status').value,
     warehouseId: document.getElementById('warehouseId').value,
@@ -1313,9 +1305,9 @@ function renderTable(data = inventoryData) {
       <td>${item.productName}</td>
       <td>${String(item.id).padStart(6, '0')}</td>
       <td>${item.unitOfMeasure}</td>
-      <td>${item.buyPrice}%</td>
-      <td>₱${item.sellPrice.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
-      <td>${item.location}</td>
+      <td>₱${item.buyPrice.toLocaleString('en-PH', {minimumFractionDigits: 2})}</td>
+      <td>-</td>
+      <td>-</td>
       <td>${item.categoryId}</td>
       <td><span class="status-badge status-${item.status}">${item.status.toUpperCase()}</span></td>
       <td>${item.warehouseId}</td>
