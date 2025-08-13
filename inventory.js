@@ -904,98 +904,41 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
 const getAllProductsInventory = async () => {
   try {
     const sql = await database.sql();
-
-    // Helper to resolve an available table from candidates
-    const resolveTable = async (candidates) => {
-      const rows = await sql`
-        SELECT table_name
-        FROM information_schema.tables
-        WHERE table_schema = 'public'
-          AND table_name = ANY(${candidates})
-      `;
-      const found = rows.map(r => r.table_name);
-      return candidates.find(c => found.includes(c)) || null;
-    };
-
-    // Helper to check if column exists on a table
-    const hasColumn = async (tableName, columnName) => {
-      const rows = await sql`
-        SELECT 1
-        FROM information_schema.columns
-        WHERE table_schema = 'public'
-          AND table_name = ${tableName}
-          AND column_name = ${columnName}
-        LIMIT 1
-      `;
-      return rows.length > 0;
-    };
-
-    const productTable = await resolveTable(['product', 'products']);
-    if (!productTable) {
-      throw new Error("Product table not found. Expected 'product' or 'products'.");
-    }
-
-    const pricingTable = await resolveTable(['product_pricings', 'product_pricing']);
-
-    const hasProductImage = await hasColumn(productTable, 'product_image');
-    const hasProductCategory = await hasColumn(productTable, 'product_category');
-    const hasProductId = await hasColumn(productTable, 'product_id');
-    const hasProductName = await hasColumn(productTable, 'product_name');
-
-    // Build identifiers safely
-    const pIdent = productTable; // safe to interpolate via unsafe for identifiers
-    const pricingCte = pricingTable
-      ? `latest_pricing AS (
-           SELECT DISTINCT ON (product_id)
-             product_id,
-             price,
-             discount_rate,
-             effective_date
-           FROM ${pricingTable}
-           ORDER BY product_id, effective_date DESC
-         )`
-      : `latest_pricing AS (
-           SELECT NULL::int AS product_id,
-                  NULL::numeric AS price,
-                  NULL::numeric AS discount_rate,
-                  NULL::date AS effective_date
-           WHERE false
-         )`;
-
-    // Columns
-    const colId = hasProductId ? 'p.product_id' : 'ROW_NUMBER() OVER ()';
-    const colName = hasProductName ? 'p.product_name' : "COALESCE(NULL::text,'')";
-    const colCategory = hasProductCategory ? 'p.product_category' : "COALESCE(NULL::text,'')";
-    const colImage = hasProductImage ? 'p.product_image' : 'NULL::text';
-
-    const queryText = `
-      WITH ${pricingCte},
+    const result = await sql`
+      WITH latest_pricing AS (
+        SELECT DISTINCT ON (product_id)
+          product_id,
+          price,
+          discount_rate,
+          effective_date
+        FROM product_pricing
+        ORDER BY product_id, effective_date DESC
+      ),
       stock_by_product AS (
         SELECT COALESCE(product_name, '') AS product_name, SUM(total_quantity) AS total_quantity
         FROM inventory_items
         GROUP BY product_name
       )
       SELECT 
-        ${colId} AS id,
-        (${colId})::text AS item_code,
-        ${colName} AS product_name,
+        p.product_id AS id,
+        p.product_id::text AS item_code,
+        p.product_name,
         'PCS'::varchar(10) AS unit_of_measure,
         NULL::DECIMAL(10,2) AS buy_price,
         COALESCE(lp.price * (1 - COALESCE(lp.discount_rate, 0)), lp.price) AS sell_price,
         NULL::varchar(255) AS location,
-        ${colCategory} AS product_category,
+        p.product_category AS product_category,
         CASE WHEN COALESCE(s.total_quantity, 0) > 0 THEN 'active' ELSE 'out of stock' END AS status,
         NULL::varchar(50) AS warehouse_id,
         COALESCE(s.total_quantity, 0) AS total_quantity,
         COALESCE(lp.effective_date, CURRENT_DATE) AS updated_at,
-        ${colImage} AS product_image
-      FROM ${pIdent} p
-      LEFT JOIN latest_pricing lp ON lp.product_id = ${hasProductId ? 'p.product_id' : 'NULL'}
-      LEFT JOIN stock_by_product s ON s.product_name = ${hasProductName ? 'p.product_name' : "COALESCE(NULL::text,'')"}
-      ORDER BY ${hasProductId ? 'p.product_id' : '1'}
+        p.product_image
+      FROM products p
+      LEFT JOIN latest_pricing lp ON lp.product_id = p.product_id
+      LEFT JOIN stock_by_product s ON s.product_name = p.product_name
+      ORDER BY p.product_id
     `;
 
-    const result = await sql`${sql.unsafe(queryText)}`;
     return result.map(r => ({
       ...r,
       category_id: r.product_category
