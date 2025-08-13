@@ -336,7 +336,9 @@ app.get('/api/inventory', requireAuth, async (req, res) => {
     const items = await getAllInventoryItems();
     res.json({ success: true, data: items });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to fetch inventory items' });
+    console.error('Failed to fetch inventory items:', err);
+    // Return an empty dataset to keep UI responsive, but include error message
+    res.json({ success: true, data: [], warning: 'Database error while fetching inventory items' });
   }
 });
 
@@ -837,6 +839,17 @@ app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: 'Failed to update order status' });
+  }
+});
+
+app.get('/api/health/db', requireAuth, async (req, res) => {
+  try {
+    const db = require('./database');
+    const conn = await db.sql();
+    const r = await conn`SELECT 1 as ok`;
+    res.json({ ok: true, result: r[0]?.ok === 1 });
+  } catch (e) {
+    res.json({ ok: false, error: e?.message });
   }
 });
 

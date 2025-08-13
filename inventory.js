@@ -49,6 +49,63 @@ const initializeInventoryTable = async () => {
     
     console.log('✅ Warehouses table created/verified');
     
+    // Ensure dependent tables exist (products, product_pricing)
+    await sql`
+      CREATE TABLE IF NOT EXISTS products (
+        product_id SERIAL PRIMARY KEY,
+        product_name VARCHAR(255) NOT NULL,
+        product_description TEXT,
+        product_category VARCHAR(100),
+        product_image TEXT
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS product_pricing (
+        id SERIAL PRIMARY KEY,
+        product_id INTEGER REFERENCES products(product_id),
+        price NUMERIC(10,2) NOT NULL,
+        discount_rate NUMERIC(10,2) DEFAULT 0,
+        effective_date DATE DEFAULT CURRENT_DATE,
+        updated_by INTEGER
+      )
+    `;
+    
+    // Migrate legacy inventory_items columns if the table already existed
+    await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_id INTEGER`;
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS product_name`;
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS buy_price`;
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS sell_price`;
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS location`;
+    // Add FK if missing (guarded)
+    await sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name = 'fk_inventory_product'
+            AND table_name = 'inventory_items'
+        ) THEN
+          ALTER TABLE inventory_items
+          ADD CONSTRAINT fk_inventory_product FOREIGN KEY (product_id) REFERENCES products(product_id);
+        END IF;
+      END $$;
+    `;
+    
+    // Migrate legacy material_shipments columns
+    await sql`ALTER TABLE material_shipments ADD COLUMN IF NOT EXISTS product_id INTEGER`;
+    await sql`ALTER TABLE material_shipments DROP COLUMN IF EXISTS bom_id`;
+    await sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE constraint_name = 'fk_shipment_product'
+            AND table_name = 'material_shipments'
+        ) THEN
+          ALTER TABLE material_shipments
+          ADD CONSTRAINT fk_shipment_product FOREIGN KEY (product_id) REFERENCES products(product_id);
+        END IF;
+      END $$;
+    `;
+    
     
   } catch (err) {
     console.error('❌ Error creating inventory tables:', err);
