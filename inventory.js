@@ -21,6 +21,30 @@ const initializeInventoryTable = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+    // Ensure FK column exists
+    await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_id INTEGER`;
+    // Index for FK
+    await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_id ON inventory_items(product_id)`;
+    // Add FK constraint if missing
+    const fkCheck = await sql`
+      SELECT constraint_name FROM information_schema.table_constraints
+      WHERE table_schema='public' AND table_name='inventory_items' AND constraint_type='FOREIGN KEY'
+    `;
+    const hasFk = fkCheck.some(r => (r.constraint_name || '').includes('product_id'));
+    if (!hasFk) {
+      try {
+        await sql`
+          ALTER TABLE inventory_items
+          ADD CONSTRAINT inventory_items_product_id_fkey
+          FOREIGN KEY (product_id)
+          REFERENCES products(product_id)
+          ON UPDATE CASCADE
+          ON DELETE SET NULL
+        `;
+      } catch (e) {
+        // Ignore if constraint already exists in a race
+      }
+    }
     
     console.log('✅ Inventory table created/verified');
     
@@ -153,9 +177,13 @@ const getAllInventoryItems = async (filters = {}) => {
     let query = sql`
       SELECT 
         i.*,
+        p.product_name AS ref_product_name,
+        p.product_category AS ref_product_category,
+        p.product_image AS ref_product_image,
         c.category_name,
         w.warehouse_name
       FROM inventory_items i
+      LEFT JOIN products p ON p.product_id = i.product_id
       LEFT JOIN categories c ON i.category_id = c.category_id
       LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
     `;
@@ -185,24 +213,31 @@ const getAllInventoryItems = async (filters = {}) => {
     
     if (conditions.length > 0) {
       const whereClause = ` WHERE ${conditions.join(' AND ')}`;
-      query = sql`
+      const base = `
         SELECT 
           i.*,
+          p.product_name AS ref_product_name,
+          p.product_category AS ref_product_category,
+          p.product_image AS ref_product_image,
           c.category_name,
           w.warehouse_name
         FROM inventory_items i
+        LEFT JOIN products p ON p.product_id = i.product_id
         LEFT JOIN categories c ON i.category_id = c.category_id
         LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
-        ${sql.unsafe(whereClause)}
-        ORDER BY i.updated_at DESC
       `;
+      query = sql`${sql([base + whereClause + ' ORDER BY i.updated_at DESC'])}`;
     } else {
       query = sql`
         SELECT 
           i.*,
+          p.product_name AS ref_product_name,
+          p.product_category AS ref_product_category,
+          p.product_image AS ref_product_image,
           c.category_name,
           w.warehouse_name
         FROM inventory_items i
+        LEFT JOIN products p ON p.product_id = i.product_id
         LEFT JOIN categories c ON i.category_id = c.category_id
         LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
         ORDER BY i.updated_at DESC
@@ -245,6 +280,7 @@ const createInventoryItem = async (itemData) => {
     const sql = await database.sql();
     const {
       item_code,
+      product_id,
       product_name,
       unit_of_measure,
       buy_price,
@@ -256,13 +292,15 @@ const createInventoryItem = async (itemData) => {
       total_quantity
     } = itemData;
     
+    const computedStatus = total_quantity > 0 ? 'active' : 'out of stock';
+    
     const result = await sql`
       INSERT INTO inventory_items (
-        item_code, product_name, unit_of_measure, buy_price, sell_price,
+        item_code, product_id, product_name, unit_of_measure, buy_price, sell_price,
         location, category_id, status, warehouse_id, total_quantity, updated_at
       ) VALUES (
-        ${item_code}, ${product_name}, ${unit_of_measure}, ${buy_price}, ${sell_price},
-        ${location}, ${category_id}, ${status}, ${warehouse_id}, ${total_quantity}, CURRENT_TIMESTAMP
+        ${item_code}, ${product_id || null}, ${product_name}, ${unit_of_measure}, ${buy_price}, ${sell_price},
+        ${location}, ${category_id}, ${computedStatus}, ${warehouse_id}, ${total_quantity}, CURRENT_TIMESTAMP
       )
       RETURNING *
     `;
@@ -280,6 +318,7 @@ const updateInventoryItem = async (id, itemData) => {
     const sql = await database.sql();
     const {
       item_code,
+      product_id,
       product_name,
       unit_of_measure,
       buy_price,
@@ -291,16 +330,19 @@ const updateInventoryItem = async (id, itemData) => {
       total_quantity
     } = itemData;
     
+    const computedStatus = total_quantity > 0 ? 'active' : 'out of stock';
+    
     const result = await sql`
       UPDATE inventory_items SET
         item_code = ${item_code},
+        product_id = ${product_id || null},
         product_name = ${product_name},
         unit_of_measure = ${unit_of_measure},
         buy_price = ${buy_price},
         sell_price = ${sell_price},
         location = ${location},
         category_id = ${category_id},
-        status = ${status},
+        status = ${computedStatus},
         warehouse_id = ${warehouse_id},
         total_quantity = ${total_quantity},
         updated_at = CURRENT_TIMESTAMP
