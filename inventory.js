@@ -1010,6 +1010,40 @@ const getAllProductsInventory = async () => {
   }
 };
 
+// Fetch one product plus its latest pricing
+const getProductWithLatestPricing = async (productId) => {
+  try {
+    const sql = await database.sql();
+    const rows = await sql`
+      WITH latest_pricing AS (
+        SELECT DISTINCT ON (product_id)
+          id,
+          product_id,
+          price,
+          discount_rate,
+          effective_date
+        FROM product_pricing
+        WHERE product_id = ${productId}
+        ORDER BY product_id, effective_date DESC
+      )
+      SELECT p.product_id, p.product_name, p.product_category, p.product_image,
+             lp.id AS pricing_id,
+             lp.price,
+             lp.discount_rate,
+             lp.effective_date,
+             COALESCE(lp.price * (1 - COALESCE(lp.discount_rate, 0)), lp.price) AS net_price
+      FROM products p
+      LEFT JOIN latest_pricing lp ON lp.product_id = p.product_id
+      WHERE p.product_id = ${productId}
+      LIMIT 1
+    `;
+    return rows[0] || null;
+  } catch (err) {
+    console.error('Error fetching product with pricing:', err);
+    throw err;
+  }
+};
+
 
 module.exports = {
   initializeInventoryTable,
@@ -1040,5 +1074,6 @@ module.exports = {
   deleteOrderShipment,
   getOrderShipmentStats,
   updateOrderShipmentStatus,
-  getAllProductsInventory
+  getAllProductsInventory,
+  getProductWithLatestPricing
 };

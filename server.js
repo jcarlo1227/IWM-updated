@@ -43,7 +43,8 @@ const {
   deleteOrderShipment,
   getOrderShipmentStats,
   updateOrderShipmentStatus,
-  getAllProductsInventory
+  getAllProductsInventory,
+  getProductWithLatestPricing
 } = require('./inventory');
 require('dotenv').config();
 
@@ -818,6 +819,24 @@ app.get('/api/inventory-products', requireAuth, async (req, res) => {
   } catch (err) {
     console.error('Failed to fetch products inventory:', err);
     res.status(500).json({ success: false, message: 'Failed to fetch products inventory' });
+  }
+});
+
+// API: Get one product with latest pricing (used when selecting a product during add-to-inventory)
+app.get('/api/products/:productId/with-pricing', requireAuth, async (req, res) => {
+  try {
+    const productId = parseInt(req.params.productId, 10);
+    if (Number.isNaN(productId)) {
+      return res.status(400).json({ success: false, message: 'Invalid product_id' });
+    }
+    const data = await getProductWithLatestPricing(productId);
+    if (!data) {
+      return res.status(404).json({ success: false, message: 'Product not found' });
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('Fetch product with pricing error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch product info' });
   }
 });
 
