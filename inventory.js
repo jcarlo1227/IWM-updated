@@ -206,7 +206,9 @@ const initializeOrderShipmentsTable = async () => {
 const getAllInventoryItems = async (filters = {}) => {
   try {
     const sql = await database.sql();
-    const baseSelect = sql`
+
+    // Base select with latest price via LATERAL join
+    let queryText = `
       SELECT 
         i.id,
         i.item_code,
@@ -229,33 +231,43 @@ const getAllInventoryItems = async (filters = {}) => {
       LEFT JOIN categories c ON i.category_id = c.category_id
       LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
       LEFT JOIN products p ON p.product_id = i.product_id
-      LEFT JOIN product_pricing pp ON pp.product_id = i.product_id
+      LEFT JOIN LATERAL (
+        SELECT price
+        FROM product_pricing ppx
+        WHERE ppx.product_id = i.product_id
+        ORDER BY effective_date DESC
+        LIMIT 1
+      ) pp ON true
     `;
 
-    const clauses = [];
-    if (filters.search) {
-      const term = `%${filters.search}%`;
-      clauses.push(sql`(p.product_name ILIKE ${term} OR i.item_code ILIKE ${term})`);
+    const params = [];
+    const conds = [];
+
+    if (filters && typeof filters.search === 'string' && filters.search.trim() !== '') {
+      const term = `%${filters.search.trim()}%`;
+      conds.push(`(p.product_name ILIKE $${params.length + 1} OR i.item_code ILIKE $${params.length + 2})`);
+      params.push(term, term);
     }
-    if (filters.category) {
-      clauses.push(sql`i.category_id = ${filters.category}`);
+    if (filters && filters.category) {
+      conds.push(`i.category_id = $${params.length + 1}`);
+      params.push(filters.category);
     }
-    if (filters.status) {
-      clauses.push(sql`i.status = ${filters.status}`);
+    if (filters && filters.status) {
+      conds.push(`i.status = $${params.length + 1}`);
+      params.push(filters.status);
     }
-    if (filters.warehouse) {
-      clauses.push(sql`i.warehouse_id = ${filters.warehouse}`);
+    if (filters && filters.warehouse) {
+      conds.push(`i.warehouse_id = $${params.length + 1}`);
+      params.push(filters.warehouse);
     }
 
-    let whereSql = sql``;
-    if (clauses.length > 0) {
-      whereSql = sql`WHERE ${clauses[0]}`;
-      for (let i = 1; i < clauses.length; i++) {
-        whereSql = sql`${whereSql} AND ${clauses[i]}`;
-      }
+    if (conds.length) {
+      queryText += ` WHERE ${conds.join(' AND ')}`;
     }
 
-    const result = await sql`${baseSelect} ${whereSql} ORDER BY i.updated_at DESC`;
+    queryText += ` ORDER BY i.updated_at DESC`;
+
+    const result = await sql.unsafe(queryText, params);
     return result;
   } catch (err) {
     console.error('Error fetching inventory items:', err);
