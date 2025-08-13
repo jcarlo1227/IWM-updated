@@ -10,8 +10,6 @@ const initializeInventoryTable = async () => {
         item_code VARCHAR(50) UNIQUE NOT NULL,
         product_name VARCHAR(255) NOT NULL,
         unit_of_measure VARCHAR(10) NOT NULL,
-        buy_price DECIMAL(10,2) NOT NULL,
-        sell_price DECIMAL(10,2),
         location VARCHAR(255) NOT NULL,
         category_id VARCHAR(50),
         status VARCHAR(20),
@@ -21,19 +19,21 @@ const initializeInventoryTable = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
-    // Ensure FK column exists
+    // Remove legacy columns and add new pricing columns
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS buy_price`;
+    await sql`ALTER TABLE inventory_items DROP COLUMN IF EXISTS sell_price`;
+    await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS price DECIMAL(10,2)`;
     await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_id INTEGER`;
     await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_pricing_id INTEGER`;
-    // Index for FKs
+    // Indexes
     await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_id ON inventory_items(product_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_pricing_id ON inventory_items(product_pricing_id)`;
     // Add FK constraints if missing
-    const fkCheck = await sql`
+    const existingFks = await sql`
       SELECT constraint_name FROM information_schema.table_constraints
       WHERE table_schema='public' AND table_name='inventory_items' AND constraint_type='FOREIGN KEY'
     `;
-    const hasFkProd = fkCheck.some(r => (r.constraint_name || '').includes('product_id'));
-    const hasFkPricing = fkCheck.some(r => (r.constraint_name || '').includes('product_pricing_id'));
+    const hasFkProd = existingFks.some(r => (r.constraint_name || '').includes('product_id_fkey'));
     if (!hasFkProd) {
       try {
         await sql`
@@ -46,17 +46,19 @@ const initializeInventoryTable = async () => {
         `;
       } catch (e) {}
     }
-    if (!hasFkPricing) {
-      try {
-        await sql`
-          ALTER TABLE inventory_items
-          ADD CONSTRAINT inventory_items_product_pricing_id_fkey
-          FOREIGN KEY (product_pricing_id)
-          REFERENCES product_pricing(product_id)
-          ON UPDATE CASCADE
-          ON DELETE SET NULL
-        `;
-      } catch (e) {}
+    // Determine primary key column of product_pricing for robust FK
+    try {
+      await sql`ALTER TABLE inventory_items DROP CONSTRAINT IF EXISTS inventory_items_product_pricing_id_fkey`;
+      await sql`
+        ALTER TABLE inventory_items
+        ADD CONSTRAINT inventory_items_product_pricing_id_fkey
+        FOREIGN KEY (product_pricing_id)
+        REFERENCES product_pricing(id)
+        ON UPDATE CASCADE
+        ON DELETE SET NULL
+      `;
+    } catch (e) {
+      // Ignore if product_pricing table is not available or id not present
     }
     
     console.log('✅ Inventory table created/verified');
@@ -225,21 +227,21 @@ const getAllInventoryItems = async (filters = {}) => {
     }
     
     if (conditions.length > 0) {
-      const whereClause = ` WHERE ${conditions.join(' AND ')}`;
-      const base = `
-        SELECT 
-          i.*,
-          p.product_name AS ref_product_name,
-          p.product_category AS ref_product_category,
-          p.product_image AS ref_product_image,
-          c.category_name,
-          w.warehouse_name
+      // Build filtered query using parameters array 'params'
+      // Note: Neon tagged template cannot bind a dynamic number of placeholders easily,
+      // so fall back to a single string with $1..$n placeholders executed via connection
+      const connection = await database.sql();
+      const where = `WHERE ${conditions.join(' AND ')}`;
+      const text = `
+        SELECT i.*, p.product_name AS ref_product_name, p.product_category AS ref_product_category,
+               p.product_image AS ref_product_image, c.category_name, w.warehouse_name
         FROM inventory_items i
         LEFT JOIN products p ON p.product_id = i.product_id
         LEFT JOIN categories c ON i.category_id = c.category_id
         LEFT JOIN warehouses w ON i.warehouse_id = w.warehouse_id
-      `;
-      query = sql`${sql([base + whereClause + ' ORDER BY i.updated_at DESC'])}`;
+        ${where}
+        ORDER BY i.updated_at DESC`;
+      query = connection.bind ? connection(text, params) : connection(text, params);
     } else {
       query = sql`
         SELECT 
