@@ -26,26 +26,12 @@ const initializeInventoryTable = async () => {
     await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_id INTEGER`;
     await sql`ALTER TABLE inventory_items ADD COLUMN IF NOT EXISTS product_pricing_id INTEGER`;
     // Indexes
-    await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_id ON inventory_items(product_id)`;
     await sql`CREATE INDEX IF NOT EXISTS idx_inventory_items_product_pricing_id ON inventory_items(product_pricing_id)`;
     // Add FK constraints if missing
     const existingFks = await sql`
       SELECT constraint_name FROM information_schema.table_constraints
       WHERE table_schema='public' AND table_name='inventory_items' AND constraint_type='FOREIGN KEY'
     `;
-    const hasFkProd = existingFks.some(r => (r.constraint_name || '').includes('product_id_fkey'));
-    if (!hasFkProd) {
-      try {
-        await sql`
-          ALTER TABLE inventory_items
-          ADD CONSTRAINT inventory_items_product_id_fkey
-          FOREIGN KEY (product_id)
-          REFERENCES products(product_id)
-          ON UPDATE CASCADE
-          ON DELETE SET NULL
-        `;
-      } catch (e) {}
-    }
     // Determine primary key column of product_pricing for robust FK
     try {
       await sql`ALTER TABLE inventory_items DROP CONSTRAINT IF EXISTS inventory_items_product_pricing_id_fkey`;
