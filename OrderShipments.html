@@ -603,17 +603,7 @@
               </select>
             </div>
           </div>
-          <div class="col-md-2">
-            <div class="filter-group">
-              <label for="priorityFilter">Priority</label>
-              <select class="form-select" id="priorityFilter">
-                <option value="">All Priority</option>
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
-          </div>
+          
           <div class="col-md-3">
             <div class="filter-group">
               <label for="orderDateRange">Order Date</label>
@@ -646,10 +636,10 @@
                 <tr>
                   <th>Order ID</th>
                   <th>Customer</th>
-                  <th>Product/Item</th>
+                  <th>Item Code</th>
+                  <th>Product</th>
                   <th>Quantity</th>
                   <th>Total Value</th>
-                  <th>Priority</th>
                   <th>Status</th>
                   <th>Order Date</th>
                   <th>Ship Date</th>
@@ -787,14 +777,7 @@
               <label for="totalValue" class="form-label">Total Value</label>
               <input type="number" step="0.01" class="form-control" id="totalValue" name="totalValue" required>
             </div>
-            <div class="col-md-4">
-              <label for="priority" class="form-label">Priority</label>
-              <select class="form-select" id="priority" name="priority" required>
-                <option value="high">High</option>
-                <option value="medium" selected>Medium</option>
-                <option value="low">Low</option>
-              </select>
-            </div>
+            
             <div class="col-md-4">
               <label for="status" class="form-label">Status</label>
               <select class="form-select" id="status" name="status" required>
@@ -876,7 +859,6 @@
       const queryParams = new URLSearchParams();
       if (filters.search) queryParams.append('search', filters.search);
       if (filters.status) queryParams.append('status', filters.status);
-      if (filters.priority) queryParams.append('priority', filters.priority);
       if (filters.date) queryParams.append('date', filters.date);
 
       const res = await fetch(`/api/order-shipments?${queryParams.toString()}`);
@@ -915,45 +897,41 @@
     const tbody = document.querySelector('#ordersTable tbody');
     tbody.innerHTML = '';
 
-    if (!data.length) {
-      tbody.innerHTML = `<tr><td colspan="12" class="text-center text-muted py-4"><i class="bi bi-inbox fs-1 d-block mb-2"></i>No orders found</td></tr>`;
+    if (data.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="12" class="text-center text-muted py-4">
+            <i class="bi bi-inbox fs-1 d-block mb-2"></i>
+            No orders found
+          </td>
+        </tr>
+      `;
       return;
     }
 
-    data.forEach(order => {
+    data.forEach(o => {
       const row = document.createElement('tr');
       row.innerHTML = `
-        <td><strong>${order.order_id}</strong></td>
-        <td>${order.customer_name}</td>
-        <td>
-          <div class="d-flex align-items-center">
-            <span>${order.product_name}</span>
-            <small class="text-muted ms-2">(${order.item_code})</small>
-          </div>
-          <small class="text-muted" data-item-code="${order.item_code}">Loading stock...</small>
-        </td>
-        <td>${order.quantity}</td>
-        <td>₱${Number(order.total_value).toFixed(2)}</td>
-        <td><span class="status-badge priority-${order.priority}">${capitalize(order.priority)}</span></td>
-        <td><span class="status-badge status-${order.status}">${capitalize(order.status)}</span></td>
-        <td>${order.order_date || '-'}</td>
-        <td>${order.ship_date || '-'}</td>
-        <td>${order.delivery_date || '-'}</td>
-        <td>${order.tracking_number || '-'}</td>
+        <td><strong>${o.order_id}</strong></td>
+        <td>${o.customer_name || '-'}</td>
+        <td>${o.item_code || '-'}</td>
+        <td>${o.product_name || '-'}</td>
+        <td>${o.quantity || 0}</td>
+        <td>₱${(o.total_value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
+        <td><span class="status-badge status-${(o.status || 'processing').toLowerCase()}">${(o.status || 'processing').toUpperCase()}</span></td>
+        <td>${o.order_date || '-'}</td>
+        <td>${o.ship_date || '-'}</td>
+        <td>${o.delivery_date || '-'}</td>
+        <td>${o.tracking_number || '-'}</td>
         <td class="item-actions">
-          <i class="bi bi-eye" title="View Details" onclick="viewOrder(${order.id})"></i>
-          <i class="bi bi-box-seam" title="View in Inventory" onclick="viewInInventory('${order.item_code}')"></i>
-          <i class="bi bi-pencil" title="Edit" onclick="editOrder(${order.id})"></i>
-          <i class="bi bi-box-arrow-right" title="Ship Now" onclick="shipOrder(${order.id})"></i>
-          <i class="bi bi-printer" title="Print Label" onclick="printLabel('${order.order_id}')"></i>
-          <i class="bi bi-trash" title="Delete" onclick="deleteOrder(${order.id})"></i>
+          <i class="bi bi-eye" title="View" onclick="viewOrder(${o.id})"></i>
+          <i class="bi bi-pencil" title="Edit" onclick="editOrder(${o.id})"></i>
+          <i class="bi bi-truck" title="Mark Shipped" onclick="shipOrder(${o.id})"></i>
+          <i class="bi bi-trash" title="Delete" onclick="deleteOrder(${o.id})"></i>
         </td>
       `;
       tbody.appendChild(row);
     });
-
-    // After render, fetch stock info in parallel
-    updateStockBadges();
   }
 
   function capitalize(s) { return (s || '').charAt(0).toUpperCase() + (s || '').slice(1); }
@@ -985,7 +963,6 @@
     document.getElementById('saveOrderBtn').addEventListener('click', saveOrder);
     document.getElementById('searchOrder').addEventListener('input', () => applyOrderFilters());
     document.getElementById('orderStatusFilter').addEventListener('change', applyOrderFilters);
-    document.getElementById('priorityFilter').addEventListener('change', applyOrderFilters);
     document.getElementById('orderDateRange').addEventListener('change', applyOrderFilters);
   }
 
@@ -993,7 +970,6 @@
     const filters = {
       search: document.getElementById('searchOrder').value,
       status: document.getElementById('orderStatusFilter').value,
-      priority: document.getElementById('priorityFilter').value,
       date: document.getElementById('orderDateRange').value
     };
     loadOrders(filters);
@@ -1021,7 +997,6 @@
       document.getElementById('productName').value = o.product_name;
       document.getElementById('quantity').value = o.quantity;
       document.getElementById('totalValue').value = o.total_value;
-      document.getElementById('priority').value = o.priority;
       document.getElementById('status').value = o.status;
       document.getElementById('orderDate').value = o.order_date || '';
       document.getElementById('shipDate').value = o.ship_date || '';
@@ -1045,7 +1020,6 @@
       product_name: fd.get('productName'),
       quantity: parseInt(fd.get('quantity')),
       total_value: parseFloat(fd.get('totalValue')),
-      priority: fd.get('priority'),
       status: fd.get('status'),
       order_date: fd.get('orderDate') || null,
       ship_date: fd.get('shipDate') || null,
@@ -1087,7 +1061,7 @@
             <p><strong>Total Value:</strong> ₱${Number(o.total_value).toFixed(2)}</p>
           </div>
           <div class="col-md-6">
-            <p><strong>Priority:</strong> ${capitalize(o.priority)}</p>
+            
             <p><strong>Status:</strong> ${capitalize(o.status)}</p>
             <p><strong>Order Date:</strong> ${o.order_date || 'N/A'}</p>
             <p><strong>Ship Date:</strong> ${o.ship_date || 'N/A'}</p>
@@ -1141,8 +1115,8 @@
   }
 
   function generateReports() {
-    const headers = ['Order ID','Customer','Item Code','Product','Quantity','Total Value','Priority','Status','Order Date','Ship Date','Delivery Date','Tracking #'];
-    const rows = ordersData.map(o => [o.order_id,o.customer_name,o.item_code,o.product_name,o.quantity,o.total_value,o.priority,o.status,o.order_date||'',o.ship_date||'',o.delivery_date||'',o.tracking_number||'']);
+    const headers = ['Order ID','Customer','Item Code','Product','Quantity','Total Value','Status','Order Date','Ship Date','Delivery Date','Tracking #'];
+    const rows = ordersData.map(o => [o.order_id,o.customer_name,o.item_code,o.product_name,o.quantity,o.total_value,o.status,o.order_date||'',o.ship_date||'',o.delivery_date||'',o.tracking_number||'']);
     const csv = [headers, ...rows].map(r => r.map(c => '"' + String(c).replaceAll('"','""') + '"').join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
