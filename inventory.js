@@ -900,6 +900,23 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
   }
 };
 
+// Get recent order shipment activity
+const getRecentOrderShipmentActivity = async (limit = 10) => {
+  try {
+    const sql = await database.sql();
+    const rows = await sql`
+      SELECT id, order_id, product_name, status, updated_at, ship_date, delivery_date, tracking_number
+      FROM order_shipments
+      ORDER BY updated_at DESC
+      LIMIT ${limit}
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching recent activity:', err);
+    throw err;
+  }
+};
+
 
 module.exports = {
   initializeInventoryTable,
@@ -920,5 +937,6 @@ module.exports = {
   updateOrderShipment,
   deleteOrderShipment,
   getOrderShipmentStats,
-  updateOrderShipmentStatus
+  updateOrderShipmentStatus,
+  getRecentOrderShipmentActivity
 };

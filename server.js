@@ -34,7 +34,8 @@ const {
   updateOrderShipment,
   deleteOrderShipment,
   getOrderShipmentStats,
-  updateOrderShipmentStatus
+  updateOrderShipmentStatus,
+  getRecentOrderShipmentActivity
 } = require('./inventory');
 require('dotenv').config();
 
@@ -747,6 +748,17 @@ app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: 'Failed to update order status' });
+  }
+});
+
+app.get('/api/order-shipments/recent-activity', requireAuth, async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(50, parseInt(req.query.limit || '10')));
+    const rows = await getRecentOrderShipmentActivity(limit);
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Error fetching recent activity:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch recent activity' });
   }
 });
 

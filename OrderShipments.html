@@ -698,34 +698,7 @@
             <div class="card-header bg-white">
               <h6 class="mb-0 fw-bold"><i class="bi bi-activity me-2"></i>Recent Activity</h6>
             </div>
-            <div class="card-body">
-              <div class="d-flex align-items-center mb-3">
-                <div class="bg-success rounded-circle p-2 me-3">
-                  <i class="bi bi-check text-white"></i>
-                </div>
-                <div>
-                  <div class="fw-bold">Order ORD-0001 delivered successfully</div>
-                  <small class="text-muted">2 hours ago</small>
-                </div>
-              </div>
-              <div class="d-flex align-items-center mb-3">
-                <div class="bg-primary rounded-circle p-2 me-3">
-                  <i class="bi bi-truck text-white"></i>
-                </div>
-                <div>
-                  <div class="fw-bold">Order ORD-0002 shipped to customer</div>
-                  <small class="text-muted">1 day ago</small>
-                </div>
-              </div>
-              <div class="d-flex align-items-center">
-                <div class="bg-warning rounded-circle p-2 me-3">
-                  <i class="bi bi-plus text-white"></i>
-                </div>
-                <div>
-                  <div class="fw-bold">New order ORD-0003 received</div>
-                  <small class="text-muted">2 days ago</small>
-                </div>
-              </div>
+            <div class="card-body" id="recentActivityBody">
             </div>
           </div>
         </div>
@@ -849,6 +822,7 @@
     setupOrderEvents();
     loadNotifications(); // Load notifications on page load
     loadNotificationCount(); // Load notification count on page load
+    loadRecentActivity();
   });
 
   async function loadOrders(filters = {}) {
@@ -1032,6 +1006,7 @@
       bootstrap.Modal.getInstance(document.getElementById('orderModal')).hide();
       await loadOrders();
       await loadOrderStats();
+      await loadRecentActivity();
     } else {
       alert(result.message || 'Failed to save order');
     }
@@ -1072,14 +1047,14 @@
     const today = new Date().toISOString().split('T')[0];
     const res = await fetch(`/api/order-shipments/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) });
     const result = await res.json();
-    if (result.success) { loadOrders(); loadOrderStats(); }
+    if (result.success) { loadOrders(); loadOrderStats(); loadRecentActivity(); }
   }
 
   async function deleteOrder(id) {
     if (!confirm('Delete this order?')) return;
     const res = await fetch(`/api/order-shipments/${id}`, { method: 'DELETE' });
     const result = await res.json();
-    if (result.success) { loadOrders(); loadOrderStats(); }
+    if (result.success) { loadOrders(); loadOrderStats(); loadRecentActivity(); }
   }
 
   function printLabel(orderId) {
@@ -1100,6 +1075,7 @@
     await Promise.allSettled(toShip.map(o => fetch(`/api/order-shipments/${o.id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) })));
     await loadOrders();
     await loadOrderStats();
+    await loadRecentActivity();
   }
 
   function printShippingLabels() {
@@ -1199,6 +1175,40 @@
       if (response.ok) window.location.href = '/loginpage.html';
     } catch (e) {
       window.location.href = '/loginpage.html';
+    }
+  }
+  async function loadRecentActivity() {
+    try {
+      const res = await fetch('/api/order-shipments/recent-activity?limit=10');
+      const result = await res.json();
+      const container = document.getElementById('recentActivityBody');
+      if (!container) return;
+      container.innerHTML = '';
+      if (!result.success || !Array.isArray(result.data) || result.data.length === 0) {
+        container.innerHTML = '<div class="text-muted">No recent activity</div>';
+        return;
+      }
+      result.data.forEach(ev => {
+        const icon = ev.status === 'delivered' ? 'bi-check text-white' : (ev.status === 'shipped' ? 'bi-truck text-white' : 'bi-plus text-white');
+        const bg = ev.status === 'delivered' ? 'bg-success' : (ev.status === 'shipped' ? 'bg-primary' : 'bg-warning');
+        const when = formatTimeAgo(ev.updated_at);
+        const title = `Order ${ev.order_id} ${ev.status}`;
+        const div = document.createElement('div');
+        div.className = 'd-flex align-items-center mb-3';
+        div.innerHTML = `
+          <div class="${bg} rounded-circle p-2 me-3">
+            <i class="bi ${icon}"></i>
+          </div>
+          <div>
+            <div class="fw-bold">${title}</div>
+            <small class="text-muted">${when}</small>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    } catch (e) {
+      const container = document.getElementById('recentActivityBody');
+      if (container) container.innerHTML = '<div class="text-muted">Failed to load recent activity</div>';
     }
   }
   setInterval(() => { loadNotifications(); loadNotificationCount(); }, 300000);
