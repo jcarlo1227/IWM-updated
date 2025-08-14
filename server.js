@@ -35,7 +35,10 @@ const {
   deleteOrderShipment,
   getOrderShipmentStats,
   updateOrderShipmentStatus,
-  getRecentOrderShipmentActivity
+  getRecentOrderShipmentActivity,
+  getStockOverview,
+  getStockByCategory,
+  getStockByWarehouse
 } = require('./inventory');
 require('dotenv').config();
 
@@ -442,6 +445,38 @@ app.get('/api/warehouses', requireAuth, async (req, res) => {
   }
 });
 
+// Stock Tracking APIs
+app.get('/api/stock/overview', requireAuth, async (req, res) => {
+  try {
+    const threshold = parseInt(req.query.threshold) || 50;
+    const data = await getStockOverview({ threshold });
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('Stock overview error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock overview' });
+  }
+});
+
+app.get('/api/stock/by-category', requireAuth, async (req, res) => {
+  try {
+    const rows = await getStockByCategory();
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('Stock by category error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock by category' });
+  }
+});
+
+app.get('/api/stock/by-warehouse', requireAuth, async (req, res) => {
+  try {
+    const rows = await getStockByWarehouse();
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('Stock by warehouse error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock by warehouse' });
+  }
+});
+
 // Products and Pricing (read-only)
 app.get('/api/products', requireAuth, async (req, res) => {
   try {
@@ -684,7 +719,7 @@ app.get('/api/order-shipments', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/order-shipments/:id', requireAuth, async (req, res) => {
+app.get('/api/order-shipments/:id(\\d+)', requireAuth, async (req, res) => {
   try {
     const order = await getOrderShipmentById(req.params.id);
     if (order) {
@@ -708,7 +743,7 @@ app.post('/api/order-shipments', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/order-shipments/:id', requireAuth, async (req, res) => {
+app.put('/api/order-shipments/:id(\\d+)', requireAuth, async (req, res) => {
   try {
     const updatedOrder = await updateOrderShipment(req.params.id, req.body);
     if (updatedOrder) {
@@ -722,7 +757,7 @@ app.put('/api/order-shipments/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/order-shipments/:id', requireAuth, async (req, res) => {
+app.delete('/api/order-shipments/:id(\\d+)', requireAuth, async (req, res) => {
   try {
     const deleted = await deleteOrderShipment(req.params.id);
     if (deleted) {
@@ -736,7 +771,7 @@ app.delete('/api/order-shipments/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
+app.post('/api/order-shipments/:id(\\d+)/status', requireAuth, async (req, res) => {
   try {
     const { status, setShipDate, setDeliveryDate } = req.body;
     const updated = await updateOrderShipmentStatus(req.params.id, status, { setShipDate, setDeliveryDate });
@@ -747,7 +782,9 @@ app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
     }
   } catch (error) {
     console.error('Error updating order status:', error);
-    res.status(500).json({ success: false, message: 'Failed to update order status' });
+    const message = (error && error.message) ? error.message : 'Failed to update order status';
+    const isBusinessError = /you cannot ship the item|Order not found/i.test(message);
+    res.status(isBusinessError ? 400 : 500).json({ success: false, message });
   }
 });
 
