@@ -111,6 +111,10 @@
       color: var(--secondary-color);
     }
 
+    .clickable-card { cursor: pointer; }
+    .clickable-card:focus { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
+    .clickable-card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1); }
+
     .table-container {
       background: var(--main-bg);
       border-radius: 10px;
@@ -597,7 +601,7 @@
         <!-- Stock Summary Cards -->
         <div class="row g-4 mb-4">
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardTotalItems" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-primary bg-opacity-10 p-3">
@@ -611,7 +615,7 @@
           </div>
           
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardInStock" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-success bg-opacity-10 p-3">
@@ -625,7 +629,7 @@
           </div>
           
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardLowStock" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-warning bg-opacity-10 p-3">
@@ -639,7 +643,7 @@
           </div>
           
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardOutOfStock" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-danger bg-opacity-10 p-3">
@@ -681,6 +685,35 @@
     </div>
   </div>
 </div>
+
+<!-- Stock List Modal -->
+<div class="modal fade" id="stockListModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="stockListModalTitle">Items</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Item Code</th>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Warehouse</th>
+                <th>Quantity</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="stockListTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
 
 <!-- Insert/Edit Modal -->
 <div class="modal fade" id="itemModal" tabindex="-1">
@@ -1046,6 +1079,7 @@ document.addEventListener('DOMContentLoaded', function() {
   loadStockTracking();
   // periodic refresh to keep values updated
   setInterval(loadStockTracking, 30000);
+  setupCardInteractions();
 });
 
 // CRUD Operations
@@ -1349,6 +1383,76 @@ function renderProgressList(containerId, items) {
       </div>
     `;
     container.appendChild(wrapper);
+  });
+}
+
+// Inventory list for modal
+let stockInventoryCache = null;
+async function getInventoryItems() {
+  if (Array.isArray(stockInventoryCache)) return stockInventoryCache;
+  const res = await fetch(`${API_BASE}/inventory`);
+  const json = await res.json().catch(() => ({ success: false, data: [] }));
+  stockInventoryCache = json && json.data ? json.data : [];
+  return stockInventoryCache;
+}
+
+function setupCardInteractions() {
+  const totalEl = document.getElementById('cardTotalItems');
+  const inEl = document.getElementById('cardInStock');
+  const lowEl = document.getElementById('cardLowStock');
+  const outEl = document.getElementById('cardOutOfStock');
+  const onKey = (type) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showStockList(type); } };
+  totalEl?.addEventListener('click', () => showStockList('all'));
+  totalEl?.addEventListener('keydown', onKey('all'));
+  inEl?.addEventListener('click', () => showStockList('inStock'));
+  inEl?.addEventListener('keydown', onKey('inStock'));
+  lowEl?.addEventListener('click', () => showStockList('lowStock'));
+  lowEl?.addEventListener('keydown', onKey('lowStock'));
+  outEl?.addEventListener('click', () => showStockList('outOfStock'));
+  outEl?.addEventListener('keydown', onKey('outOfStock'));
+}
+
+async function showStockList(type) {
+  const items = await getInventoryItems();
+  let filtered = items;
+  const threshold = 50;
+  if (type === 'inStock') {
+    filtered = items.filter(i => Number(i.total_quantity) > 0);
+  } else if (type === 'lowStock') {
+    filtered = items.filter(i => Number(i.total_quantity) > 0 && Number(i.total_quantity) < threshold);
+  } else if (type === 'outOfStock') {
+    filtered = items.filter(i => String(i.status || '').toLowerCase() === 'out of stock' || Number(i.total_quantity) === 0);
+  }
+  const titleMap = {
+    all: 'All Items',
+    inStock: 'In Stock Items',
+    lowStock: 'Low Stock Items (< 50)',
+    outOfStock: 'Out of Stock Items'
+  };
+  const titleEl = document.getElementById('stockListModalTitle');
+  if (titleEl) titleEl.textContent = `${titleMap[type] || 'Items'} (${filtered.length})`;
+  renderStockRows(filtered);
+  const modal = new bootstrap.Modal(document.getElementById('stockListModal'));
+  modal.show();
+}
+
+function renderStockRows(rows) {
+  const tbody = document.getElementById('stockListTbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const status = String(r.status || '').toLowerCase();
+    const badgeClass = status === 'out of stock' ? 'status-inactive' : 'status-active';
+    tr.innerHTML = `
+      <td>${r.item_code || ''}</td>
+      <td>${r.product_name || ''}</td>
+      <td>${r.product_category || ''}</td>
+      <td>${r.warehouse_name || r.warehouse_id || ''}</td>
+      <td>${Number(r.total_quantity || 0).toLocaleString()}</td>
+      <td><span class="status-badge ${badgeClass}">${(r.status || '').toString().toUpperCase()}</span></td>
+    `;
+    tbody.appendChild(tr);
   });
 }
 
