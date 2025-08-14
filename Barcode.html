@@ -677,13 +677,13 @@
         <!-- Scanner Area -->
         <div class="scanner-area" id="scannerArea">
           <i class="bi bi-upc-scan" style="font-size: 3rem; color: var(--body-font); margin-bottom: 1rem;"></i>
-          <h6>Point camera at barcode or RFID tag</h6>
+          <h6>Point camera at barcode</h6>
           <p class="text-muted">Or manually enter code below</p>
         </div>
 
         <!-- Manual Input -->
         <input type="text" class="form-control scanner-input" id="manualInput" 
-               placeholder="Scan or type barcode/RFID code here..." 
+               placeholder="Scan or type barcode code here..." 
                onkeypress="handleManualInput(event)">
 
         <!-- Current Scan Result -->
@@ -1088,7 +1088,6 @@ function startBarcodeScanner() {
   updateScannerMode();
   startScanning();
 }
-
 
 
 function startScanning() {
