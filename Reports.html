@@ -608,8 +608,6 @@
             <label class="form-label">Warehouse</label>
             <select class="form-select" id="warehouseFilter" onchange="filterData()">
               <option value="">All Warehouses</option>
-              <option value="WH001">WH001</option>
-              <option value="WH002">WH002</option>
             </select>
           </div>
           <div class="col-md-2">
@@ -670,84 +668,111 @@
 
 <script>
 // Global variables - Connected to inventory data
-let inventoryData = [
-  {
-    id: 1,
-    itemCode: 'ITM001',
-    productName: 'Wireless Earphone',
-    unitOfMeasure: 'PCS',
-    price: 350.00,
-    categoryId: 'CAT001',
-    status: 'active',
-    warehouseId: 'WH001',
-    totalQuantity: 150,
-    updatedAt: '2024-01-15'
-  },
-  {
-    id: 2,
-    itemCode: 'ITM002',
-    productName: 'USB Cable',
-    unitOfMeasure: 'PCS',
-    price: 75.00,
-    categoryId: 'CAT002',
-    status: 'inactive',
-    warehouseId: 'WH002',
-    totalQuantity: 300,
-    updatedAt: '2024-01-14'
-  },
-  {
-    id: 3,
-    itemCode: 'ITM003',
-    productName: 'Bluetooth Speaker',
-    unitOfMeasure: 'PCS',
-    price: 1200.00,
-    categoryId: 'CAT001',
-    status: 'active',
-    warehouseId: 'WH001',
-    totalQuantity: 45,
-    updatedAt: '2024-01-13'
-  },
-  {
-    id: 4,
-    itemCode: 'ITM004',
-    productName: 'Phone Charger',
-    unitOfMeasure: 'PCS',
-    price: 200.00,
-    categoryId: 'CAT002',
-    status: 'active',
-    warehouseId: 'WH001',
-    totalQuantity: 500,
-    updatedAt: '2024-01-12'
-  },
-  {
-    id: 5,
-    itemCode: 'ITM005',
-    productName: 'Laptop Stand',
-    unitOfMeasure: 'PCS',
-    price: 450.00,
-    categoryId: 'CAT003',
-    status: 'active',
-    warehouseId: 'WH002',
-    totalQuantity: 80,
-    updatedAt: '2024-01-11'
-  }
-];
-
-let filteredData = [...inventoryData];
+let inventoryData = [];
+let filteredData = [];
+const API_BASE = '/api';
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-  renderTable();
-  updateSummary();
-  updateLastUpdated();
+  loadData();
 });
 
 // Calculate valuation metrics (single price)
 function calculateValuation(item) {
-  const totalValue = (item.price || 0) * item.totalQuantity;
+  if (!item) return { totalValue: 0 };
+  const price = parseFloat(item.price) || 0;
+  const quantity = parseInt(item.totalQuantity) || 0;
+  const totalValue = price * quantity;
   return {
-    totalValue
+    totalValue: isNaN(totalValue) ? 0 : totalValue
   };
+}
+
+// Fetch helpers and mapping
+async function apiCall(endpoint, options = {}) {
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(options.headers || {})
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw error;
+  }
+}
+
+function mapInventoryData(raw) {
+  return raw.map(item => ({
+    id: item.id,
+    itemCode: item.item_code,
+    productId: item.product_id,
+    productName: item.product_name,
+    productDescription: item.product_description,
+    productCategory: item.product_category,
+    productImage: item.product_image,
+    price: parseFloat(item.price) || 0,
+    unitOfMeasure: item.unit_of_measure,
+    categoryId: item.category_id,
+    status: item.status,
+    warehouseId: item.warehouse_id,
+    warehouseName: item.warehouse_name,
+    totalQuantity: parseInt(item.total_quantity) || 0,
+    updatedAt: item.updated_at
+  }));
+}
+
+async function loadData() {
+  try {
+    setLoading(true);
+    const [inventoryRes, warehousesRes] = await Promise.all([
+      apiCall('/inventory'),
+      apiCall('/warehouses')
+    ]);
+    inventoryData = inventoryRes && inventoryRes.success ? mapInventoryData(inventoryRes.data || []) : [];
+    filteredData = [...inventoryData];
+    populateWarehouseFilter(warehousesRes && warehousesRes.success ? warehousesRes.data || [] : []);
+    renderTable();
+    updateSummary();
+    updateLastUpdated();
+  } catch (e) {
+    console.error('Failed to load report data', e);
+    inventoryData = [];
+    filteredData = [];
+    renderTable();
+    updateSummary();
+    updateLastUpdated();
+  } finally {
+    setLoading(false);
+  }
+}
+
+function populateWarehouseFilter(warehouses) {
+  const select = document.getElementById('warehouseFilter');
+  if (!select) return;
+  while (select.children.length > 1) select.removeChild(select.lastChild);
+  warehouses.forEach(w => {
+    const opt = document.createElement('option');
+    opt.value = w.warehouse_id;
+    opt.textContent = w.warehouse_name || w.warehouse_id;
+    select.appendChild(opt);
+  });
+}
+
+function setLoading(show) {
+  const tbody = document.getElementById('valuationTableBody');
+  if (!tbody) return;
+  if (show) {
+    tbody.innerHTML = '<tr><td colspan="7" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
+  }
 }
 
 // Get value class for styling
@@ -758,50 +783,77 @@ function getValueClass(value) {
 }
 
 // Render the valuation table
-function renderTable(data = filteredData) {
-  const tbody = document.getElementById('valuationTableBody');
-  tbody.innerHTML = '';
-
-  data.forEach(item => {
-    const valuation = calculateValuation(item);
-    const row = document.createElement('tr');
-    
-    row.innerHTML = `
-      <td><strong>${item.itemCode}</strong></td>
-      <td>${item.productName}</td>
-      <td><span class="badge bg-info">${item.totalQuantity} ${item.unitOfMeasure}</span></td>
-      <td>$${(item.price || 0).toFixed(2)}</td>
-      <td>-</td>
-      <td class="${getValueClass(valuation.totalValue)}">$${valuation.totalValue.toFixed(2)}</td>
-      <td>-</td>
-      <td>-</td>
-      <td><span class="badge bg-secondary">${item.warehouseId}</span></td>
-      <td>
-        <span class="status-badge ${item.status === 'active' ? 'status-active' : 'status-inactive'}">
-          ${item.status.toUpperCase()}
-        </span>
-      </td>
-    `;
-    
-    tbody.appendChild(row);
-  });
-}
+ function renderTable(data = filteredData) {
+   const tbody = document.getElementById('valuationTableBody');
+   if (!tbody) return;
+   
+   tbody.innerHTML = '';
+ 
+   if (!data || data.length === 0) {
+     tbody.innerHTML = `
+       <tr>
+         <td colspan="7" class="text-center text-muted">No items found.</td>
+       </tr>
+     `;
+     return;
+   }
+ 
+   data.forEach(item => {
+     try {
+       const valuation = calculateValuation(item);
+       const row = document.createElement('tr');
+       
+       const price = parseFloat(item.price) || 0;
+       const quantity = parseInt(item.totalQuantity) || 0;
+       const totalValue = parseFloat(valuation.totalValue) || 0;
+       
+       row.innerHTML = `
+         <td><strong>${item.itemCode || ''}</strong></td>
+         <td>${item.productName || ''}</td>
+         <td><span class="badge bg-info">${quantity} ${item.unitOfMeasure || ''}</span></td>
+         <td>$${price.toFixed(2)}</td>
+         <td class="${getValueClass(totalValue)}">$${totalValue.toFixed(2)}</td>
+         <td><span class="badge bg-secondary">${item.warehouseName || item.warehouseId || ''}</span></td>
+         <td>
+           <span class="status-badge ${String(item.status).toLowerCase() === 'active' ? 'status-active' : 'status-inactive'}">
+             ${String(item.status || '').toUpperCase() || 'UNKNOWN'}
+           </span>
+         </td>
+       `;
+       
+       tbody.appendChild(row);
+     } catch (error) {
+       console.error('Error rendering table row:', error, item);
+     }
+   });
+ }
 
 // Update summary cards
-function updateSummary() {
-  let totalValue = 0;
-  inventoryData.forEach(item => {
-    const valuation = calculateValuation(item);
-    totalValue += valuation.totalValue;
-  });
-  const avgValue = inventoryData.length > 0 ? totalValue / inventoryData.length : 0;
-  
-  // Update summary cards
-  document.getElementById('totalValue').textContent = `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-  document.getElementById('totalItems').textContent = inventoryData.length;
-  document.getElementById('activeItems').textContent = inventoryData.filter(item => item.status === 'active').length;
-  document.getElementById('avgValue').textContent = `$${avgValue.toFixed(2)}`;
-}
+ function updateSummary() {
+   let totalValue = 0;
+   
+   if (inventoryData && Array.isArray(inventoryData)) {
+     inventoryData.forEach(item => {
+       const valuation = calculateValuation(item);
+       totalValue += parseFloat(valuation.totalValue) || 0;
+     });
+   }
+   
+   const totalItems = inventoryData ? inventoryData.length : 0;
+   const activeItems = inventoryData ? inventoryData.filter(item => String(item.status).toLowerCase() === 'active').length : 0;
+   const avgValue = totalItems > 0 ? totalValue / totalItems : 0;
+   
+   // Safely update DOM elements
+   const totalValueEl = document.getElementById('totalValue');
+   const totalItemsEl = document.getElementById('totalItems');
+   const activeItemsEl = document.getElementById('activeItems');
+   const avgValueEl = document.getElementById('avgValue');
+   
+   if (totalValueEl) totalValueEl.textContent = `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+   if (totalItemsEl) totalItemsEl.textContent = totalItems;
+   if (activeItemsEl) activeItemsEl.textContent = activeItems;
+   if (avgValueEl) avgValueEl.textContent = `$${avgValue.toFixed(2)}`;
+ }
 
 // Update last updated timestamp
 function updateLastUpdated() {
@@ -824,9 +876,9 @@ function searchItems() {
     filteredData = [...inventoryData];
   } else {
     filteredData = inventoryData.filter(item => 
-      item.productName.toLowerCase().includes(searchTerm) ||
-      item.itemCode.toLowerCase().includes(searchTerm) ||
-      item.id.toString().includes(searchTerm)
+      (item.productName && item.productName.toLowerCase().includes(searchTerm)) ||
+      (item.itemCode && item.itemCode.toLowerCase().includes(searchTerm)) ||
+      (item.id && item.id.toString().includes(searchTerm))
     );
   }
   
@@ -840,7 +892,7 @@ function filterData() {
   const valueFilter = document.getElementById('valueFilter').value;
   
   filteredData = inventoryData.filter(item => {
-    let statusMatch = !statusFilter || item.status === statusFilter;
+    let statusMatch = !statusFilter || String(item.status).toLowerCase() === statusFilter.toLowerCase();
     let warehouseMatch = !warehouseFilter || item.warehouseId === warehouseFilter;
     let valueMatch = true;
     
@@ -891,38 +943,103 @@ function sortData() {
 
 // Action button functions
 function generateReport() {
-  alert('Generating comprehensive inventory valuation report...');
-  // Here you would implement actual report generation
+  if (inventoryData.length === 0) {
+    alert('No inventory data available to generate report.');
+    return;
+  }
+  
+  // Update the report data and display
+  updateSummary();
+  renderTable();
+  updateLastUpdated();
+  alert('Inventory valuation report generated successfully!');
 }
 
 function exportToExcel() {
-  alert('Exporting inventory valuation data to Excel...');
-  // Here you would implement Excel export functionality
+  if (filteredData.length === 0) {
+    alert('No data available to export.');
+    return;
+  }
+  
+  // Create CSV content
+  let csvContent = "Item Code,Product Name,Quantity,Unit Price,Total Value,Warehouse,Status\n";
+  
+     filteredData.forEach(item => {
+     const valuation = calculateValuation(item);
+     const price = parseFloat(item.price) || 0;
+     const quantity = parseInt(item.totalQuantity) || 0;
+     const row = [
+       item.itemCode || '',
+       item.productName || '',
+       quantity,
+       price.toFixed(2),
+       valuation.totalValue.toFixed(2),
+       item.warehouseName || item.warehouseId || '',
+       item.status || ''
+     ].map(field => `"${field}"`).join(',');
+     csvContent += row + "\n";
+   });
+  
+  // Download CSV file
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', 'inventory_valuation_report.csv');
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function exportToPDF() {
-  alert('Exporting inventory valuation report to PDF...');
-  // Here you would implement PDF export functionality
+  // Simple implementation using browser's print to PDF
+  const originalTitle = document.title;
+  document.title = 'Inventory Valuation Report';
+  
+  // Hide action buttons for PDF
+  const actionButtons = document.querySelector('.action-buttons');
+  const originalDisplay = actionButtons.style.display;
+  actionButtons.style.display = 'none';
+  
+  window.print();
+  
+  // Restore original state
+  document.title = originalTitle;
+  actionButtons.style.display = originalDisplay;
 }
 
 function printReport() {
+  const originalTitle = document.title;
+  document.title = 'Inventory Valuation Report';
   window.print();
+  document.title = originalTitle;
 }
 
 function refreshData() {
-  // Simulate data refresh
-  updateLastUpdated();
-  renderTable();
-  updateSummary();
-  alert('Data refreshed successfully!');
+  loadData();
 }
 
 // Notification functions
-function markAllAsRead() {
-  document.querySelectorAll('.notification-unread').forEach(item => {
-    item.classList.remove('notification-unread');
-  });
-  document.getElementById('notificationCount').textContent = '0';
+async function markAllAsRead() {
+  try {
+    const response = await apiCall('/notifications/read-all', {
+      method: 'POST'
+    });
+    if (response.success) {
+      document.querySelectorAll('.notification-unread').forEach(item => {
+        item.classList.remove('notification-unread');
+      });
+      document.getElementById('notificationCount').textContent = '0';
+    }
+  } catch (error) {
+    console.error('Failed to mark all notifications as read:', error);
+    // Fallback to visual update only
+    document.querySelectorAll('.notification-unread').forEach(item => {
+      item.classList.remove('notification-unread');
+    });
+    document.getElementById('notificationCount').textContent = '0';
+  }
 }
 
 // Search input event listener
