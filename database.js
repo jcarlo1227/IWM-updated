@@ -1,115 +1,7 @@
 const { neon } = require('@neondatabase/serverless');
 require('dotenv').config();
 
-// Material Shipments Functions
-async function getAllMaterialShipments(filters = {}) {
-  const sql = await getSql();
-  let query = 'SELECT * FROM material_shipments WHERE 1=1';
-  const params = [];
-
-  if (filters.search) {
-    query += ' AND (material_name ILIKE $1 OR shipment_id ILIKE $1 OR source ILIKE $1)';
-    params.push(`%${filters.search}%`);
-  }
-  if (filters.status) {
-    query += ` AND status = $${params.length + 1}`;
-    params.push(filters.status);
-  }
-  if (filters.type) {
-    query += ` AND shipment_type = $${params.length + 1}`;
-    params.push(filters.type);
-  }
-  if (filters.date) {
-    query += ` AND date_shipped = $${params.length + 1}`;
-    params.push(filters.date);
-  }
-
-  query += ' ORDER BY created_at DESC';
-  return await sql.unsafe(query, params);
-}
-
-async function getMaterialShipmentById(id) {
-  const sql = await getSql();
-  const result = await sql`
-    SELECT * FROM material_shipments WHERE id = ${id}
-  `;
-  return result[0];
-}
-
-async function createMaterialShipment(data) {
-  const sql = await getSql();
-  const result = await sql`
-    INSERT INTO material_shipments (
-      shipment_id, material_id, category_id, material_name,
-      quantity, unit, shipment_type, source, destination,
-      status, date_shipped, estimated_delivery, received_date,
-      handled_by, notes
-    ) VALUES (
-      ${data.shipment_id}, ${data.material_id}, ${data.category_id}, ${data.material_name},
-      ${data.quantity}, ${data.unit}, ${data.shipment_type}, ${data.source}, ${data.destination},
-      ${data.status}, ${data.date_shipped}, ${data.estimated_delivery}, ${data.received_date},
-      ${data.handled_by}, ${data.notes}
-    )
-    RETURNING *
-  `;
-  return result[0];
-}
-
-async function updateMaterialShipment(id, data) {
-  const sql = await getSql();
-  const result = await sql`
-    UPDATE material_shipments SET
-      shipment_id = ${data.shipment_id},
-      material_id = ${data.material_id},
-      category_id = ${data.category_id},
-      material_name = ${data.material_name},
-      quantity = ${data.quantity},
-      unit = ${data.unit},
-      shipment_type = ${data.shipment_type},
-      source = ${data.source},
-      destination = ${data.destination},
-      status = ${data.status},
-      date_shipped = ${data.date_shipped},
-      estimated_delivery = ${data.estimated_delivery},
-      received_date = ${data.received_date},
-      handled_by = ${data.handled_by},
-      notes = ${data.notes},
-      updated_at = CURRENT_TIMESTAMP
-    WHERE id = ${id}
-    RETURNING *
-  `;
-  return result[0];
-}
-
-async function deleteMaterialShipment(id) {
-  const sql = await getSql();
-  const result = await sql`
-    DELETE FROM material_shipments WHERE id = ${id}
-    RETURNING *
-  `;
-  return result[0];
-}
-
-async function getMaterialShipmentStats() {
-  const sql = await getSql();
-  const stats = await Promise.all([
-    sql`SELECT COUNT(*) as total FROM material_shipments`,
-    sql`SELECT COUNT(*) as delivered FROM material_shipments WHERE status = 'delivered'`,
-    sql`SELECT COUNT(*) as pending FROM material_shipments WHERE status = 'pending'`,
-    sql`SELECT COUNT(*) as shipped FROM material_shipments WHERE status = 'shipped'`,
-    sql`SELECT COUNT(*) as inbound FROM material_shipments WHERE shipment_type = 'inbound'`,
-    sql`SELECT COUNT(*) as outbound FROM material_shipments WHERE shipment_type = 'outbound'`
-  ]);
-
-  return {
-    totalShipments: parseInt(stats[0][0].total),
-    deliveredShipments: parseInt(stats[1][0].delivered),
-    pendingShipments: parseInt(stats[2][0].pending),
-    shippedShipments: parseInt(stats[3][0].shipped),
-    inboundShipments: parseInt(stats[4][0].inbound),
-    outboundShipments: parseInt(stats[5][0].outbound)
-  };
-}
+// Material shipments removed
 
 let sql = null;
 let connectionPromise = null;
@@ -240,9 +132,8 @@ const initializeDatabase = async () => {
     }
     
     // Initialize inventory tables
-    const { initializeInventoryTable, initializeMaterialShipmentsTable, initializeOrderShipmentsTable } = require('./inventory');
+    const { initializeInventoryTable, initializeOrderShipmentsTable } = require('./inventory');
     await initializeInventoryTable();
-    await initializeMaterialShipmentsTable();
     await initializeOrderShipmentsTable();
     
   } catch (err) {
