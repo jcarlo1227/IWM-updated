@@ -679,9 +679,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Calculate valuation metrics (single price)
 function calculateValuation(item) {
-  const totalValue = (item.price || 0) * item.totalQuantity;
+  if (!item) return { totalValue: 0 };
+  const price = parseFloat(item.price) || 0;
+  const quantity = parseInt(item.totalQuantity) || 0;
+  const totalValue = price * quantity;
   return {
-    totalValue
+    totalValue: isNaN(totalValue) ? 0 : totalValue
   };
 }
 
@@ -716,13 +719,13 @@ function mapInventoryData(raw) {
     productDescription: item.product_description,
     productCategory: item.product_category,
     productImage: item.product_image,
-    price: item.price,
+    price: parseFloat(item.price) || 0,
     unitOfMeasure: item.unit_of_measure,
     categoryId: item.category_id,
     status: item.status,
     warehouseId: item.warehouse_id,
     warehouseName: item.warehouse_name,
-    totalQuantity: item.total_quantity,
+    totalQuantity: parseInt(item.total_quantity) || 0,
     updatedAt: item.updated_at
   }));
 }
@@ -782,6 +785,8 @@ function getValueClass(value) {
 // Render the valuation table
  function renderTable(data = filteredData) {
    const tbody = document.getElementById('valuationTableBody');
+   if (!tbody) return;
+   
    tbody.innerHTML = '';
  
    if (!data || data.length === 0) {
@@ -794,42 +799,60 @@ function getValueClass(value) {
    }
  
    data.forEach(item => {
-     const valuation = calculateValuation(item);
-     const row = document.createElement('tr');
-     
-     row.innerHTML = `
-       <td><strong>${item.itemCode}</strong></td>
-       <td>${item.productName || ''}</td>
-       <td><span class="badge bg-info">${item.totalQuantity} ${item.unitOfMeasure || ''}</span></td>
-       <td>$${(item.price || 0).toFixed(2)}</td>
-       <td class="${getValueClass(valuation.totalValue)}">$${valuation.totalValue.toFixed(2)}</td>
-       <td><span class="badge bg-secondary">${item.warehouseName || item.warehouseId || ''}</span></td>
-       <td>
-         <span class="status-badge ${String(item.status).toLowerCase() === 'active' ? 'status-active' : 'status-inactive'}">
-           ${String(item.status || '').toUpperCase() || 'UNKNOWN'}
-         </span>
-       </td>
-     `;
-     
-     tbody.appendChild(row);
+     try {
+       const valuation = calculateValuation(item);
+       const row = document.createElement('tr');
+       
+       const price = parseFloat(item.price) || 0;
+       const quantity = parseInt(item.totalQuantity) || 0;
+       const totalValue = parseFloat(valuation.totalValue) || 0;
+       
+       row.innerHTML = `
+         <td><strong>${item.itemCode || ''}</strong></td>
+         <td>${item.productName || ''}</td>
+         <td><span class="badge bg-info">${quantity} ${item.unitOfMeasure || ''}</span></td>
+         <td>$${price.toFixed(2)}</td>
+         <td class="${getValueClass(totalValue)}">$${totalValue.toFixed(2)}</td>
+         <td><span class="badge bg-secondary">${item.warehouseName || item.warehouseId || ''}</span></td>
+         <td>
+           <span class="status-badge ${String(item.status).toLowerCase() === 'active' ? 'status-active' : 'status-inactive'}">
+             ${String(item.status || '').toUpperCase() || 'UNKNOWN'}
+           </span>
+         </td>
+       `;
+       
+       tbody.appendChild(row);
+     } catch (error) {
+       console.error('Error rendering table row:', error, item);
+     }
    });
  }
 
 // Update summary cards
  function updateSummary() {
    let totalValue = 0;
-   inventoryData.forEach(item => {
-     const valuation = calculateValuation(item);
-     totalValue += valuation.totalValue;
-   });
-   const totalItems = inventoryData.length;
-   const activeItems = inventoryData.filter(item => String(item.status).toLowerCase() === 'active').length;
+   
+   if (inventoryData && Array.isArray(inventoryData)) {
+     inventoryData.forEach(item => {
+       const valuation = calculateValuation(item);
+       totalValue += parseFloat(valuation.totalValue) || 0;
+     });
+   }
+   
+   const totalItems = inventoryData ? inventoryData.length : 0;
+   const activeItems = inventoryData ? inventoryData.filter(item => String(item.status).toLowerCase() === 'active').length : 0;
    const avgValue = totalItems > 0 ? totalValue / totalItems : 0;
    
-   document.getElementById('totalValue').textContent = `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-   document.getElementById('totalItems').textContent = totalItems;
-   document.getElementById('activeItems').textContent = activeItems;
-   document.getElementById('avgValue').textContent = `$${avgValue.toFixed(2)}`;
+   // Safely update DOM elements
+   const totalValueEl = document.getElementById('totalValue');
+   const totalItemsEl = document.getElementById('totalItems');
+   const activeItemsEl = document.getElementById('activeItems');
+   const avgValueEl = document.getElementById('avgValue');
+   
+   if (totalValueEl) totalValueEl.textContent = `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+   if (totalItemsEl) totalItemsEl.textContent = totalItems;
+   if (activeItemsEl) activeItemsEl.textContent = activeItems;
+   if (avgValueEl) avgValueEl.textContent = `$${avgValue.toFixed(2)}`;
  }
 
 // Update last updated timestamp
@@ -941,19 +964,21 @@ function exportToExcel() {
   // Create CSV content
   let csvContent = "Item Code,Product Name,Quantity,Unit Price,Total Value,Warehouse,Status\n";
   
-  filteredData.forEach(item => {
-    const valuation = calculateValuation(item);
-    const row = [
-      item.itemCode || '',
-      item.productName || '',
-      item.totalQuantity || 0,
-      (item.price || 0).toFixed(2),
-      valuation.totalValue.toFixed(2),
-      item.warehouseName || item.warehouseId || '',
-      item.status || ''
-    ].map(field => `"${field}"`).join(',');
-    csvContent += row + "\n";
-  });
+     filteredData.forEach(item => {
+     const valuation = calculateValuation(item);
+     const price = parseFloat(item.price) || 0;
+     const quantity = parseInt(item.totalQuantity) || 0;
+     const row = [
+       item.itemCode || '',
+       item.productName || '',
+       quantity,
+       price.toFixed(2),
+       valuation.totalValue.toFixed(2),
+       item.warehouseName || item.warehouseId || '',
+       item.status || ''
+     ].map(field => `"${field}"`).join(',');
+     csvContent += row + "\n";
+   });
   
   // Download CSV file
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
