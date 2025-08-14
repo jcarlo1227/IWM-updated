@@ -127,16 +127,35 @@ const initializeInventoryTable = async () => {
 const initializeOrderShipmentsTable = async () => {
   try {
     const sql = await database.sql();
+    // Ensure core tables exist
+    await sql`
+      CREATE TABLE IF NOT EXISTS customers (
+        customer_id VARCHAR(50) PRIMARY KEY,
+        customer_name VARCHAR(255) NOT NULL
+      )
+    `;
+    await sql`
+      CREATE TABLE IF NOT EXISTS sales_orders (
+        order_id VARCHAR(50) PRIMARY KEY,
+        customer_id VARCHAR(50) REFERENCES customers(customer_id),
+        order_date DATE,
+        total_amount NUMERIC(12,2),
+        order_status VARCHAR(50),
+        payment_status VARCHAR(50),
+        shipping_address TEXT,
+        created_by VARCHAR(100),
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        quantity INTEGER,
+        item_code VARCHAR(50)
+      )
+    `;
     await sql`
       CREATE TABLE IF NOT EXISTS order_shipments (
         id SERIAL PRIMARY KEY,
-        order_id VARCHAR(50) UNIQUE NOT NULL,
-        customer_name VARCHAR(255) NOT NULL,
-        item_code VARCHAR(50) NOT NULL,
-        product_name VARCHAR(255) NOT NULL,
-        quantity INTEGER NOT NULL,
-        total_value DECIMAL(12,2) NOT NULL,
-        priority VARCHAR(20) DEFAULT 'medium',
+        order_id VARCHAR(50) NOT NULL,
+        item_code VARCHAR(50),
+        quantity INTEGER,
+        total_value NUMERIC(12,2),
         status VARCHAR(20) DEFAULT 'processing',
         order_date DATE,
         ship_date DATE,
@@ -147,11 +166,95 @@ const initializeOrderShipmentsTable = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // Align order_shipments.order_id type with sales_orders.order_id
+    const soCol = await sql`
+      SELECT data_type, udt_name, character_maximum_length
+      FROM information_schema.columns
+      WHERE table_name = 'sales_orders' AND column_name = 'order_id'
+      LIMIT 1
+    `;
+    if (soCol && soCol.length) {
+      const soType = String(soCol[0].data_type || '').toLowerCase();
+      const soUdt = String(soCol[0].udt_name || '').toLowerCase();
+      const soLen = soCol[0].character_maximum_length || 50;
+      let targetType = 'VARCHAR(' + soLen + ')';
+      let castType = 'text';
+      if (soType.includes('integer') || soUdt === 'int4') {
+        targetType = 'INTEGER';
+        castType = 'integer';
+      } else if (soUdt === 'int8' || soType.includes('bigint')) {
+        targetType = 'BIGINT';
+        castType = 'bigint';
+      } else if (soType.includes('character varying') || soType.includes('character')) {
+        targetType = `VARCHAR(${soLen})`;
+        castType = 'text';
+      }
+      // Check current shipments column type
+      const osCol = await sql`
+        SELECT data_type, udt_name, character_maximum_length
+        FROM information_schema.columns
+        WHERE table_name = 'order_shipments' AND column_name = 'order_id'
+        LIMIT 1
+      `;
+      let needAlter = true;
+      if (osCol && osCol.length) {
+        const osType = String(osCol[0].data_type || '').toLowerCase();
+        const osUdt = String(osCol[0].udt_name || '').toLowerCase();
+        const osLen = osCol[0].character_maximum_length;
+        if ((targetType.startsWith('VARCHAR') && osType.includes('character') && osLen === soLen) ||
+            (targetType === 'INTEGER' && (osType.includes('integer') || osUdt === 'int4')) ||
+            (targetType === 'BIGINT' && (osType.includes('bigint') || osUdt === 'int8'))) {
+          needAlter = false;
+        }
+      }
+      if (needAlter) {
+        const alter = `ALTER TABLE order_shipments ALTER COLUMN order_id TYPE ${targetType} USING order_id::${castType}`;
+        await sql(alter);
+      }
+    }
+ 
+    // Add FK for shipments.order_id -> sales_orders(order_id)
+    await sql`
+      DO $$ BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints
+          WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order'
+        ) THEN
+          ALTER TABLE order_shipments
+          ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE;
+        END IF;
+      END $$;
+    `;
     console.log('✅ Order shipments table created/verified');
   } catch (err) {
     console.error('❌ Error creating order shipments table:', err);
     throw err;
   }
+};
+
+// Insert shipments for paid sales orders that are not yet in shipments
+const syncPaidOrdersIntoShipments = async () => {
+  const sql = await database.sql();
+  // Detect optional columns on sales_orders
+  const cols = await sql`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'sales_orders' AND column_name IN ('item_code','quantity')
+  `;
+  const names = new Set(cols.map(c => c.column_name));
+  const itemExpr = names.has('item_code') ? 'so.item_code' : "NULL::VARCHAR(50)";
+  const qtyExpr = names.has('quantity') ? 'so.quantity' : 'NULL::INTEGER';
+  const queryText = `
+    INSERT INTO order_shipments (
+      order_id, item_code, quantity, total_value, status, order_date, updated_at
+    )
+    SELECT so.order_id, ${itemExpr} AS item_code, ${qtyExpr} AS quantity, so.total_amount, 'processing', so.order_date, CURRENT_TIMESTAMP
+    FROM sales_orders so
+    WHERE so.payment_status = 'paid'
+      AND NOT EXISTS (
+        SELECT 1 FROM order_shipments os WHERE os.order_id = so.order_id
+      )`;
+  await sql(queryText);
 };
 
 // Get all inventory items with optional filters
@@ -464,41 +567,74 @@ const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
 const getAllOrderShipments = async (filters = {}) => {
   try {
     const sql = await database.sql();
+    // Ensure shipments reflect paid orders
+    await syncPaidOrdersIntoShipments();
+
     let base = sql`
-      SELECT * FROM order_shipments
+      SELECT 
+        os.*,
+        so.customer_id,
+        c.customer_name,
+        i.product_id,
+        p.product_name
+      FROM order_shipments os
+      LEFT JOIN sales_orders so ON so.order_id = os.order_id
+      LEFT JOIN customers c ON c.customer_id = so.customer_id
+      LEFT JOIN inventory_items i ON i.item_code = os.item_code
+      LEFT JOIN products p ON p.product_id = i.product_id
     `;
 
     const conditions = [];
     const params = [];
 
     if (filters.search) {
-      conditions.push(`(order_id ILIKE $${params.length + 1} OR customer_name ILIKE $${params.length + 1} OR product_name ILIKE $${params.length + 1} OR item_code ILIKE $${params.length + 1})`);
+      conditions.push(`(os.order_id ILIKE $${params.length + 1} OR c.customer_name ILIKE $${params.length + 1} OR p.product_name ILIKE $${params.length + 1} OR os.item_code ILIKE $${params.length + 1})`);
       params.push(`%${filters.search}%`);
     }
     if (filters.status) {
-      conditions.push(`status = $${params.length + 1}`);
+      conditions.push(`os.status = $${params.length + 1}`);
       params.push(filters.status);
     }
     if (filters.priority) {
-      conditions.push(`priority = $${params.length + 1}`);
-      params.push(filters.priority);
+      // no priority column anymore; ignore or map
+      conditions.push(`1=1`);
     }
     if (filters.date) {
-      conditions.push(`order_date = $${params.length + 1}`);
+      conditions.push(`os.order_date = $${params.length + 1}`);
       params.push(filters.date);
     }
 
     if (conditions.length > 0) {
       const whereClause = ` WHERE ${conditions.join(' AND ')}`;
       base = sql`
-        SELECT * FROM order_shipments
+        SELECT 
+          os.*,
+          so.customer_id,
+          c.customer_name,
+          i.product_id,
+          p.product_name
+        FROM order_shipments os
+        LEFT JOIN sales_orders so ON so.order_id = os.order_id
+        LEFT JOIN customers c ON c.customer_id = so.customer_id
+        LEFT JOIN inventory_items i ON i.item_code = os.item_code
+        LEFT JOIN products p ON p.product_id = i.product_id
         ${sql(whereClause)}
-        ORDER BY created_at DESC
+        ORDER BY os.updated_at DESC
       `;
     } else {
       base = sql`
-        SELECT * FROM order_shipments
-        ORDER BY created_at DESC
+        SELECT 
+          os.*,
+          so.customer_id,
+          c.customer_name,
+          i.product_id,
+          p.product_name
+        FROM order_shipments os
+        LEFT JOIN sales_orders so ON so.order_id = os.order_id
+        LEFT JOIN customers c ON c.customer_id = so.customer_id
+        LEFT JOIN inventory_items i ON i.item_code = os.item_code
+        LEFT JOIN products p ON p.product_id = i.product_id
+        ORDER BY os.updated_at DESC
       `;
     }
 
@@ -515,7 +651,18 @@ const getOrderShipmentById = async (id) => {
   try {
     const sql = await database.sql();
     const result = await sql`
-      SELECT * FROM order_shipments WHERE id = ${id}
+      SELECT 
+        os.*,
+        so.customer_id,
+        c.customer_name,
+        i.product_id,
+        p.product_name
+      FROM order_shipments os
+      LEFT JOIN sales_orders so ON so.order_id = os.order_id
+      LEFT JOIN customers c ON c.customer_id = so.customer_id
+      LEFT JOIN inventory_items i ON i.item_code = os.item_code
+      LEFT JOIN products p ON p.product_id = i.product_id
+      WHERE os.id = ${id}
     `;
     return result[0] || null;
   } catch (err) {
@@ -530,12 +677,9 @@ const createOrderShipment = async (orderData) => {
     const sql = await database.sql();
     const {
       order_id,
-      customer_name,
       item_code,
-      product_name,
       quantity,
       total_value,
-      priority,
       status,
       order_date,
       ship_date,
@@ -544,13 +688,19 @@ const createOrderShipment = async (orderData) => {
       notes
     } = orderData;
 
+    // Only allow creating a shipment if the sales order is paid
+    const so = await sql`SELECT payment_status FROM sales_orders WHERE order_id = ${order_id}`;
+    if (!so.length || String(so[0].payment_status).toLowerCase() !== 'paid') {
+      throw new Error('Shipment can only be created for paid sales orders');
+    }
+
     const result = await sql`
       INSERT INTO order_shipments (
-        order_id, customer_name, item_code, product_name, quantity, total_value,
-        priority, status, order_date, ship_date, delivery_date, tracking_number, notes, updated_at
+        order_id, item_code, quantity, total_value,
+        status, order_date, ship_date, delivery_date, tracking_number, notes, updated_at
       ) VALUES (
-        ${order_id}, ${customer_name}, ${item_code}, ${product_name}, ${quantity}, ${total_value},
-        ${priority || 'medium'}, ${status || 'processing'}, ${order_date}, ${ship_date}, ${delivery_date}, ${tracking_number}, ${notes}, CURRENT_TIMESTAMP
+        ${order_id}, ${item_code}, ${quantity}, ${total_value},
+        ${status || 'processing'}, ${order_date}, ${ship_date}, ${delivery_date}, ${tracking_number}, ${notes}, CURRENT_TIMESTAMP
       )
       RETURNING *
     `;
