@@ -27,14 +27,7 @@ const {
   getAllWarehouses,
   getInventoryStats,
   updateItemQuantity,
-  getAllMaterialShipments,
-  getMaterialShipmentById,
-  createMaterialShipment,
-  updateMaterialShipment,
-  deleteMaterialShipment,
-  getMaterialShipmentStats,
-  updateShipmentStatus,
-  getShipmentsByCategoryId,
+  // Material shipments removed
   // New order shipments
   getAllOrderShipments,
   getOrderShipmentById,
@@ -148,9 +141,7 @@ app.get('/barcode.html', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'Barcode.html'));
 });
 
-app.get('/materialshipments.html', requireAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, 'MaterialShipments.html'));
-});
+// Material Shipments removed
 
 app.get('/ordershipments.html', requireAuth, (req, res) => {
   res.sendFile(path.join(__dirname, 'OrderShipments.html'));
@@ -336,7 +327,9 @@ app.get('/api/inventory', requireAuth, async (req, res) => {
     const items = await getAllInventoryItems();
     res.json({ success: true, data: items });
   } catch (err) {
-    res.status(500).json({ success: false, message: 'Failed to fetch inventory items' });
+    console.error('Failed to fetch inventory items:', err);
+    // Return an empty dataset to keep UI responsive, but include error message
+    res.json({ success: true, data: [], warning: 'Database error while fetching inventory items' });
   }
 });
 
@@ -446,6 +439,37 @@ app.get('/api/warehouses', requireAuth, async (req, res) => {
     res.json({ success: true, data: warehouses });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch warehouses' });
+  }
+});
+
+// Products and Pricing (read-only)
+app.get('/api/products', requireAuth, async (req, res) => {
+  try {
+    const db = require('./database');
+    const sqlConn = await db.sql();
+    const rows = await sqlConn`SELECT product_id, product_name, product_description, product_category, product_image FROM products ORDER BY product_id`;
+    res.json({ success: true, data: rows });
+  } catch (error) {
+    console.error('Fetch products error:', error);
+    res.json({ success: true, data: [] });
+  }
+});
+
+app.get('/api/product-pricing/:productId', requireAuth, async (req, res) => {
+  try {
+    const db = require('./database');
+    const sqlConn = await db.sql();
+    const rows = await sqlConn`
+      SELECT product_id, price, discount_rate, effective_date
+      FROM product_pricing
+      WHERE product_id = ${req.params.productId}
+      ORDER BY effective_date DESC
+      LIMIT 1
+    `;
+    res.json({ success: true, data: rows[0] || null });
+  } catch (error) {
+    console.error('Fetch product pricing error:', error);
+    res.json({ success: true, data: null });
   }
 });
 
@@ -635,89 +659,7 @@ const startServer = async () => {
   }
 };
 
-// Material Shipments API endpoints
-app.get('/api/material-shipments/stats', requireAuth, async (req, res) => {
-  try {
-    const stats = await getMaterialShipmentStats();
-    res.json({ success: true, data: stats });
-  } catch (error) {
-    console.error('Error fetching material shipment stats:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch shipment statistics' });
-  }
-});
-
-app.get('/api/material-shipments', requireAuth, async (req, res) => {
-  try {
-    const { search, status, type, date } = req.query;
-    const filters = { search, status, type, date };
-    
-    const shipments = await getAllMaterialShipments(filters);
-    res.json({ 
-      success: true, 
-      data: shipments || [],
-      count: shipments ? shipments.length : 0
-    });
-  } catch (error) {
-    console.error('Error fetching material shipments:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'Failed to fetch material shipments',
-      error: error.message
-    });
-  }
-});
-
-app.get('/api/material-shipments/:id', requireAuth, async (req, res) => {
-  try {
-    const shipment = await getMaterialShipmentById(req.params.id);
-    if (shipment) {
-      res.json({ success: true, data: shipment });
-    } else {
-      res.status(404).json({ success: false, message: 'Shipment not found' });
-    }
-  } catch (error) {
-    console.error('Error fetching material shipment:', error);
-    res.status(500).json({ success: false, message: 'Failed to fetch shipment' });
-  }
-});
-
-app.post('/api/material-shipments', requireAuth, async (req, res) => {
-  try {
-    const newShipment = await createMaterialShipment(req.body);
-    res.json({ success: true, message: 'Shipment created successfully', data: newShipment });
-  } catch (error) {
-    console.error('Error creating material shipment:', error);
-    res.status(500).json({ success: false, message: 'Failed to create shipment' });
-  }
-});
-
-app.put('/api/material-shipments/:id', requireAuth, async (req, res) => {
-  try {
-    const updatedShipment = await updateMaterialShipment(req.params.id, req.body);
-    if (updatedShipment) {
-      res.json({ success: true, message: 'Shipment updated successfully', data: updatedShipment });
-    } else {
-      res.status(404).json({ success: false, message: 'Shipment not found' });
-    }
-  } catch (error) {
-    console.error('Error updating material shipment:', error);
-    res.status(500).json({ success: false, message: 'Failed to update shipment' });
-  }
-});
-
-app.delete('/api/material-shipments/:id', requireAuth, async (req, res) => {
-  try {
-    const deleted = await deleteMaterialShipment(req.params.id);
-    if (deleted) {
-      res.json({ success: true, message: 'Shipment deleted successfully' });
-    } else {
-      res.status(404).json({ success: false, message: 'Shipment not found' });
-    }
-  } catch (error) {
-    console.error('Error deleting material shipment:', error);
-    res.status(500).json({ success: false, message: 'Failed to delete shipment' });
-  }
-});
+// Material Shipments endpoints removed
 
 // Order Shipments API endpoints
 app.get('/api/order-shipments/stats', requireAuth, async (req, res) => {
@@ -806,6 +748,17 @@ app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error updating order status:', error);
     res.status(500).json({ success: false, message: 'Failed to update order status' });
+  }
+});
+
+app.get('/api/health/db', requireAuth, async (req, res) => {
+  try {
+    const db = require('./database');
+    const conn = await db.sql();
+    const r = await conn`SELECT 1 as ok`;
+    res.json({ ok: true, result: r[0]?.ok === 1 });
+  } catch (e) {
+    res.json({ ok: false, error: e?.message });
   }
 });
 
