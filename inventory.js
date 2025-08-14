@@ -129,9 +129,19 @@ const initializeOrderShipmentsTable = async () => {
     const sql = await database.sql();
     // Ensure core tables exist
     await sql`
+      CREATE TABLE IF NOT EXISTS businesses (
+        id SERIAL PRIMARY KEY
+      )
+    `;
+    await sql`
       CREATE TABLE IF NOT EXISTS customers (
-        customer_id VARCHAR(50) PRIMARY KEY,
-        customer_name VARCHAR(255) NOT NULL
+        customer_id SERIAL PRIMARY KEY,
+        business_id INT REFERENCES businesses(id) ON DELETE CASCADE,
+        first_name VARCHAR(100) NOT NULL,
+        last_name VARCHAR(100) NOT NULL,
+        email VARCHAR(255) UNIQUE,
+        phone VARCHAR(50),
+        created_at TIMESTAMP DEFAULT NOW()
       )
     `;
 
@@ -341,21 +351,8 @@ const initializeOrderShipmentsTable = async () => {
       }
     }
 
-    // Conditionally add FK to sales_orders(customer_id) only if that column is unique/PK
-    const soExists = await sql`SELECT to_regclass('public.sales_orders') AS reg`;
-    if (soExists && soExists[0] && soExists[0].reg) {
-      const soCustInfo = await sql`
-        SELECT tc.constraint_type
-        FROM information_schema.table_constraints tc
-        JOIN information_schema.key_column_usage kcu
-          ON tc.constraint_name = kcu.constraint_name AND tc.table_name = kcu.table_name
-        WHERE tc.table_name = 'sales_orders' AND kcu.column_name = 'customer_id'
-      `;
-      const hasUniqueOnSOCustomer = (soCustInfo || []).some(r => ['PRIMARY KEY','UNIQUE'].includes(String(r.constraint_type || '').toUpperCase()));
-      if (hasUniqueOnSOCustomer) {
-        await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_customer') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_sales_customer FOREIGN KEY (customer_id) REFERENCES sales_orders(customer_id) ON DELETE SET NULL; END IF; END $$;`;
-      }
-    }
+    // Conditionally add FK to customers(customer_id)
+    await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_customer') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_customer FOREIGN KEY (customer_id) REFERENCES customers(customer_id) ON DELETE SET NULL; END IF; END $$;`;
     console.log('✅ Order shipments table created/verified');
   } catch (err) {
     console.error('❌ Error creating order shipments table:', err);
@@ -365,30 +362,30 @@ const initializeOrderShipmentsTable = async () => {
 
 // Insert shipments for processed production plans not yet in shipments
 const syncProcessedPlansIntoShipments = async () => {
-	const sql = await database.sql();
-	// Only run if production_planning table exists
-	const t = await sql`SELECT to_regclass('public.production_planning') AS reg`;
-	if (!t.length || !t[0].reg) return;
-	const queryText = `
-		INSERT INTO order_shipments (
-			order_id, product_id, product_name, quantity,
-			status, order_date, ship_date, updated_at
-		)
-		SELECT
-			pp.order_id,
-			pp.product_id,
-			pp.product_name,
-			pp.quantity,
-			'processed' AS status,
-			pp.planned_date AS order_date,
-			pp.shipping_date AS ship_date,
-			CURRENT_TIMESTAMP
-		FROM production_planning pp
-		WHERE pp.status = 'processed'
-			AND NOT EXISTS (
-				SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
-			)`;
-	await sql(queryText);
+  const sql = await database.sql();
+  // Only run if production_planning table exists
+  const t = await sql`SELECT to_regclass('public.production_planning') AS reg`;
+  if (!t.length || !t[0].reg) return;
+  const queryText = `
+    INSERT INTO order_shipments (
+      order_id, product_id, product_name, quantity,
+      status, order_date, ship_date, updated_at
+    )
+    SELECT
+      pp.order_id,
+      pp.product_id,
+      pp.product_name,
+      pp.quantity,
+      'processed' AS status,
+      pp.planned_date AS order_date,
+      pp.shipping_date AS ship_date,
+      CURRENT_TIMESTAMP
+    FROM production_planning pp
+    WHERE pp.status = 'processed'
+      AND NOT EXISTS (
+        SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
+      )`;
+  await sql(queryText);
 };
 
 // Get all inventory items with optional filters
