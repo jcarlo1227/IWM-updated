@@ -236,45 +236,30 @@ const initializeOrderShipmentsTable = async () => {
       }
     }
  
-    // Add FK for shipments.order_id -> production_planning(order_id) if table exists; otherwise keep sales_orders FK
-    await sql`
-      DO $$ BEGIN
-        IF EXISTS (
-          SELECT 1 FROM information_schema.tables WHERE table_name = 'production_planning'
-        ) THEN
-          -- Drop old FK if present
-          IF EXISTS (
-            SELECT 1 FROM information_schema.table_constraints
-            WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order'
-          ) THEN
-            ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order;
-          END IF;
-          -- Create index on production_planning.order_id if not present
-          IF NOT EXISTS (
-            SELECT 1 FROM pg_indexes WHERE tablename = 'production_planning' AND indexname = 'idx_production_planning_order_id'
-          ) THEN
-            CREATE INDEX idx_production_planning_order_id ON production_planning(order_id);
-          END IF;
-          -- Add new FK to production_planning.order_id
-          IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints
-            WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order'
-          ) THEN
-            ALTER TABLE order_shipments
-            ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE;
-          END IF;
-        ELSE
-          -- Ensure FK to sales_orders
-          IF NOT EXISTS (
-            SELECT 1 FROM information_schema.table_constraints
-            WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order'
-          ) THEN
-            ALTER TABLE order_shipments
-            ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE;
-          END IF;
-        END IF;
-      END $$;
+    // Add FK to production_planning(order_id) only if order_id is unique/PK; otherwise fallback to sales_orders
+    // Check if production_planning exists and order_id is unique or primary key
+    const ppInfo = await sql`
+      SELECT tc.constraint_type
+      FROM information_schema.table_constraints tc
+      JOIN information_schema.key_column_usage kcu
+        ON tc.constraint_name = kcu.constraint_name AND tc.table_name = kcu.table_name
+      WHERE tc.table_name = 'production_planning' AND kcu.column_name = 'order_id'
     `;
+    const hasUniqueOnPP = (ppInfo || []).some(r => ['PRIMARY KEY','UNIQUE'].includes(String(r.constraint_type || '').toUpperCase()));
+
+    if (ppInfo && ppInfo.length) {
+      // Drop sales_orders FK if present
+      await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order; END IF; END $$;`;
+      if (hasUniqueOnPP) {
+        await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE; END IF; END $$;`;
+      } else {
+        // Cannot add FK to production_planning(order_id) because it is not unique. Keep or add FK to sales_orders if available.
+        await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE; END IF; END $$;`;
+      }
+    } else {
+      // No production_planning table; ensure FK to sales_orders
+      await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE; END IF; END $$;`;
+    }
     console.log('✅ Order shipments table created/verified');
   } catch (err) {
     console.error('❌ Error creating order shipments table:', err);
