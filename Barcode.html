@@ -626,7 +626,6 @@
         <a class="nav-link" href="Inventory.html"><i class="bi bi-box-seam me-2"></i>Inventory</a>
         <a class="nav-link active" href="Barcode.html"><i class="bi bi-upc-scan me-2"></i>Barcode</a>
         <a class="nav-link" href="WarehouseLayAndOpti.html"><i class="bi bi-layout-wtf me-2"></i>Layout & Optimization</a>
-        <a class="nav-link" href="MaterialShipments.html"><i class="bi bi-truck me-2"></i>Material Shipments</a>
         <a class="nav-link" href="OrderShipments.html"><i class="bi bi-box-arrow-right me-2"></i>Order Shipments</a>
         <a class="nav-link" href="StockTracking.html"><i class="bi bi-shop me-2"></i>Stock Tracking</a>
         <a class="nav-link" href="Reports.html"><i class="bi bi-graph-up me-2"></i>Reports</a>
@@ -1035,11 +1034,13 @@ function mapInventoryData(rawData) {
   return rawData.map(item => ({
     id: item.id,
     itemCode: item.item_code,
+    productId: item.product_id,
     productName: item.product_name,
+    productDescription: item.product_description,
+    productCategory: item.product_category,
+    productImage: item.product_image,
+    price: item.price,
     unitOfMeasure: item.unit_of_measure,
-    buyPrice: item.buy_price,
-    sellPrice: item.sell_price,
-    location: item.location,
     categoryId: item.category_id,
     status: item.status,
     warehouseId: item.warehouse_id,
@@ -1350,7 +1351,7 @@ function showScanResult(scanData) {
       itemInfo = `
         <div class="mt-2">
           <strong>Product:</strong> ${scanData.item.productName}<br>
-          <strong>Location:</strong> ${scanData.item.location}<br>
+          <strong>Category:</strong> ${scanData.item.productCategory || '-'}<br>
           <strong>Quantity:</strong> ${scanData.item.totalQuantity}
         </div>
       `;
@@ -1529,15 +1530,14 @@ function showItemDetails(item) {
         </div>
         <div class="col-md-6">
           <strong>Current Quantity:</strong> ${item.totalQuantity} ${item.unitOfMeasure}<br>
-          <strong>Location:</strong> ${item.location}<br>
-          <strong>Buy Price:</strong> ₱${item.buyPrice}
+          <strong>Price:</strong> ₱${item.price}
         </div>
         <div class="col-md-6">
           <strong>Category:</strong> ${category?.category_name || 'N/A'}<br>
           <strong>Warehouse:</strong> ${warehouse?.warehouse_name || 'N/A'}
         </div>
         <div class="col-md-6">
-          <strong>Sell Price:</strong> ₱${item.sellPrice || 'N/A'}<br>
+          <strong>Product Category:</strong> ${item.productCategory || 'N/A'}<br>
           <strong>Last Updated:</strong> ${new Date(item.updatedAt).toLocaleString()}
         </div>
       </div>
