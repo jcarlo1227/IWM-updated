@@ -111,6 +111,10 @@
       color: var(--secondary-color);
     }
 
+    .clickable-card { cursor: pointer; }
+    .clickable-card:focus { outline: 2px solid var(--secondary-color); outline-offset: 2px; }
+    .clickable-card:hover { box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.1); }
+
     .table-container {
       background: var(--main-bg);
       border-radius: 10px;
@@ -597,56 +601,56 @@
         <!-- Stock Summary Cards -->
         <div class="row g-4 mb-4">
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardTotalItems" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-primary bg-opacity-10 p-3">
                     <i class="bi bi-box-seam fs-4 text-primary"></i>
                   </div>
                 </div>
-                <h3 class="fw-bold text-primary mb-1">2,847</h3>
+                <h3 class="fw-bold text-primary mb-1" id="summaryTotalItems">0</h3>
                 <p class="text-muted mb-0">Total Items</p>
               </div>
             </div>
           </div>
           
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardInStock" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-success bg-opacity-10 p-3">
                     <i class="bi bi-check-circle fs-4 text-success"></i>
                   </div>
                 </div>
-                <h3 class="fw-bold text-success mb-1">1,923</h3>
+                <h3 class="fw-bold text-success mb-1" id="summaryInStockQty">0</h3>
                 <p class="text-muted mb-0">In Stock</p>
               </div>
             </div>
           </div>
           
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardLowStock" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-warning bg-opacity-10 p-3">
                     <i class="bi bi-exclamation-triangle fs-4 text-warning"></i>
                   </div>
                 </div>
-                <h3 class="fw-bold text-warning mb-1">324</h3>
+                <h3 class="fw-bold text-warning mb-1" id="summaryLowStock">0</h3>
                 <p class="text-muted mb-0">Low Stock</p>
               </div>
             </div>
           </div>
           
           <div class="col-lg-3 col-md-6">
-            <div class="card border-0 shadow-sm">
+            <div id="cardOutOfStock" class="card border-0 shadow-sm clickable-card" role="button" tabindex="0">
               <div class="card-body text-center">
                 <div class="d-flex align-items-center justify-content-center mb-3">
                   <div class="rounded-circle bg-danger bg-opacity-10 p-3">
                     <i class="bi bi-x-circle fs-4 text-danger"></i>
                   </div>
                 </div>
-                <h3 class="fw-bold text-danger mb-1">600</h3>
+                <h3 class="fw-bold text-danger mb-1" id="summaryOutOfStock">0</h3>
                 <p class="text-muted mb-0">Out of Stock</p>
               </div>
             </div>
@@ -661,45 +665,7 @@
                 <h6 class="mb-0"><i class="bi bi-pie-chart me-2"></i>Stock by Category</h6>
               </div>
               <div class="card-body">
-                <div class="mb-3">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted">Electronics</span>
-                    <span class="fw-bold">1,245 items</span>
-                  </div>
-                  <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-primary" style="width: 44%"></div>
-                  </div>
-                </div>
-                
-                <div class="mb-3">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted">Accessories</span>
-                    <span class="fw-bold">892 items</span>
-                  </div>
-                  <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-success" style="width: 31%"></div>
-                  </div>
-                </div>
-                
-                <div class="mb-3">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted">Components</span>
-                    <span class="fw-bold">456 items</span>
-                  </div>
-                  <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-info" style="width: 16%"></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted">Materials</span>
-                    <span class="fw-bold">254 items</span>
-                  </div>
-                  <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-warning" style="width: 9%"></div>
-                  </div>
-                </div>
+                <div id="categoryStockContainer"></div>
               </div>
             </div>
           </div>
@@ -710,35 +676,7 @@
                 <h6 class="mb-0"><i class="bi bi-building me-2"></i>Stock by Warehouse</h6>
               </div>
               <div class="card-body">
-                <div class="mb-3">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted">Warehouse A (WH001)</span>
-                    <span class="fw-bold">1,567 items</span>
-                  </div>
-                  <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-primary" style="width: 55%"></div>
-                  </div>
-                </div>
-                
-                <div class="mb-3">
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted">Warehouse B (WH002)</span>
-                    <span class="fw-bold">823 items</span>
-                  </div>
-                  <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-success" style="width: 29%"></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div class="d-flex justify-content-between align-items-center mb-2">
-                    <span class="text-muted">Warehouse C (WH003)</span>
-                    <span class="fw-bold">457 items</span>
-                  </div>
-                  <div class="progress" style="height: 8px;">
-                    <div class="progress-bar bg-info" style="width: 16%"></div>
-                  </div>
-                </div>
+                <div id="warehouseStockContainer"></div>
               </div>
             </div>
           </div>
@@ -747,6 +685,35 @@
     </div>
   </div>
 </div>
+
+<!-- Stock List Modal -->
+<div class="modal fade" id="stockListModal" tabindex="-1">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="stockListModalTitle">Items</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Item Code</th>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Warehouse</th>
+                <th>Quantity</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="stockListTbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+  </div>
 
 <!-- Insert/Edit Modal -->
 <div class="modal fade" id="itemModal" tabindex="-1">
@@ -1104,8 +1071,15 @@ let currentEditId = null;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-  renderTable();
+  if (document.getElementById('inventoryTableBody')) {
+    renderTable();
+  }
   updateTotalItems();
+  // Stock tracking dynamic data
+  loadStockTracking();
+  // periodic refresh to keep values updated
+  setInterval(loadStockTracking, 30000);
+  setupCardInteractions();
 });
 
 // CRUD Operations
@@ -1286,14 +1260,15 @@ function searchItems() {
 }
 
 // Add event listeners for filters
-document.getElementById('categoryFilter').addEventListener('change', searchItems);
-document.getElementById('statusFilter').addEventListener('change', searchItems);
-document.getElementById('warehouseFilter').addEventListener('change', searchItems);
-document.getElementById('searchInput').addEventListener('input', searchItems);
+try { document.getElementById('categoryFilter')?.addEventListener('change', searchItems); } catch(e) {}
+try { document.getElementById('statusFilter')?.addEventListener('change', searchItems); } catch(e) {}
+try { document.getElementById('warehouseFilter')?.addEventListener('change', searchItems); } catch(e) {}
+try { document.getElementById('searchInput')?.addEventListener('input', searchItems); } catch(e) {}
 
 // Rendering functions
 function renderTable(data = inventoryData) {
   const tbody = document.getElementById('inventoryTableBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
   
   data.forEach(item => {
@@ -1327,7 +1302,158 @@ function renderTable(data = inventoryData) {
 }
 
 function updateTotalItems() {
-  document.getElementById('totalItems').textContent = inventoryData.length;
+  const el = document.getElementById('totalItems');
+  if (el) el.textContent = inventoryData.length;
+}
+
+// Stock Tracking: Fetch and render helpers
+const API_BASE = '/api';
+
+async function loadStockTracking() {
+  try {
+    const [overviewRes, categoryRes, warehouseRes] = await Promise.all([
+      fetch(`${API_BASE}/stock/overview?threshold=50`),
+      fetch(`${API_BASE}/stock/by-category`),
+      fetch(`${API_BASE}/stock/by-warehouse`)
+    ]);
+
+    const overviewJson = await overviewRes.json();
+    const categoryJson = await categoryRes.json();
+    const warehouseJson = await warehouseRes.json();
+
+    if (overviewJson && overviewJson.success && overviewJson.data) {
+      const o = overviewJson.data;
+      setNumberText('summaryTotalItems', o.totalItems);
+      setNumberText('summaryInStockQty', o.totalStockQuantity);
+      setNumberText('summaryLowStock', o.lowStockItems);
+      setNumberText('summaryOutOfStock', o.outOfStockItems);
+      const now = new Date();
+      document.getElementById('lastUpdated').textContent = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+    }
+
+    if (categoryJson && categoryJson.success) {
+      renderProgressList('categoryStockContainer', categoryJson.data.map(row => ({
+        label: normalizeCategory(row.category),
+        value: Number(row.total_quantity) || 0
+      })))
+    }
+
+    if (warehouseJson && warehouseJson.success) {
+      renderProgressList('warehouseStockContainer', warehouseJson.data.map(row => ({
+        label: `${row.warehouse_name} (${row.warehouse_id})`,
+        value: Number(row.total_quantity) || 0
+      })))
+    }
+  } catch (err) {
+    console.error('Failed to load stock tracking data:', err);
+  }
+}
+
+function setNumberText(id, num) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const n = Number(num) || 0;
+  el.textContent = n.toLocaleString();
+}
+
+function normalizeCategory(cat) {
+  const c = String(cat || '').trim().toLowerCase();
+  if (c.startsWith('make')) return 'Make-Up';
+  if (c.startsWith('skin')) return 'Skincare';
+  return cat || 'Uncategorized';
+}
+
+function renderProgressList(containerId, items) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+  const max = Math.max(1, ...items.map(i => i.value));
+  const colors = ['bg-primary', 'bg-success', 'bg-info', 'bg-warning', 'bg-secondary'];
+  items.forEach((item, idx) => {
+    const pct = Math.round((item.value / max) * 100);
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mb-3';
+    wrapper.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="text-muted">${item.label}</span>
+        <span class="fw-bold">${(item.value || 0).toLocaleString()} items</span>
+      </div>
+      <div class="progress" style="height: 8px;">
+        <div class="progress-bar ${colors[idx % colors.length]}" style="width: ${pct}%"></div>
+      </div>
+    `;
+    container.appendChild(wrapper);
+  });
+}
+
+// Inventory list for modal
+let stockInventoryCache = null;
+async function getInventoryItems() {
+  if (Array.isArray(stockInventoryCache)) return stockInventoryCache;
+  const res = await fetch(`${API_BASE}/inventory`);
+  const json = await res.json().catch(() => ({ success: false, data: [] }));
+  stockInventoryCache = json && json.data ? json.data : [];
+  return stockInventoryCache;
+}
+
+function setupCardInteractions() {
+  const totalEl = document.getElementById('cardTotalItems');
+  const inEl = document.getElementById('cardInStock');
+  const lowEl = document.getElementById('cardLowStock');
+  const outEl = document.getElementById('cardOutOfStock');
+  const onKey = (type) => (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); showStockList(type); } };
+  totalEl?.addEventListener('click', () => showStockList('all'));
+  totalEl?.addEventListener('keydown', onKey('all'));
+  inEl?.addEventListener('click', () => showStockList('inStock'));
+  inEl?.addEventListener('keydown', onKey('inStock'));
+  lowEl?.addEventListener('click', () => showStockList('lowStock'));
+  lowEl?.addEventListener('keydown', onKey('lowStock'));
+  outEl?.addEventListener('click', () => showStockList('outOfStock'));
+  outEl?.addEventListener('keydown', onKey('outOfStock'));
+}
+
+async function showStockList(type) {
+  const items = await getInventoryItems();
+  let filtered = items;
+  const threshold = 50;
+  if (type === 'inStock') {
+    filtered = items.filter(i => Number(i.total_quantity) > 0);
+  } else if (type === 'lowStock') {
+    filtered = items.filter(i => Number(i.total_quantity) > 0 && Number(i.total_quantity) < threshold);
+  } else if (type === 'outOfStock') {
+    filtered = items.filter(i => String(i.status || '').toLowerCase() === 'out of stock' || Number(i.total_quantity) === 0);
+  }
+  const titleMap = {
+    all: 'All Items',
+    inStock: 'In Stock Items',
+    lowStock: 'Low Stock Items (< 50)',
+    outOfStock: 'Out of Stock Items'
+  };
+  const titleEl = document.getElementById('stockListModalTitle');
+  if (titleEl) titleEl.textContent = `${titleMap[type] || 'Items'} (${filtered.length})`;
+  renderStockRows(filtered);
+  const modal = new bootstrap.Modal(document.getElementById('stockListModal'));
+  modal.show();
+}
+
+function renderStockRows(rows) {
+  const tbody = document.getElementById('stockListTbody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  rows.forEach(r => {
+    const tr = document.createElement('tr');
+    const status = String(r.status || '').toLowerCase();
+    const badgeClass = status === 'out of stock' ? 'status-inactive' : 'status-active';
+    tr.innerHTML = `
+      <td>${r.item_code || ''}</td>
+      <td>${r.product_name || ''}</td>
+      <td>${r.product_category || ''}</td>
+      <td>${r.warehouse_name || r.warehouse_id || ''}</td>
+      <td>${Number(r.total_quantity || 0).toLocaleString()}</td>
+      <td><span class="status-badge ${badgeClass}">${(r.status || '').toString().toUpperCase()}</span></td>
+    `;
+    tbody.appendChild(tr);
+  });
 }
 
 // Top Navigation Functions
@@ -1405,11 +1531,16 @@ function markAllAsRead() {
 }
 
 // Top search functionality
-document.getElementById('topSearchInput').addEventListener('input', function(e) {
-  const searchTerm = e.target.value;
-  document.getElementById('searchInput').value = searchTerm;
-  searchItems();
-});
+try {
+  document.getElementById('topSearchInput')?.addEventListener('input', function(e) {
+    const searchTerm = e.target.value;
+    const si = document.getElementById('searchInput');
+    if (si) {
+      si.value = searchTerm;
+      searchItems();
+    }
+  });
+} catch(e) {}
 
 // Real-time notifications (simulated)
 function addNotification(title, text, type = 'info') {
@@ -1470,3 +1601,4 @@ document.addEventListener('keydown', function(e) {
 </script>
 </body>
 </html>
+
