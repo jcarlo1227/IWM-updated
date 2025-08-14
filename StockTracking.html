@@ -1038,7 +1038,9 @@ let currentEditId = null;
 
 // Initialize the application
 document.addEventListener('DOMContentLoaded', function() {
-  renderTable();
+  if (document.getElementById('inventoryTableBody')) {
+    renderTable();
+  }
   updateTotalItems();
   // Stock tracking dynamic data
   loadStockTracking();
@@ -1224,14 +1226,15 @@ function searchItems() {
 }
 
 // Add event listeners for filters
-document.getElementById('categoryFilter').addEventListener('change', searchItems);
-document.getElementById('statusFilter').addEventListener('change', searchItems);
-document.getElementById('warehouseFilter').addEventListener('change', searchItems);
-document.getElementById('searchInput').addEventListener('input', searchItems);
+try { document.getElementById('categoryFilter')?.addEventListener('change', searchItems); } catch(e) {}
+try { document.getElementById('statusFilter')?.addEventListener('change', searchItems); } catch(e) {}
+try { document.getElementById('warehouseFilter')?.addEventListener('change', searchItems); } catch(e) {}
+try { document.getElementById('searchInput')?.addEventListener('input', searchItems); } catch(e) {}
 
 // Rendering functions
 function renderTable(data = inventoryData) {
   const tbody = document.getElementById('inventoryTableBody');
+  if (!tbody) return;
   tbody.innerHTML = '';
   
   data.forEach(item => {
@@ -1424,11 +1427,16 @@ function markAllAsRead() {
 }
 
 // Top search functionality
-document.getElementById('topSearchInput').addEventListener('input', function(e) {
-  const searchTerm = e.target.value;
-  document.getElementById('searchInput').value = searchTerm;
-  searchItems();
-});
+try {
+  document.getElementById('topSearchInput')?.addEventListener('input', function(e) {
+    const searchTerm = e.target.value;
+    const si = document.getElementById('searchInput');
+    if (si) {
+      si.value = searchTerm;
+      searchItems();
+    }
+  });
+} catch(e) {}
 
 // Real-time notifications (simulated)
 function addNotification(title, text, type = 'info') {
