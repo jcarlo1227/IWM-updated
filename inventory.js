@@ -896,6 +896,40 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
     const willSetTracking = String(status || '').toLowerCase() === 'shipped';
     const generatedTracking = willSetTracking ? `TRCK${Math.floor(100000 + Math.random() * 900000)}` : null;
 
+    // If marking as shipped, ensure sufficient inventory and deduct only on first transition
+    if (String(status || '').toLowerCase() === 'shipped') {
+      const rows = await sql`SELECT status, item_code, product_id, quantity FROM order_shipments WHERE id = ${id}`;
+      if (!rows.length) throw new Error('Order not found');
+      const current = rows[0];
+      const currentStatus = String(current.status || '').toLowerCase();
+      if (currentStatus !== 'shipped' && currentStatus !== 'delivered') {
+        const requiredQty = Number(current.quantity) || 0;
+        if (requiredQty > 0) {
+          let invItem = null;
+          if (current.item_code) {
+            const itemsByCode = await sql`SELECT id, total_quantity FROM inventory_items WHERE item_code = ${current.item_code} LIMIT 1`;
+            if (itemsByCode.length) invItem = itemsByCode[0];
+          }
+          if (!invItem && current.product_id) {
+            const itemsByProduct = await sql`SELECT id, total_quantity FROM inventory_items WHERE product_id = ${current.product_id} ORDER BY total_quantity DESC LIMIT 1`;
+            if (itemsByProduct.length) invItem = itemsByProduct[0];
+          }
+          if (!invItem) {
+            throw new Error('you cannot ship the item');
+          }
+          const updatedStock = await sql`
+            UPDATE inventory_items
+            SET total_quantity = total_quantity - ${requiredQty}, updated_at = CURRENT_TIMESTAMP
+            WHERE id = ${invItem.id} AND total_quantity >= ${requiredQty}
+            RETURNING id, total_quantity
+          `;
+          if (!updatedStock.length) {
+            throw new Error('you cannot ship the item');
+          }
+        }
+      }
+    }
+
     const result = await sql`
       UPDATE order_shipments
       SET status = ${status},
