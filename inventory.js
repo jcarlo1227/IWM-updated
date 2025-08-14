@@ -236,17 +236,25 @@ const initializeOrderShipmentsTable = async () => {
 // Insert shipments for paid sales orders that are not yet in shipments
 const syncPaidOrdersIntoShipments = async () => {
   const sql = await database.sql();
-  await sql`
+  // Detect optional columns on sales_orders
+  const cols = await sql`
+    SELECT column_name FROM information_schema.columns
+    WHERE table_name = 'sales_orders' AND column_name IN ('item_code','quantity')
+  `;
+  const names = new Set(cols.map(c => c.column_name));
+  const itemExpr = names.has('item_code') ? 'so.item_code' : "NULL::VARCHAR(50)";
+  const qtyExpr = names.has('quantity') ? 'so.quantity' : 'NULL::INTEGER';
+  const queryText = `
     INSERT INTO order_shipments (
       order_id, item_code, quantity, total_value, status, order_date, updated_at
     )
-    SELECT so.order_id, so.item_code, so.quantity, so.total_amount, 'processing', so.order_date, CURRENT_TIMESTAMP
+    SELECT so.order_id, ${itemExpr} AS item_code, ${qtyExpr} AS quantity, so.total_amount, 'processing', so.order_date, CURRENT_TIMESTAMP
     FROM sales_orders so
     WHERE so.payment_status = 'paid'
       AND NOT EXISTS (
         SELECT 1 FROM order_shipments os WHERE os.order_id = so.order_id
-      )
-  `;
+      )`;
+  await sql(queryText);
 };
 
 // Get all inventory items with optional filters
