@@ -27,7 +27,6 @@ const {
   getAllWarehouses,
   getInventoryStats,
   updateItemQuantity,
-  // Material shipments removed
   // New order shipments
   getAllOrderShipments,
   getOrderShipmentById,
