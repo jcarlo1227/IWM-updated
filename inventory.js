@@ -134,21 +134,7 @@ const initializeOrderShipmentsTable = async () => {
         customer_name VARCHAR(255) NOT NULL
       )
     `;
-    await sql`
-      CREATE TABLE IF NOT EXISTS sales_orders (
-        order_id VARCHAR(50) PRIMARY KEY,
-        customer_id VARCHAR(50) REFERENCES customers(customer_id),
-        order_date DATE,
-        total_amount NUMERIC(12,2),
-        order_status VARCHAR(50),
-        payment_status VARCHAR(50),
-        shipping_address TEXT,
-        created_by VARCHAR(100),
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        quantity INTEGER,
-        item_code VARCHAR(50)
-      )
-    `;
+    // Removed sales_orders linkage; relying on production_planning
     await sql`
       CREATE TABLE IF NOT EXISTS order_shipments (
         id SERIAL PRIMARY KEY,
@@ -236,8 +222,7 @@ const initializeOrderShipmentsTable = async () => {
       }
     }
  
-    // Add FK to production_planning(order_id) only if order_id is unique/PK; otherwise fallback to sales_orders
-    // Check if production_planning exists and order_id is unique or primary key
+    // Add FK to production_planning(order_id) only if order_id is unique/PK
     const ppInfo = await sql`
       SELECT tc.constraint_type
       FROM information_schema.table_constraints tc
@@ -247,48 +232,17 @@ const initializeOrderShipmentsTable = async () => {
     `;
     const hasUniqueOnPP = (ppInfo || []).some(r => ['PRIMARY KEY','UNIQUE'].includes(String(r.constraint_type || '').toUpperCase()));
 
-    if (ppInfo && ppInfo.length) {
-      // Drop sales_orders FK if present
-      await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order; END IF; END $$;`;
-      if (hasUniqueOnPP) {
-        await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE; END IF; END $$;`;
-      } else {
-        // Cannot add FK to production_planning(order_id) because it is not unique. Keep or add FK to sales_orders if available.
-        await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE; END IF; END $$;`;
-      }
-    } else {
-      // No production_planning table; ensure FK to sales_orders
-      await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE; END IF; END $$;`;
+    // Drop any legacy FK to sales_orders
+    await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order; END IF; END $$;`;
+
+    if (hasUniqueOnPP) {
+      await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE; END IF; END $$;`;
     }
     console.log('✅ Order shipments table created/verified');
   } catch (err) {
     console.error('❌ Error creating order shipments table:', err);
     throw err;
   }
-};
-
-// Insert shipments for paid sales orders that are not yet in shipments
-const syncPaidOrdersIntoShipments = async () => {
-  const sql = await database.sql();
-  // Detect optional columns on sales_orders
-  const cols = await sql`
-    SELECT column_name FROM information_schema.columns
-    WHERE table_name = 'sales_orders' AND column_name IN ('item_code','quantity')
-  `;
-  const names = new Set(cols.map(c => c.column_name));
-  const itemExpr = names.has('item_code') ? 'so.item_code' : "NULL::VARCHAR(50)";
-  const qtyExpr = names.has('quantity') ? 'so.quantity' : 'NULL::INTEGER';
-  const queryText = `
-    INSERT INTO order_shipments (
-      order_id, item_code, quantity, total_value, status, order_date, updated_at
-    )
-    SELECT so.order_id, ${itemExpr} AS item_code, ${qtyExpr} AS quantity, so.total_amount, 'processing', so.order_date, CURRENT_TIMESTAMP
-    FROM sales_orders so
-    WHERE so.payment_status = 'paid'
-      AND NOT EXISTS (
-        SELECT 1 FROM order_shipments os WHERE os.order_id = so.order_id
-      )`;
-  await sql(queryText);
 };
 
 // Insert shipments for processed production plans not yet in shipments
@@ -629,16 +583,13 @@ const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
 const getAllOrderShipments = async (filters = {}) => {
   try {
     const sql = await database.sql();
-    // Ensure shipments reflect paid orders
-    await syncPaidOrdersIntoShipments();
+    // Ensure shipments reflect processed production plans
     await syncProcessedPlansIntoShipments();
 
     let queryText = `
       SELECT 
-        os.*,
-        so.customer_id
+        os.*
       FROM order_shipments os
-      LEFT JOIN sales_orders so ON so.order_id = os.order_id
     `;
 
     const conditions = [];
@@ -646,7 +597,7 @@ const getAllOrderShipments = async (filters = {}) => {
 
     if (filters.search) {
       const term = `%${filters.search}%`;
-      conditions.push(`(os.order_id::text ILIKE $${params.length + 1} OR os.product_name ILIKE $${params.length + 1} OR so.customer_id::text ILIKE $${params.length + 1})`);
+      conditions.push(`(os.order_id::text ILIKE $${params.length + 1} OR os.product_name ILIKE $${params.length + 1})`);
       params.push(term);
     }
     if (filters.status) {
@@ -681,10 +632,8 @@ const getOrderShipmentById = async (id) => {
     const sql = await database.sql();
     const result = await sql`
       SELECT 
-        os.*,
-        so.customer_id
+        os.*
       FROM order_shipments os
-      LEFT JOIN sales_orders so ON so.order_id = os.order_id
       WHERE os.id = ${id}
     `;
     return result[0] || null;
@@ -710,12 +659,6 @@ const createOrderShipment = async (orderData) => {
       tracking_number,
       notes
     } = orderData;
-
-    // Only allow creating a shipment if the sales order is paid
-    const so = await sql`SELECT payment_status FROM sales_orders WHERE order_id = ${order_id}`;
-    if (!so.length || String(so[0].payment_status).toLowerCase() !== 'paid') {
-      throw new Error('Shipment can only be created for paid sales orders');
-    }
 
     const result = await sql`
       INSERT INTO order_shipments (
