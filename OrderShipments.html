@@ -588,7 +588,7 @@
           <div class="col-md-3">
             <div class="filter-group">
               <label for="searchOrder">Search Orders</label>
-              <input type="text" class="form-control" id="searchOrder" placeholder="Search by order ID, customer, or product...">
+              <input type="text" class="form-control" id="searchOrder" placeholder="Search by order ID, customer ID, or item code...">
             </div>
           </div>
           <div class="col-md-2">
@@ -625,9 +625,9 @@
       <div class="shipment-card">
         <div class="d-flex justify-content-between align-items-center mb-3">
           <h5><i class="bi bi-box-arrow-right me-2"></i>Order Shipment Records</h5>
-          <div class="text-muted">
-            <small>Total Orders: <span id="totalOrders">3</span></small>
-          </div>
+                  <div class="text-muted">
+          <small>Total Orders: <span id="totalOrders">0</span></small>
+        </div>
         </div>
         <div class="table-container">
           <div class="table-responsive">
@@ -635,9 +635,8 @@
               <thead>
                 <tr>
                   <th>Order ID</th>
-                  <th>Customer</th>
+                  <th>Customer ID</th>
                   <th>Item Code</th>
-                  <th>Product</th>
                   <th>Quantity</th>
                   <th>Total Value</th>
                   <th>Status</th>
@@ -753,9 +752,9 @@
               <label for="orderIdInput" class="form-label">Order ID</label>
               <input type="text" class="form-control" id="orderIdInput" name="orderIdInput" required>
             </div>
-            <div class="col-md-8">
-              <label for="customerName" class="form-label">Customer Name</label>
-              <input type="text" class="form-control" id="customerName" name="customerName" required>
+                        <div class="col-md-8">
+              <label for="customerId" class="form-label">Customer ID</label>
+              <input type="text" class="form-control" id="customerId" name="customerId">
             </div>
           </div>
           <div class="row mb-3">
@@ -765,7 +764,7 @@
             </div>
             <div class="col-md-5">
               <label for="productName" class="form-label">Product Name</label>
-              <input type="text" class="form-control" id="productName" name="productName" required>
+              <input type="text" class="form-control" id="productName" name="productName" disabled placeholder="Derived from item">
             </div>
             <div class="col-md-3">
               <label for="quantity" class="form-label">Quantity</label>
@@ -900,7 +899,7 @@
     if (data.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="12" class="text-center text-muted py-4">
+          <td colspan="11" class="text-center text-muted py-4">
             <i class="bi bi-inbox fs-1 d-block mb-2"></i>
             No orders found
           </td>
@@ -913,9 +912,8 @@
       const row = document.createElement('tr');
       row.innerHTML = `
         <td><strong>${o.order_id}</strong></td>
-        <td>${o.customer_name || '-'}</td>
+        <td>${o.customer_id || '-'}</td>
         <td>${o.item_code || '-'}</td>
-        <td>${o.product_name || '-'}</td>
         <td>${o.quantity || 0}</td>
         <td>₱${(o.total_value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
         <td><span class="status-badge status-${(o.status || 'processing').toLowerCase()}">${(o.status || 'processing').toUpperCase()}</span></td>
@@ -992,11 +990,11 @@
       document.getElementById('orderModalLabel').textContent = 'Edit Order';
       document.getElementById('orderHiddenId').value = o.id;
       document.getElementById('orderIdInput').value = o.order_id;
-      document.getElementById('customerName').value = o.customer_name;
-      document.getElementById('itemCode').value = o.item_code;
-      document.getElementById('productName').value = o.product_name;
-      document.getElementById('quantity').value = o.quantity;
-      document.getElementById('totalValue').value = o.total_value;
+      document.getElementById('customerId').value = o.customer_id || '';
+      document.getElementById('itemCode').value = o.item_code || '';
+      document.getElementById('productName').value = o.product_name || '';
+      document.getElementById('quantity').value = o.quantity || 0;
+      document.getElementById('totalValue').value = o.total_value || 0;
       document.getElementById('status').value = o.status;
       document.getElementById('orderDate').value = o.order_date || '';
       document.getElementById('shipDate').value = o.ship_date || '';
@@ -1015,9 +1013,7 @@
     const fd = new FormData(form);
     const payload = {
       order_id: fd.get('orderIdInput'),
-      customer_name: fd.get('customerName'),
       item_code: fd.get('itemCode'),
-      product_name: fd.get('productName'),
       quantity: parseInt(fd.get('quantity')),
       total_value: parseFloat(fd.get('totalValue')),
       status: fd.get('status'),
@@ -1055,10 +1051,10 @@
         <div class="row">
           <div class="col-md-6">
             <p><strong>Order ID:</strong> ${o.order_id}</p>
-            <p><strong>Customer:</strong> ${o.customer_name}</p>
-            <p><strong>Product:</strong> ${o.product_name} <small class="text-muted">(${o.item_code})</small></p>
-            <p><strong>Quantity:</strong> ${o.quantity}</p>
-            <p><strong>Total Value:</strong> ₱${Number(o.total_value).toFixed(2)}</p>
+            <p><strong>Customer ID:</strong> ${o.customer_id || '-'}</p>
+            <p><strong>Item Code:</strong> ${o.item_code || '-'}</p>
+            <p><strong>Quantity:</strong> ${o.quantity || 0}</p>
+            <p><strong>Total Value:</strong> ₱${Number(o.total_value || 0).toFixed(2)}</p>
           </div>
           <div class="col-md-6">
             
@@ -1115,8 +1111,8 @@
   }
 
   function generateReports() {
-    const headers = ['Order ID','Customer','Item Code','Product','Quantity','Total Value','Status','Order Date','Ship Date','Delivery Date','Tracking #'];
-    const rows = ordersData.map(o => [o.order_id,o.customer_name,o.item_code,o.product_name,o.quantity,o.total_value,o.status,o.order_date||'',o.ship_date||'',o.delivery_date||'',o.tracking_number||'']);
+    const headers = ['Order ID','Customer ID','Item Code','Quantity','Total Value','Status','Order Date','Ship Date','Delivery Date','Tracking #'];
+    const rows = ordersData.map(o => [o.order_id,o.customer_id,o.item_code,o.quantity,o.total_value,o.status,o.order_date||'',o.ship_date||'',o.delivery_date||'',o.tracking_number||'']);
     const csv = [headers, ...rows].map(r => r.map(c => '"' + String(c).replaceAll('"','""') + '"').join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
@@ -1128,7 +1124,7 @@
   function viewInventoryImpact() {
     const totals = new Map();
     ordersData.forEach(o => {
-      const key = `${o.item_code} ${o.product_name}`;
+      const key = `${o.item_code}`;
       totals.set(key, (totals.get(key) || 0) + (o.quantity || 0));
     });
     const lines = Array.from(totals.entries()).map(([k,v]) => `- ${k}: ${v}`);

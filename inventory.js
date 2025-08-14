@@ -570,34 +570,28 @@ const getAllOrderShipments = async (filters = {}) => {
     // Ensure shipments reflect paid orders
     await syncPaidOrdersIntoShipments();
 
-    let base = sql`
+    let queryText = `
       SELECT 
         os.*,
-        so.customer_id,
-        c.customer_name,
-        i.product_id,
-        p.product_name
+        so.customer_id
       FROM order_shipments os
       LEFT JOIN sales_orders so ON so.order_id = os.order_id
-      LEFT JOIN customers c ON c.customer_id = so.customer_id
-      LEFT JOIN inventory_items i ON i.item_code = os.item_code
-      LEFT JOIN products p ON p.product_id = i.product_id
     `;
 
     const conditions = [];
     const params = [];
 
     if (filters.search) {
-      conditions.push(`(os.order_id ILIKE $${params.length + 1} OR c.customer_name ILIKE $${params.length + 1} OR p.product_name ILIKE $${params.length + 1} OR os.item_code ILIKE $${params.length + 1})`);
-      params.push(`%${filters.search}%`);
+      const term = `%${filters.search}%`;
+      conditions.push(`(os.order_id ILIKE $${params.length + 1} OR os.item_code ILIKE $${params.length + 1} OR so.customer_id ILIKE $${params.length + 1})`);
+      params.push(term);
     }
     if (filters.status) {
       conditions.push(`os.status = $${params.length + 1}`);
       params.push(filters.status);
     }
     if (filters.priority) {
-      // no priority column anymore; ignore or map
-      conditions.push(`1=1`);
+      // priority column no longer exists; ignore
     }
     if (filters.date) {
       conditions.push(`os.order_date = $${params.length + 1}`);
@@ -605,40 +599,12 @@ const getAllOrderShipments = async (filters = {}) => {
     }
 
     if (conditions.length > 0) {
-      const whereClause = ` WHERE ${conditions.join(' AND ')}`;
-      base = sql`
-        SELECT 
-          os.*,
-          so.customer_id,
-          c.customer_name,
-          i.product_id,
-          p.product_name
-        FROM order_shipments os
-        LEFT JOIN sales_orders so ON so.order_id = os.order_id
-        LEFT JOIN customers c ON c.customer_id = so.customer_id
-        LEFT JOIN inventory_items i ON i.item_code = os.item_code
-        LEFT JOIN products p ON p.product_id = i.product_id
-        ${sql(whereClause)}
-        ORDER BY os.updated_at DESC
-      `;
-    } else {
-      base = sql`
-        SELECT 
-          os.*,
-          so.customer_id,
-          c.customer_name,
-          i.product_id,
-          p.product_name
-        FROM order_shipments os
-        LEFT JOIN sales_orders so ON so.order_id = os.order_id
-        LEFT JOIN customers c ON c.customer_id = so.customer_id
-        LEFT JOIN inventory_items i ON i.item_code = os.item_code
-        LEFT JOIN products p ON p.product_id = i.product_id
-        ORDER BY os.updated_at DESC
-      `;
+      queryText += ` WHERE ${conditions.join(' AND ')}`;
     }
 
-    const result = await base;
+    queryText += ` ORDER BY os.updated_at DESC`;
+
+    const result = await sql(queryText, params);
     return result;
   } catch (err) {
     console.error('Error fetching order shipments:', err);
@@ -653,15 +619,9 @@ const getOrderShipmentById = async (id) => {
     const result = await sql`
       SELECT 
         os.*,
-        so.customer_id,
-        c.customer_name,
-        i.product_id,
-        p.product_name
+        so.customer_id
       FROM order_shipments os
       LEFT JOIN sales_orders so ON so.order_id = os.order_id
-      LEFT JOIN customers c ON c.customer_id = so.customer_id
-      LEFT JOIN inventory_items i ON i.item_code = os.item_code
-      LEFT JOIN products p ON p.product_id = i.product_id
       WHERE os.id = ${id}
     `;
     return result[0] || null;
@@ -718,12 +678,9 @@ const updateOrderShipment = async (id, orderData) => {
     const sql = await database.sql();
     const {
       order_id,
-      customer_name,
       item_code,
-      product_name,
       quantity,
       total_value,
-      priority,
       status,
       order_date,
       ship_date,
@@ -735,12 +692,9 @@ const updateOrderShipment = async (id, orderData) => {
     const result = await sql`
       UPDATE order_shipments SET
         order_id = ${order_id},
-        customer_name = ${customer_name},
         item_code = ${item_code},
-        product_name = ${product_name},
         quantity = ${quantity},
         total_value = ${total_value},
-        priority = ${priority},
         status = ${status},
         order_date = ${order_date},
         ship_date = ${ship_date},
