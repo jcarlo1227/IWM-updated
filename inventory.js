@@ -879,12 +879,15 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
     const sql = await database.sql();
     const setShipDate = options.setShipDate ? options.setShipDate : null;
     const setDeliveryDate = options.setDeliveryDate ? options.setDeliveryDate : null;
+    const willSetTracking = String(status || '').toLowerCase() === 'shipped';
+    const generatedTracking = willSetTracking ? `TRCK${Math.floor(100000 + Math.random() * 900000)}` : null;
 
     const result = await sql`
       UPDATE order_shipments
       SET status = ${status},
           ship_date = COALESCE(${setShipDate}, ship_date),
           delivery_date = COALESCE(${setDeliveryDate}, delivery_date),
+          tracking_number = CASE WHEN ${willSetTracking} THEN COALESCE(tracking_number, ${generatedTracking}) ELSE tracking_number END,
           updated_at = CURRENT_TIMESTAMP
       WHERE id = ${id}
       RETURNING *
