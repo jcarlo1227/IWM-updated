@@ -390,7 +390,7 @@ const syncProcessedPlansIntoShipments = async () => {
       pp.shipping_date AS ship_date,
       CURRENT_TIMESTAMP
     FROM production_planning pp
-    WHERE pp.status = 'processed'
+    WHERE TRIM(LOWER(pp.status)) = 'processed'
       AND NOT EXISTS (
         SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
       )`;
@@ -743,6 +743,10 @@ const getAllOrderShipments = async (filters = {}) => {
     queryText += ` ORDER BY os.updated_at DESC`;
 
     const result = await sql(queryText, params);
+    if ((!result || result.length === 0) && (!filters || Object.keys(filters).filter(k => filters[k]).length === 0)) {
+      await syncProcessedPlansIntoShipments();
+      return await sql(queryText, []);
+    }
     return result;
   } catch (err) {
     console.error('Error fetching order shipments:', err);

@@ -132,9 +132,11 @@ const initializeDatabase = async () => {
     }
     
     // Initialize inventory tables
-    const { initializeInventoryTable, initializeOrderShipmentsTable } = require('./inventory');
+    const { initializeInventoryTable, initializeOrderShipmentsTable, getAllOrderShipments } = require('./inventory');
     await initializeInventoryTable();
     await initializeOrderShipmentsTable();
+    // Trigger initial sync from production_planning (processed) into order_shipments
+    try { await getAllOrderShipments({}); } catch (e) { console.warn('Initial sync from production_planning skipped:', e?.message); }
     
   } catch (err) {
     console.error('❌ Database initialization error:', err);
