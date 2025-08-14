@@ -753,14 +753,18 @@ const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
     } else if (operation === 'subtract') {
       query = sql`
         UPDATE inventory_items 
-        SET total_quantity = GREATEST(total_quantity - ${newQuantity}, 0), updated_at = CURRENT_TIMESTAMP
+        SET total_quantity = GREATEST(total_quantity - ${newQuantity}, 0),
+            status = CASE WHEN GREATEST(total_quantity - ${newQuantity}, 0) <= 0 THEN 'out of stock' ELSE status END,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
       `;
     } else {
       query = sql`
         UPDATE inventory_items 
-        SET total_quantity = ${newQuantity}, updated_at = CURRENT_TIMESTAMP
+        SET total_quantity = ${newQuantity},
+            status = CASE WHEN ${newQuantity} <= 0 THEN 'out of stock' ELSE status END,
+            updated_at = CURRENT_TIMESTAMP
         WHERE id = ${id}
         RETURNING *
       `;
@@ -1005,7 +1009,9 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
           }
           const updatedStock = await sql`
             UPDATE inventory_items
-            SET total_quantity = total_quantity - ${requiredQty}, updated_at = CURRENT_TIMESTAMP
+            SET total_quantity = total_quantity - ${requiredQty},
+                status = CASE WHEN total_quantity - ${requiredQty} <= 0 THEN 'out of stock' ELSE status END,
+                updated_at = CURRENT_TIMESTAMP
             WHERE id = ${invItem.id} AND total_quantity >= ${requiredQty}
             RETURNING id, total_quantity
           `;
