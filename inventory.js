@@ -261,7 +261,7 @@ const syncProcessedPlansIntoShipments = async () => {
 			pp.product_id,
 			pp.product_name,
 			pp.quantity,
-			'processing' AS status,
+			'processed' AS status,
 			pp.planned_date AS order_date,
 			pp.shipping_date AS ship_date,
 			CURRENT_TIMESTAMP
