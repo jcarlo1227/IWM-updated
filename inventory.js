@@ -134,6 +134,62 @@ const initializeOrderShipmentsTable = async () => {
         customer_name VARCHAR(255) NOT NULL
       )
     `;
+
+    // Create production_planning table and trigger to populate from sales_orders
+    await sql`
+      CREATE TABLE IF NOT EXISTS production_planning (
+        plan_id SERIAL PRIMARY KEY,
+        order_id INTEGER UNIQUE,
+        product_id INTEGER,
+        product_name VARCHAR(255),
+        work_order_id SERIAL UNIQUE,
+        planned_date DATE,
+        shipping_date DATE,
+        status VARCHAR(50),
+        quantity INTEGER
+      )
+    `;
+
+    const createPPTriggerFunction = `
+      CREATE OR REPLACE FUNCTION insert_pp_after_orders_insert()
+      RETURNS TRIGGER AS $$
+      BEGIN
+          INSERT INTO production_planning (
+              order_id, 
+              product_id, 
+              product_name, 
+              planned_date, 
+              status, 
+              quantity
+          )
+          VALUES (
+              NEW.order_id,
+              NEW.product_id,
+              (SELECT product_name FROM products WHERE product_id = NEW.product_id),
+              NEW.order_date,
+              NEW.order_status,
+              NEW.quantity
+          );
+
+          RETURN NEW;
+      END;
+      $$ LANGUAGE plpgsql;`;
+    await sql(createPPTriggerFunction);
+
+    await sql(`
+      DO $$
+      BEGIN
+          IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sales_orders') THEN
+              IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_insert_pp') THEN
+                  CREATE TRIGGER trg_insert_pp
+                  AFTER INSERT ON sales_orders
+                  FOR EACH ROW
+                  EXECUTE FUNCTION insert_pp_after_orders_insert();
+              END IF;
+          END IF;
+      END $$;
+    `);
+
     // Removed sales_orders linkage; relying on production_planning
     await sql`
       CREATE TABLE IF NOT EXISTS order_shipments (
