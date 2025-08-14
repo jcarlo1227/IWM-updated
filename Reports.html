@@ -608,8 +608,6 @@
             <label class="form-label">Warehouse</label>
             <select class="form-select" id="warehouseFilter" onchange="filterData()">
               <option value="">All Warehouses</option>
-              <option value="WH001">WH001</option>
-              <option value="WH002">WH002</option>
             </select>
           </div>
           <div class="col-md-2">
@@ -670,85 +668,104 @@
 
 <script>
 // Global variables - Connected to inventory data
-let inventoryData = [
-  {
-    id: 1,
-    itemCode: 'ITM001',
-    productName: 'Wireless Earphone',
-    unitOfMeasure: 'PCS',
-    price: 350.00,
-    categoryId: 'CAT001',
-    status: 'active',
-    warehouseId: 'WH001',
-    totalQuantity: 150,
-    updatedAt: '2024-01-15'
-  },
-  {
-    id: 2,
-    itemCode: 'ITM002',
-    productName: 'USB Cable',
-    unitOfMeasure: 'PCS',
-    price: 75.00,
-    categoryId: 'CAT002',
-    status: 'inactive',
-    warehouseId: 'WH002',
-    totalQuantity: 300,
-    updatedAt: '2024-01-14'
-  },
-  {
-    id: 3,
-    itemCode: 'ITM003',
-    productName: 'Bluetooth Speaker',
-    unitOfMeasure: 'PCS',
-    price: 1200.00,
-    categoryId: 'CAT001',
-    status: 'active',
-    warehouseId: 'WH001',
-    totalQuantity: 45,
-    updatedAt: '2024-01-13'
-  },
-  {
-    id: 4,
-    itemCode: 'ITM004',
-    productName: 'Phone Charger',
-    unitOfMeasure: 'PCS',
-    price: 200.00,
-    categoryId: 'CAT002',
-    status: 'active',
-    warehouseId: 'WH001',
-    totalQuantity: 500,
-    updatedAt: '2024-01-12'
-  },
-  {
-    id: 5,
-    itemCode: 'ITM005',
-    productName: 'Laptop Stand',
-    unitOfMeasure: 'PCS',
-    price: 450.00,
-    categoryId: 'CAT003',
-    status: 'active',
-    warehouseId: 'WH002',
-    totalQuantity: 80,
-    updatedAt: '2024-01-11'
-  }
-];
-
-let filteredData = [...inventoryData];
+let inventoryData = [];
+let filteredData = [];
+const API_BASE = '/api';
 
 // Initialize the application
-document.addEventListener('DOMContentLoaded', function() {
-  renderTable();
-  updateSummary();
-  updateLastUpdated();
-});
+ document.addEventListener('DOMContentLoaded', function() {
+   loadData();
+ });
 
-// Calculate valuation metrics (single price)
-function calculateValuation(item) {
-  const totalValue = (item.price || 0) * item.totalQuantity;
-  return {
-    totalValue
-  };
-}
+ // Calculate valuation metrics (single price)
+ function calculateValuation(item) {
+   const totalValue = (item.price || 0) * item.totalQuantity;
+   return {
+     totalValue
+   };
+ }
+
+ // Fetch helpers and mapping
+ async function apiCall(endpoint, options = {}) {
+   const response = await fetch(`${API_BASE}${endpoint}`, {
+     ...options,
+     headers: {
+       'Content-Type': 'application/json',
+       ...(options.headers || {})
+     }
+   });
+   if (!response.ok) throw new Error(`HTTP ${response.status}`);
+   return response.json();
+ }
+
+ function mapInventoryData(raw) {
+   return raw.map(item => ({
+     id: item.id,
+     itemCode: item.item_code,
+     productId: item.product_id,
+     productName: item.product_name,
+     productDescription: item.product_description,
+     productCategory: item.product_category,
+     productImage: item.product_image,
+     price: item.price,
+     unitOfMeasure: item.unit_of_measure,
+     categoryId: item.category_id,
+     status: item.status,
+     warehouseId: item.warehouse_id,
+     warehouseName: item.warehouse_name,
+     totalQuantity: item.total_quantity,
+     updatedAt: item.updated_at
+   }));
+ }
+
+ async function loadData() {
+   try {
+     setLoading(true);
+     const [inventoryRes, warehousesRes] = await Promise.all([
+       apiCall('/inventory'),
+       apiCall('/warehouses')
+     ]);
+     inventoryData = inventoryRes && inventoryRes.success ? mapInventoryData(inventoryRes.data || []) : [];
+     filteredData = [...inventoryData];
+     populateWarehouseFilter(warehousesRes && warehousesRes.success ? warehousesRes.data || [] : []);
+     renderTable();
+     updateSummary();
+     updateLastUpdated();
+   } catch (e) {
+     console.error('Failed to load report data', e);
+     inventoryData = [];
+     filteredData = [];
+     renderTable();
+     updateSummary();
+     updateLastUpdated();
+   } finally {
+     setLoading(false);
+   }
+ }
+
+ function populateWarehouseFilter(warehouses) {
+   const select = document.getElementById('warehouseFilter');
+   if (!select) return;
+   while (select.children.length > 1) select.removeChild(select.lastChild);
+   warehouses.forEach(w => {
+     const opt = document.createElement('option');
+     opt.value = w.warehouse_id;
+     opt.textContent = w.warehouse_name || w.warehouse_id;
+     select.appendChild(opt);
+   });
+ }
+
+ function setLoading(show) {
+   const tbody = document.getElementById('valuationTableBody');
+   if (!tbody) return;
+   if (show) {
+     tbody.innerHTML = '<tr><td colspan="7" class="text-center"><div class="spinner-border" role="status"><span class="visually-hidden">Loading...</span></div></td></tr>';
+   }
+ }
+
+ function refreshData() {
+   loadData();
+ }
 
 // Get value class for styling
 function getValueClass(value) {
@@ -758,50 +775,48 @@ function getValueClass(value) {
 }
 
 // Render the valuation table
-function renderTable(data = filteredData) {
-  const tbody = document.getElementById('valuationTableBody');
-  tbody.innerHTML = '';
-
-  data.forEach(item => {
-    const valuation = calculateValuation(item);
-    const row = document.createElement('tr');
-    
-    row.innerHTML = `
-      <td><strong>${item.itemCode}</strong></td>
-      <td>${item.productName}</td>
-      <td><span class="badge bg-info">${item.totalQuantity} ${item.unitOfMeasure}</span></td>
-      <td>$${(item.price || 0).toFixed(2)}</td>
-      <td>-</td>
-      <td class="${getValueClass(valuation.totalValue)}">$${valuation.totalValue.toFixed(2)}</td>
-      <td>-</td>
-      <td>-</td>
-      <td><span class="badge bg-secondary">${item.warehouseId}</span></td>
-      <td>
-        <span class="status-badge ${item.status === 'active' ? 'status-active' : 'status-inactive'}">
-          ${item.status.toUpperCase()}
-        </span>
-      </td>
-    `;
-    
-    tbody.appendChild(row);
-  });
-}
+ function renderTable(data = filteredData) {
+   const tbody = document.getElementById('valuationTableBody');
+   tbody.innerHTML = '';
+ 
+   data.forEach(item => {
+     const valuation = calculateValuation(item);
+     const row = document.createElement('tr');
+     
+     row.innerHTML = `
+       <td><strong>${item.itemCode}</strong></td>
+       <td>${item.productName || ''}</td>
+       <td><span class="badge bg-info">${item.totalQuantity} ${item.unitOfMeasure || ''}</span></td>
+       <td>$${(item.price || 0).toFixed(2)}</td>
+       <td class="${getValueClass(valuation.totalValue)}">$${valuation.totalValue.toFixed(2)}</td>
+       <td><span class="badge bg-secondary">${item.warehouseName || item.warehouseId || ''}</span></td>
+       <td>
+         <span class="status-badge ${String(item.status).toLowerCase() === 'active' ? 'status-active' : 'status-inactive'}">
+           ${String(item.status || '').toUpperCase() || 'UNKNOWN'}
+         </span>
+       </td>
+     `;
+     
+     tbody.appendChild(row);
+   });
+ }
 
 // Update summary cards
-function updateSummary() {
-  let totalValue = 0;
-  inventoryData.forEach(item => {
-    const valuation = calculateValuation(item);
-    totalValue += valuation.totalValue;
-  });
-  const avgValue = inventoryData.length > 0 ? totalValue / inventoryData.length : 0;
-  
-  // Update summary cards
-  document.getElementById('totalValue').textContent = `$${totalValue.toLocaleString('en-US', {minimumFractionDigits: 2})}`;
-  document.getElementById('totalItems').textContent = inventoryData.length;
-  document.getElementById('activeItems').textContent = inventoryData.filter(item => item.status === 'active').length;
-  document.getElementById('avgValue').textContent = `$${avgValue.toFixed(2)}`;
-}
+ function updateSummary() {
+   let totalValue = 0;
+   inventoryData.forEach(item => {
+     const valuation = calculateValuation(item);
+     totalValue += valuation.totalValue;
+   });
+   const totalItems = inventoryData.length;
+   const activeItems = inventoryData.filter(item => String(item.status).toLowerCase() === 'active').length;
+   const avgValue = totalItems > 0 ? totalValue / totalItems : 0;
+   
+   document.getElementById('totalValue').textContent = `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+   document.getElementById('totalItems').textContent = totalItems;
+   document.getElementById('activeItems').textContent = activeItems;
+   document.getElementById('avgValue').textContent = `$${avgValue.toFixed(2)}`;
+ }
 
 // Update last updated timestamp
 function updateLastUpdated() {
@@ -909,15 +924,6 @@ function printReport() {
   window.print();
 }
 
-function refreshData() {
-  // Simulate data refresh
-  updateLastUpdated();
-  renderTable();
-  updateSummary();
-  alert('Data refreshed successfully!');
-}
-
-// Notification functions
 function markAllAsRead() {
   document.querySelectorAll('.notification-unread').forEach(item => {
     item.classList.remove('notification-unread');
