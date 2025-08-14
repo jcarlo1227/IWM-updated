@@ -684,7 +684,7 @@ app.get('/api/order-shipments', requireAuth, async (req, res) => {
   }
 });
 
-app.get('/api/order-shipments/:id', requireAuth, async (req, res) => {
+app.get('/api/order-shipments/:id(\\d+)', requireAuth, async (req, res) => {
   try {
     const order = await getOrderShipmentById(req.params.id);
     if (order) {
@@ -708,7 +708,7 @@ app.post('/api/order-shipments', requireAuth, async (req, res) => {
   }
 });
 
-app.put('/api/order-shipments/:id', requireAuth, async (req, res) => {
+app.put('/api/order-shipments/:id(\\d+)', requireAuth, async (req, res) => {
   try {
     const updatedOrder = await updateOrderShipment(req.params.id, req.body);
     if (updatedOrder) {
@@ -722,7 +722,7 @@ app.put('/api/order-shipments/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.delete('/api/order-shipments/:id', requireAuth, async (req, res) => {
+app.delete('/api/order-shipments/:id(\\d+)', requireAuth, async (req, res) => {
   try {
     const deleted = await deleteOrderShipment(req.params.id);
     if (deleted) {
@@ -736,7 +736,7 @@ app.delete('/api/order-shipments/:id', requireAuth, async (req, res) => {
   }
 });
 
-app.post('/api/order-shipments/:id/status', requireAuth, async (req, res) => {
+app.post('/api/order-shipments/:id(\\d+)/status', requireAuth, async (req, res) => {
   try {
     const { status, setShipDate, setDeliveryDate } = req.body;
     const updated = await updateOrderShipmentStatus(req.params.id, status, { setShipDate, setDeliveryDate });
