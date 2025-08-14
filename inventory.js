@@ -302,14 +302,15 @@ const initializeOrderShipmentsTable = async () => {
     await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order; END IF; END $$;`;
 
     if (hasUniqueOnPP) {
-      await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE NOT VALID; END IF; END $$;`;
-      // Optional cleanup: remove orphaned rows before validating
+      // Cleanup orphaned rows first so adding FK cannot fail
       await sql`
         DELETE FROM order_shipments os
         WHERE NOT EXISTS (
           SELECT 1 FROM production_planning pp WHERE pp.order_id::text = os.order_id::text
         )
       `;
+      // Add FK without immediate validation
+      await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE NOT VALID; END IF; END $$;`;
       // Validate the constraint after cleanup
       await sql`ALTER TABLE order_shipments VALIDATE CONSTRAINT fk_shipments_planning_order`;
     }
