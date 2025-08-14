@@ -767,6 +767,7 @@ const createOrderShipment = async (orderData) => {
     const sql = await database.sql();
     const {
       order_id,
+      customer_id,
       item_code,
       quantity,
       total_value,
@@ -780,10 +781,10 @@ const createOrderShipment = async (orderData) => {
 
     const result = await sql`
       INSERT INTO order_shipments (
-        order_id, item_code, quantity, total_value,
+        order_id, customer_id, item_code, quantity, total_value,
         status, order_date, ship_date, delivery_date, tracking_number, notes, updated_at
       ) VALUES (
-        ${order_id}, ${item_code}, ${quantity}, ${total_value},
+        ${order_id}, ${customer_id}, ${item_code}, ${quantity}, ${total_value},
         ${status || 'processing'}, ${order_date}, ${ship_date}, ${delivery_date}, ${tracking_number}, ${notes}, CURRENT_TIMESTAMP
       )
       RETURNING *
@@ -802,6 +803,7 @@ const updateOrderShipment = async (id, orderData) => {
     const sql = await database.sql();
     const {
       order_id,
+      customer_id,
       item_code,
       quantity,
       total_value,
@@ -816,6 +818,7 @@ const updateOrderShipment = async (id, orderData) => {
     const result = await sql`
       UPDATE order_shipments SET
         order_id = ${order_id},
+        customer_id = ${customer_id},
         item_code = ${item_code},
         quantity = ${quantity},
         total_value = ${total_value},

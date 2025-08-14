@@ -1009,6 +1009,7 @@
     const fd = new FormData(form);
     const payload = {
       order_id: fd.get('orderIdInput'),
+      customer_id: fd.get('customerId') || null,
       item_code: fd.get('itemCode'),
       quantity: parseInt(fd.get('quantity')),
       total_value: parseFloat(fd.get('totalValue')),
