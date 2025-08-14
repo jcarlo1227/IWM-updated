@@ -1069,7 +1069,20 @@
     if (!toShip.length) { alert('No processing orders to ship.'); return; }
     if (!confirm(`Ship ${toShip.length} processing order(s)?`)) return;
     const today = new Date().toISOString().split('T')[0];
-    await Promise.allSettled(toShip.map(o => fetch(`/api/order-shipments/${o.id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) })));
+    const results = await Promise.allSettled(toShip.map(async (o) => {
+      try {
+        const res = await fetch(`/api/order-shipments/${o.id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) });
+        const json = await res.json();
+        return json;
+      } catch (e) {
+        return { success: false, message: e?.message || 'Failed' };
+      }
+    }));
+    const failed = results.map(r => (r.status === 'fulfilled' ? r.value : r.reason)).filter(r => !r.success);
+    if (failed.length) {
+      const msgs = Array.from(new Set(failed.map(f => f.message).filter(Boolean)));
+      alert(`Some orders could not be shipped:\n${msgs.join('\n')}`);
+    }
     await loadOrders();
     await loadOrderStats();
     await loadRecentActivity();
