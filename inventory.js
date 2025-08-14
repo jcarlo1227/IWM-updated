@@ -302,17 +302,7 @@ const initializeOrderShipmentsTable = async () => {
     await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order; END IF; END $$;`;
 
     if (hasUniqueOnPP) {
-      // Cleanup orphaned rows first so adding FK cannot fail
-      await sql`
-        DELETE FROM order_shipments os
-        WHERE NOT EXISTS (
-          SELECT 1 FROM production_planning pp WHERE pp.order_id::text = os.order_id::text
-        )
-      `;
-      // Add FK without immediate validation
-      await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE NOT VALID; END IF; END $$;`;
-      // Validate the constraint after cleanup
-      await sql`ALTER TABLE order_shipments VALIDATE CONSTRAINT fk_shipments_planning_order`;
+      await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE; END IF; END $$;`;
     }
 
     // Align and add customer_id on order_shipments based on sales_orders.customer_id if available
@@ -391,7 +381,7 @@ const syncProcessedPlansIntoShipments = async () => {
       pp.shipping_date AS ship_date,
       CURRENT_TIMESTAMP
     FROM production_planning pp
-    WHERE TRIM(LOWER(pp.status)) = 'processed'
+    WHERE pp.status = 'processed'
       AND NOT EXISTS (
         SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
       )`;
@@ -665,6 +655,88 @@ const getInventoryStats = async () => {
   }
 };
 
+// Add: Stock overview with configurable low stock threshold
+const getStockOverview = async (options = {}) => {
+  const threshold = Number(options.threshold) || 50;
+  try {
+    const sql = await database.sql();
+    if (!sql) {
+      return {
+        totalItems: 0,
+        totalStockQuantity: 0,
+        lowStockItems: 0,
+        outOfStockItems: 0
+      };
+    }
+    const [totalItems, totalStock, lowStock, outOfStock] = await Promise.all([
+      sql`SELECT COUNT(*)::int AS count FROM inventory_items`,
+      sql`SELECT COALESCE(SUM(total_quantity), 0)::bigint AS sum FROM inventory_items`,
+      sql`SELECT COUNT(*)::int AS count FROM inventory_items WHERE total_quantity > 0 AND total_quantity < ${threshold}`,
+      sql`SELECT COUNT(*)::int AS count FROM inventory_items WHERE status = 'out of stock' OR total_quantity = 0`
+    ]);
+
+    return {
+      totalItems: Number(totalItems[0].count),
+      totalStockQuantity: Number(totalStock[0].sum),
+      lowStockItems: Number(lowStock[0].count),
+      outOfStockItems: Number(outOfStock[0].count)
+    };
+  } catch (err) {
+    console.error('Error fetching stock overview:', err);
+    return {
+      totalItems: 0,
+      totalStockQuantity: 0,
+      lowStockItems: 0,
+      outOfStockItems: 0
+    };
+  }
+};
+
+// Add: Stock aggregated by product category (from products table)
+const getStockByCategory = async () => {
+  try {
+    const sql = await database.sql();
+    if (!sql) return [];
+    const rows = await sql`
+      SELECT 
+        COALESCE(NULLIF(TRIM(p.product_category), ''), 'Uncategorized') AS category,
+        SUM(i.total_quantity)::bigint AS total_quantity,
+        COUNT(*)::int AS item_count
+      FROM inventory_items i
+      LEFT JOIN products p ON p.product_id = i.product_id
+      GROUP BY category
+      ORDER BY total_quantity DESC
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching stock by category:', err);
+    return [];
+  }
+};
+
+// Add: Stock aggregated by warehouse
+const getStockByWarehouse = async () => {
+  try {
+    const sql = await database.sql();
+    if (!sql) return [];
+    const rows = await sql`
+      SELECT 
+        i.warehouse_id,
+        COALESCE(w.warehouse_name, i.warehouse_id) AS warehouse_name,
+        SUM(i.total_quantity)::bigint AS total_quantity,
+        COUNT(*)::int AS item_count
+      FROM inventory_items i
+      LEFT JOIN warehouses w ON w.warehouse_id = i.warehouse_id
+      GROUP BY i.warehouse_id, w.warehouse_name
+      ORDER BY total_quantity DESC
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching stock by warehouse:', err);
+    return [];
+  }
+};
+
 // Update item quantity
 const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
   try {
@@ -744,10 +816,6 @@ const getAllOrderShipments = async (filters = {}) => {
     queryText += ` ORDER BY os.updated_at DESC`;
 
     const result = await sql(queryText, params);
-    if ((!result || result.length === 0) && (!filters || Object.keys(filters).filter(k => filters[k]).length === 0)) {
-      await syncProcessedPlansIntoShipments();
-      return await sql(queryText, []);
-    }
     return result;
   } catch (err) {
     console.error('Error fetching order shipments:', err);
@@ -887,7 +955,25 @@ const getOrderShipmentStats = async () => {
   }
 };
 
-// Update order shipment status
+// Add: recent activity helper used by server
+const getRecentOrderShipmentActivity = async (limit = 10) => {
+  try {
+    const sql = await database.sql();
+    if (!sql) return [];
+    const rows = await sql`
+      SELECT id, order_id, product_name, status, updated_at
+      FROM order_shipments
+      ORDER BY updated_at DESC
+      LIMIT ${limit}
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching recent order shipment activity:', err);
+    return [];
+  }
+};
+
+// Update order shipment status (Mark Shipped with inventory deduction)
 const updateOrderShipmentStatus = async (id, status, options = {}) => {
   try {
     const sql = await database.sql();
@@ -948,24 +1034,6 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
   }
 };
 
-// Get recent order shipment activity
-const getRecentOrderShipmentActivity = async (limit = 10) => {
-  try {
-    const sql = await database.sql();
-    const rows = await sql`
-      SELECT id, order_id, product_name, status, updated_at, ship_date, delivery_date, tracking_number
-      FROM order_shipments
-      ORDER BY updated_at DESC
-      LIMIT ${limit}
-    `;
-    return rows;
-  } catch (err) {
-    console.error('Error fetching recent activity:', err);
-    throw err;
-  }
-};
-
-
 module.exports = {
   initializeInventoryTable,
   initializeOrderShipmentsTable,
@@ -986,5 +1054,8 @@ module.exports = {
   deleteOrderShipment,
   getOrderShipmentStats,
   updateOrderShipmentStatus,
+  getStockOverview,
+  getStockByCategory,
+  getStockByWarehouse,
   getRecentOrderShipmentActivity
 };
