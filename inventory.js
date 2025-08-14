@@ -660,6 +660,14 @@ const getStockOverview = async (options = {}) => {
   const threshold = Number(options.threshold) || 50;
   try {
     const sql = await database.sql();
+    if (!sql) {
+      return {
+        totalItems: 0,
+        totalStockQuantity: 0,
+        lowStockItems: 0,
+        outOfStockItems: 0
+      };
+    }
     const [totalItems, totalStock, lowStock, outOfStock] = await Promise.all([
       sql`SELECT COUNT(*)::int AS count FROM inventory_items`,
       sql`SELECT COALESCE(SUM(total_quantity), 0)::bigint AS sum FROM inventory_items`,
@@ -675,7 +683,12 @@ const getStockOverview = async (options = {}) => {
     };
   } catch (err) {
     console.error('Error fetching stock overview:', err);
-    throw err;
+    return {
+      totalItems: 0,
+      totalStockQuantity: 0,
+      lowStockItems: 0,
+      outOfStockItems: 0
+    };
   }
 };
 
@@ -683,6 +696,7 @@ const getStockOverview = async (options = {}) => {
 const getStockByCategory = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) return [];
     const rows = await sql`
       SELECT 
         COALESCE(NULLIF(TRIM(p.product_category), ''), 'Uncategorized') AS category,
@@ -696,7 +710,7 @@ const getStockByCategory = async () => {
     return rows;
   } catch (err) {
     console.error('Error fetching stock by category:', err);
-    throw err;
+    return [];
   }
 };
 
@@ -704,6 +718,7 @@ const getStockByCategory = async () => {
 const getStockByWarehouse = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) return [];
     const rows = await sql`
       SELECT 
         i.warehouse_id,
@@ -718,7 +733,7 @@ const getStockByWarehouse = async () => {
     return rows;
   } catch (err) {
     console.error('Error fetching stock by warehouse:', err);
-    throw err;
+    return [];
   }
 };
 
@@ -940,6 +955,24 @@ const getOrderShipmentStats = async () => {
   }
 };
 
+// Add: recent activity helper used by server
+const getRecentOrderShipmentActivity = async (limit = 10) => {
+  try {
+    const sql = await database.sql();
+    if (!sql) return [];
+    const rows = await sql`
+      SELECT id, order_id, product_name, status, updated_at
+      FROM order_shipments
+      ORDER BY updated_at DESC
+      LIMIT ${limit}
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching recent order shipment activity:', err);
+    return [];
+  }
+};
+
 // Update order shipment status
 const updateOrderShipmentStatus = async (id, status, options = {}) => {
   try {
@@ -990,5 +1023,6 @@ module.exports = {
   updateOrderShipmentStatus,
   getStockOverview,
   getStockByCategory,
-  getStockByWarehouse
+  getStockByWarehouse,
+  getRecentOrderShipmentActivity
 };

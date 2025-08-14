@@ -1265,7 +1265,8 @@ function renderTable(data = inventoryData) {
 }
 
 function updateTotalItems() {
-  document.getElementById('totalItems').textContent = inventoryData.length;
+  const el = document.getElementById('totalItems');
+  if (el) el.textContent = inventoryData.length;
 }
 
 // Stock Tracking: Fetch and render helpers
