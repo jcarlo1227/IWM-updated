@@ -747,7 +747,9 @@ app.post('/api/order-shipments/:id(\\d+)/status', requireAuth, async (req, res) 
     }
   } catch (error) {
     console.error('Error updating order status:', error);
-    res.status(500).json({ success: false, message: 'Failed to update order status' });
+    const message = (error && error.message) ? error.message : 'Failed to update order status';
+    const isBusinessError = /you cannot ship the item|Order not found/i.test(message);
+    res.status(isBusinessError ? 400 : 500).json({ success: false, message });
   }
 });
 

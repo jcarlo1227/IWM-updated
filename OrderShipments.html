@@ -1046,11 +1046,12 @@
     if (!confirm('Mark this order as shipped?')) return;
     const today = new Date().toISOString().split('T')[0];
     const res = await fetch(`/api/order-shipments/${id}/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: 'shipped', setShipDate: today }) });
-    const result = await res.json();
+        const result = await res.json();
     if (result.success) { loadOrders(); loadOrderStats(); loadRecentActivity(); }
+    else if (result && result.message) { alert(result.message); }
   }
-
-  async function deleteOrder(id) {
+ 
+   async function deleteOrder(id) {
     if (!confirm('Delete this order?')) return;
     const res = await fetch(`/api/order-shipments/${id}`, { method: 'DELETE' });
     const result = await res.json();
