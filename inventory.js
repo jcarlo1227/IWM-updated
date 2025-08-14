@@ -166,6 +166,54 @@ const initializeOrderShipmentsTable = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+
+    // Align order_shipments.order_id type with sales_orders.order_id
+    const soCol = await sql`
+      SELECT data_type, udt_name, character_maximum_length
+      FROM information_schema.columns
+      WHERE table_name = 'sales_orders' AND column_name = 'order_id'
+      LIMIT 1
+    `;
+    if (soCol && soCol.length) {
+      const soType = String(soCol[0].data_type || '').toLowerCase();
+      const soUdt = String(soCol[0].udt_name || '').toLowerCase();
+      const soLen = soCol[0].character_maximum_length || 50;
+      let targetType = 'VARCHAR(' + soLen + ')';
+      let castType = 'text';
+      if (soType.includes('integer') || soUdt === 'int4') {
+        targetType = 'INTEGER';
+        castType = 'integer';
+      } else if (soUdt === 'int8' || soType.includes('bigint')) {
+        targetType = 'BIGINT';
+        castType = 'bigint';
+      } else if (soType.includes('character varying') || soType.includes('character')) {
+        targetType = `VARCHAR(${soLen})`;
+        castType = 'text';
+      }
+      // Check current shipments column type
+      const osCol = await sql`
+        SELECT data_type, udt_name, character_maximum_length
+        FROM information_schema.columns
+        WHERE table_name = 'order_shipments' AND column_name = 'order_id'
+        LIMIT 1
+      `;
+      let needAlter = true;
+      if (osCol && osCol.length) {
+        const osType = String(osCol[0].data_type || '').toLowerCase();
+        const osUdt = String(osCol[0].udt_name || '').toLowerCase();
+        const osLen = osCol[0].character_maximum_length;
+        if ((targetType.startsWith('VARCHAR') && osType.includes('character') && osLen === soLen) ||
+            (targetType === 'INTEGER' && (osType.includes('integer') || osUdt === 'int4')) ||
+            (targetType === 'BIGINT' && (osType.includes('bigint') || osUdt === 'int8'))) {
+          needAlter = false;
+        }
+      }
+      if (needAlter) {
+        const alter = `ALTER TABLE order_shipments ALTER COLUMN order_id TYPE ${targetType} USING order_id::${castType}`;
+        await sql(alter);
+      }
+    }
+ 
     // Add FK for shipments.order_id -> sales_orders(order_id)
     await sql`
       DO $$ BEGIN
