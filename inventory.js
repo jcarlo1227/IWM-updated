@@ -655,6 +655,88 @@ const getInventoryStats = async () => {
   }
 };
 
+// Add: Stock overview with configurable low stock threshold
+const getStockOverview = async (options = {}) => {
+  const threshold = Number(options.threshold) || 50;
+  try {
+    const sql = await database.sql();
+    if (!sql) {
+      return {
+        totalItems: 0,
+        totalStockQuantity: 0,
+        lowStockItems: 0,
+        outOfStockItems: 0
+      };
+    }
+    const [totalItems, totalStock, lowStock, outOfStock] = await Promise.all([
+      sql`SELECT COUNT(*)::int AS count FROM inventory_items`,
+      sql`SELECT COALESCE(SUM(total_quantity), 0)::bigint AS sum FROM inventory_items`,
+      sql`SELECT COUNT(*)::int AS count FROM inventory_items WHERE total_quantity > 0 AND total_quantity < ${threshold}`,
+      sql`SELECT COUNT(*)::int AS count FROM inventory_items WHERE status = 'out of stock' OR total_quantity = 0`
+    ]);
+
+    return {
+      totalItems: Number(totalItems[0].count),
+      totalStockQuantity: Number(totalStock[0].sum),
+      lowStockItems: Number(lowStock[0].count),
+      outOfStockItems: Number(outOfStock[0].count)
+    };
+  } catch (err) {
+    console.error('Error fetching stock overview:', err);
+    return {
+      totalItems: 0,
+      totalStockQuantity: 0,
+      lowStockItems: 0,
+      outOfStockItems: 0
+    };
+  }
+};
+
+// Add: Stock aggregated by product category (from products table)
+const getStockByCategory = async () => {
+  try {
+    const sql = await database.sql();
+    if (!sql) return [];
+    const rows = await sql`
+      SELECT 
+        COALESCE(NULLIF(TRIM(p.product_category), ''), 'Uncategorized') AS category,
+        SUM(i.total_quantity)::bigint AS total_quantity,
+        COUNT(*)::int AS item_count
+      FROM inventory_items i
+      LEFT JOIN products p ON p.product_id = i.product_id
+      GROUP BY category
+      ORDER BY total_quantity DESC
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching stock by category:', err);
+    return [];
+  }
+};
+
+// Add: Stock aggregated by warehouse
+const getStockByWarehouse = async () => {
+  try {
+    const sql = await database.sql();
+    if (!sql) return [];
+    const rows = await sql`
+      SELECT 
+        i.warehouse_id,
+        COALESCE(w.warehouse_name, i.warehouse_id) AS warehouse_name,
+        SUM(i.total_quantity)::bigint AS total_quantity,
+        COUNT(*)::int AS item_count
+      FROM inventory_items i
+      LEFT JOIN warehouses w ON w.warehouse_id = i.warehouse_id
+      GROUP BY i.warehouse_id, w.warehouse_name
+      ORDER BY total_quantity DESC
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching stock by warehouse:', err);
+    return [];
+  }
+};
+
 // Update item quantity
 const updateItemQuantity = async (id, newQuantity, operation = 'set') => {
   try {
@@ -873,6 +955,24 @@ const getOrderShipmentStats = async () => {
   }
 };
 
+// Add: recent activity helper used by server
+const getRecentOrderShipmentActivity = async (limit = 10) => {
+  try {
+    const sql = await database.sql();
+    if (!sql) return [];
+    const rows = await sql`
+      SELECT id, order_id, product_name, status, updated_at
+      FROM order_shipments
+      ORDER BY updated_at DESC
+      LIMIT ${limit}
+    `;
+    return rows;
+  } catch (err) {
+    console.error('Error fetching recent order shipment activity:', err);
+    return [];
+  }
+};
+
 // Update order shipment status
 const updateOrderShipmentStatus = async (id, status, options = {}) => {
   try {
@@ -920,5 +1020,9 @@ module.exports = {
   updateOrderShipment,
   deleteOrderShipment,
   getOrderShipmentStats,
-  updateOrderShipmentStatus
+  updateOrderShipmentStatus,
+  getStockOverview,
+  getStockByCategory,
+  getStockByWarehouse,
+  getRecentOrderShipmentActivity
 };

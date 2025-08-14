@@ -35,7 +35,10 @@ const {
   deleteOrderShipment,
   getOrderShipmentStats,
   updateOrderShipmentStatus,
-  getRecentOrderShipmentActivity
+  getRecentOrderShipmentActivity,
+  getStockOverview,
+  getStockByCategory,
+  getStockByWarehouse
 } = require('./inventory');
 require('dotenv').config();
 
@@ -439,6 +442,38 @@ app.get('/api/warehouses', requireAuth, async (req, res) => {
     res.json({ success: true, data: warehouses });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch warehouses' });
+  }
+});
+
+// Stock Tracking APIs
+app.get('/api/stock/overview', requireAuth, async (req, res) => {
+  try {
+    const threshold = parseInt(req.query.threshold) || 50;
+    const data = await getStockOverview({ threshold });
+    res.json({ success: true, data });
+  } catch (err) {
+    console.error('Stock overview error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock overview' });
+  }
+});
+
+app.get('/api/stock/by-category', requireAuth, async (req, res) => {
+  try {
+    const rows = await getStockByCategory();
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('Stock by category error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock by category' });
+  }
+});
+
+app.get('/api/stock/by-warehouse', requireAuth, async (req, res) => {
+  try {
+    const rows = await getStockByWarehouse();
+    res.json({ success: true, data: rows });
+  } catch (err) {
+    console.error('Stock by warehouse error:', err);
+    res.status(500).json({ success: false, message: 'Failed to fetch stock by warehouse' });
   }
 });
 
