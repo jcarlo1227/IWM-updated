@@ -588,7 +588,7 @@
           <div class="col-md-3">
             <div class="filter-group">
               <label for="searchOrder">Search Orders</label>
-              <input type="text" class="form-control" id="searchOrder" placeholder="Search by order ID, customer ID, or item code...">
+              <input type="text" class="form-control" id="searchOrder" placeholder="Search by order ID, customer ID, or product...">
             </div>
           </div>
           <div class="col-md-2">
@@ -636,13 +636,11 @@
                 <tr>
                   <th>Order ID</th>
                   <th>Customer ID</th>
-                  <th>Item Code</th>
+                  <th>Product</th>
                   <th>Quantity</th>
-                  <th>Total Value</th>
                   <th>Status</th>
-                  <th>Order Date</th>
-                  <th>Ship Date</th>
-                  <th>Delivery Date</th>
+                  <th>Planned Date</th>
+                  <th>Shipping Date</th>
                   <th>Tracking #</th>
                   <th>Action</th>
                 </tr>
@@ -913,13 +911,11 @@
       row.innerHTML = `
         <td><strong>${o.order_id}</strong></td>
         <td>${o.customer_id || '-'}</td>
-        <td>${o.item_code || '-'}</td>
+        <td>${o.product_name || '-'}</td>
         <td>${o.quantity || 0}</td>
-        <td>₱${(o.total_value || 0).toLocaleString('en-PH', { minimumFractionDigits: 2 })}</td>
         <td><span class="status-badge status-${(o.status || 'processing').toLowerCase()}">${(o.status || 'processing').toUpperCase()}</span></td>
         <td>${o.order_date || '-'}</td>
         <td>${o.ship_date || '-'}</td>
-        <td>${o.delivery_date || '-'}</td>
         <td>${o.tracking_number || '-'}</td>
         <td class="item-actions">
           <i class="bi bi-eye" title="View" onclick="viewOrder(${o.id})"></i>
@@ -1052,9 +1048,8 @@
           <div class="col-md-6">
             <p><strong>Order ID:</strong> ${o.order_id}</p>
             <p><strong>Customer ID:</strong> ${o.customer_id || '-'}</p>
-            <p><strong>Item Code:</strong> ${o.item_code || '-'}</p>
+            <p><strong>Product:</strong> ${o.product_name || '-'} <small class="text-muted">(ID: ${o.product_id || '-'})</small></p>
             <p><strong>Quantity:</strong> ${o.quantity || 0}</p>
-            <p><strong>Total Value:</strong> ₱${Number(o.total_value || 0).toFixed(2)}</p>
           </div>
           <div class="col-md-6">
             
@@ -1111,8 +1106,8 @@
   }
 
   function generateReports() {
-    const headers = ['Order ID','Customer ID','Item Code','Quantity','Total Value','Status','Order Date','Ship Date','Delivery Date','Tracking #'];
-    const rows = ordersData.map(o => [o.order_id,o.customer_id,o.item_code,o.quantity,o.total_value,o.status,o.order_date||'',o.ship_date||'',o.delivery_date||'',o.tracking_number||'']);
+          const headers = ['Order ID','Customer ID','Product','Quantity','Status','Planned Date','Shipping Date','Tracking #'];
+      const rows = ordersData.map(o => [o.order_id,o.customer_id,o.product_name,o.quantity,o.status,o.order_date||'',o.ship_date||'',o.tracking_number||'']);
     const csv = [headers, ...rows].map(r => r.map(c => '"' + String(c).replaceAll('"','""') + '"').join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
     const a = document.createElement('a');
@@ -1124,11 +1119,11 @@
   function viewInventoryImpact() {
     const totals = new Map();
     ordersData.forEach(o => {
-      const key = `${o.item_code}`;
+      const key = `${o.product_name || 'Unknown Product'}`;
       totals.set(key, (totals.get(key) || 0) + (o.quantity || 0));
     });
     const lines = Array.from(totals.entries()).map(([k,v]) => `- ${k}: ${v}`);
-    alert(`Inventory Impact (deductions by item):\n\n${lines.join('\n') || 'No data'}`);
+    alert(`Inventory Impact (deductions by product):\n\n${lines.join('\n') || 'No data'}`);
   }
 
   // Notifications and user helpers

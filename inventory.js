@@ -166,31 +166,53 @@ const initializeOrderShipmentsTable = async () => {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `;
+    await sql`ALTER TABLE order_shipments ADD COLUMN IF NOT EXISTS product_id INTEGER`;
+    await sql`ALTER TABLE order_shipments ADD COLUMN IF NOT EXISTS product_name VARCHAR(255)`;
 
-    // Align order_shipments.order_id type with sales_orders.order_id
-    const soCol = await sql`
+    // Try to align order_id with production_planning if it exists; else fallback to sales_orders
+    const ppCol = await sql`
       SELECT data_type, udt_name, character_maximum_length
       FROM information_schema.columns
-      WHERE table_name = 'sales_orders' AND column_name = 'order_id'
+      WHERE table_name = 'production_planning' AND column_name = 'order_id'
       LIMIT 1
     `;
-    if (soCol && soCol.length) {
-      const soType = String(soCol[0].data_type || '').toLowerCase();
-      const soUdt = String(soCol[0].udt_name || '').toLowerCase();
-      const soLen = soCol[0].character_maximum_length || 50;
-      let targetType = 'VARCHAR(' + soLen + ')';
-      let castType = 'text';
-      if (soType.includes('integer') || soUdt === 'int4') {
+    let targetType = null;
+    let castType = 'text';
+    if (ppCol && ppCol.length) {
+      const ppType = String(ppCol[0].data_type || '').toLowerCase();
+      const ppUdt = String(ppCol[0].udt_name || '').toLowerCase();
+      if (ppType.includes('integer') || ppUdt === 'int4') {
         targetType = 'INTEGER';
         castType = 'integer';
-      } else if (soUdt === 'int8' || soType.includes('bigint')) {
+      } else if (ppUdt === 'int8' || ppType.includes('bigint')) {
         targetType = 'BIGINT';
         castType = 'bigint';
-      } else if (soType.includes('character varying') || soType.includes('character')) {
-        targetType = `VARCHAR(${soLen})`;
-        castType = 'text';
       }
-      // Check current shipments column type
+    }
+    if (!targetType) {
+      const soCol = await sql`
+        SELECT data_type, udt_name, character_maximum_length
+        FROM information_schema.columns
+        WHERE table_name = 'sales_orders' AND column_name = 'order_id'
+        LIMIT 1
+      `;
+      if (soCol && soCol.length) {
+        const soType = String(soCol[0].data_type || '').toLowerCase();
+        const soUdt = String(soCol[0].udt_name || '').toLowerCase();
+        const soLen = soCol[0].character_maximum_length || 50;
+        targetType = 'VARCHAR(' + soLen + ')';
+        castType = 'text';
+        if (soType.includes('integer') || soUdt === 'int4') {
+          targetType = 'INTEGER';
+          castType = 'integer';
+        } else if (soUdt === 'int8' || soType.includes('bigint')) {
+          targetType = 'BIGINT';
+          castType = 'bigint';
+        }
+      }
+    }
+
+    if (targetType) {
       const osCol = await sql`
         SELECT data_type, udt_name, character_maximum_length
         FROM information_schema.columns
@@ -202,7 +224,7 @@ const initializeOrderShipmentsTable = async () => {
         const osType = String(osCol[0].data_type || '').toLowerCase();
         const osUdt = String(osCol[0].udt_name || '').toLowerCase();
         const osLen = osCol[0].character_maximum_length;
-        if ((targetType.startsWith('VARCHAR') && osType.includes('character') && osLen === soLen) ||
+        if ((String(targetType).startsWith('VARCHAR') && osType.includes('character')) ||
             (targetType === 'INTEGER' && (osType.includes('integer') || osUdt === 'int4')) ||
             (targetType === 'BIGINT' && (osType.includes('bigint') || osUdt === 'int8'))) {
           needAlter = false;
@@ -214,15 +236,42 @@ const initializeOrderShipmentsTable = async () => {
       }
     }
  
-    // Add FK for shipments.order_id -> sales_orders(order_id)
+    // Add FK for shipments.order_id -> production_planning(order_id) if table exists; otherwise keep sales_orders FK
     await sql`
       DO $$ BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.table_constraints
-          WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order'
+        IF EXISTS (
+          SELECT 1 FROM information_schema.tables WHERE table_name = 'production_planning'
         ) THEN
-          ALTER TABLE order_shipments
-          ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE;
+          -- Drop old FK if present
+          IF EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order'
+          ) THEN
+            ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order;
+          END IF;
+          -- Create index on production_planning.order_id if not present
+          IF NOT EXISTS (
+            SELECT 1 FROM pg_indexes WHERE tablename = 'production_planning' AND indexname = 'idx_production_planning_order_id'
+          ) THEN
+            CREATE INDEX idx_production_planning_order_id ON production_planning(order_id);
+          END IF;
+          -- Add new FK to production_planning.order_id
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order'
+          ) THEN
+            ALTER TABLE order_shipments
+            ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE;
+          END IF;
+        ELSE
+          -- Ensure FK to sales_orders
+          IF NOT EXISTS (
+            SELECT 1 FROM information_schema.table_constraints
+            WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order'
+          ) THEN
+            ALTER TABLE order_shipments
+            ADD CONSTRAINT fk_shipments_sales_order FOREIGN KEY (order_id) REFERENCES sales_orders(order_id) ON DELETE CASCADE;
+          END IF;
         END IF;
       END $$;
     `;
@@ -255,6 +304,34 @@ const syncPaidOrdersIntoShipments = async () => {
         SELECT 1 FROM order_shipments os WHERE os.order_id = so.order_id
       )`;
   await sql(queryText);
+};
+
+// Insert shipments for processed production plans not yet in shipments
+const syncProcessedPlansIntoShipments = async () => {
+	const sql = await database.sql();
+	// Only run if production_planning table exists
+	const t = await sql`SELECT to_regclass('public.production_planning') AS reg`;
+	if (!t.length || !t[0].reg) return;
+	const queryText = `
+		INSERT INTO order_shipments (
+			order_id, product_id, product_name, quantity,
+			status, order_date, ship_date, updated_at
+		)
+		SELECT
+			pp.order_id,
+			pp.product_id,
+			pp.product_name,
+			pp.quantity,
+			'processing' AS status,
+			pp.planned_date AS order_date,
+			pp.shipping_date AS ship_date,
+			CURRENT_TIMESTAMP
+		FROM production_planning pp
+		WHERE pp.status = 'processed'
+			AND NOT EXISTS (
+				SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
+			)`;
+	await sql(queryText);
 };
 
 // Get all inventory items with optional filters
@@ -569,6 +646,7 @@ const getAllOrderShipments = async (filters = {}) => {
     const sql = await database.sql();
     // Ensure shipments reflect paid orders
     await syncPaidOrdersIntoShipments();
+    await syncProcessedPlansIntoShipments();
 
     let queryText = `
       SELECT 
@@ -583,7 +661,7 @@ const getAllOrderShipments = async (filters = {}) => {
 
     if (filters.search) {
       const term = `%${filters.search}%`;
-      conditions.push(`(os.order_id ILIKE $${params.length + 1} OR os.item_code ILIKE $${params.length + 1} OR so.customer_id ILIKE $${params.length + 1})`);
+      conditions.push(`(os.order_id::text ILIKE $${params.length + 1} OR os.product_name ILIKE $${params.length + 1} OR so.customer_id::text ILIKE $${params.length + 1})`);
       params.push(term);
     }
     if (filters.status) {
