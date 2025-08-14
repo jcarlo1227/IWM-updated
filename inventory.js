@@ -294,6 +294,68 @@ const initializeOrderShipmentsTable = async () => {
     if (hasUniqueOnPP) {
       await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE; END IF; END $$;`;
     }
+
+    // Align and add customer_id on order_shipments based on sales_orders.customer_id if available
+    let customerIdTargetType = 'VARCHAR(50)';
+    let customerIdCastType = 'text';
+    const soCustCol = await sql`
+      SELECT data_type, udt_name, character_maximum_length
+      FROM information_schema.columns
+      WHERE table_name = 'sales_orders' AND column_name = 'customer_id'
+      LIMIT 1
+    `;
+    if (soCustCol && soCustCol.length) {
+      const soType = String(soCustCol[0].data_type || '').toLowerCase();
+      const soUdt = String(soCustCol[0].udt_name || '').toLowerCase();
+      const soLen = soCustCol[0].character_maximum_length || 50;
+      customerIdTargetType = 'VARCHAR(' + soLen + ')';
+      if (soType.includes('integer') || soUdt === 'int4') {
+        customerIdTargetType = 'INTEGER';
+        customerIdCastType = 'integer';
+      } else if (soUdt === 'int8' || soType.includes('bigint')) {
+        customerIdTargetType = 'BIGINT';
+        customerIdCastType = 'bigint';
+      }
+    }
+    // Ensure column exists
+    await sql(`ALTER TABLE order_shipments ADD COLUMN IF NOT EXISTS customer_id ${customerIdTargetType}`);
+    // Align type if needed
+    const osCustCol = await sql`
+      SELECT data_type, udt_name, character_maximum_length
+      FROM information_schema.columns
+      WHERE table_name = 'order_shipments' AND column_name = 'customer_id'
+      LIMIT 1
+    `;
+    if (osCustCol && osCustCol.length) {
+      const osType = String(osCustCol[0].data_type || '').toLowerCase();
+      const osUdt = String(osCustCol[0].udt_name || '').toLowerCase();
+      const osLen = osCustCol[0].character_maximum_length;
+      const needAlterCust = (
+        (String(customerIdTargetType).startsWith('VARCHAR') && (!osType.includes('character'))) ||
+        (customerIdTargetType === 'INTEGER' && !(osType.includes('integer') || osUdt === 'int4')) ||
+        (customerIdTargetType === 'BIGINT' && !(osType.includes('bigint') || osUdt === 'int8'))
+      );
+      if (needAlterCust) {
+        const alterCust = `ALTER TABLE order_shipments ALTER COLUMN customer_id TYPE ${customerIdTargetType} USING customer_id::${customerIdCastType}`;
+        await sql(alterCust);
+      }
+    }
+
+    // Conditionally add FK to sales_orders(customer_id) only if that column is unique/PK
+    const soExists = await sql`SELECT to_regclass('public.sales_orders') AS reg`;
+    if (soExists && soExists[0] && soExists[0].reg) {
+      const soCustInfo = await sql`
+        SELECT tc.constraint_type
+        FROM information_schema.table_constraints tc
+        JOIN information_schema.key_column_usage kcu
+          ON tc.constraint_name = kcu.constraint_name AND tc.table_name = kcu.table_name
+        WHERE tc.table_name = 'sales_orders' AND kcu.column_name = 'customer_id'
+      `;
+      const hasUniqueOnSOCustomer = (soCustInfo || []).some(r => ['PRIMARY KEY','UNIQUE'].includes(String(r.constraint_type || '').toUpperCase()));
+      if (hasUniqueOnSOCustomer) {
+        await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_customer') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_sales_customer FOREIGN KEY (customer_id) REFERENCES sales_orders(customer_id) ON DELETE SET NULL; END IF; END $$;`;
+      }
+    }
     console.log('✅ Order shipments table created/verified');
   } catch (err) {
     console.error('❌ Error creating order shipments table:', err);
