@@ -230,6 +230,42 @@
     .zone-shipping { bottom: 20px; right: 20px; }
     .zone-returns { bottom: 20px; left: 20px; }
 
+    /* Status badges */
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-optimal {
+      background-color: var(--success-color);
+      color: white;
+    }
+
+    .status-needs_improvement {
+      background-color: var(--warning-color);
+      color: white;
+    }
+
+    .status-critical {
+      background-color: var(--danger-color);
+      color: white;
+    }
+
+    .status-active {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+
+    /* Dynamic zone positioning */
+    .zone-item {
+      min-width: 120px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+
     @media (max-width: 992px) {
       .sidebar {
         height: auto;
@@ -645,26 +681,8 @@
             <small>Total Area: <span id="totalArea">15,000 sq ft</span></small>
           </div>
         </div>
-        <div class="warehouse-map">
-          <div class="zone-item zone-receiving" onclick="selectZone('receiving')">
-            Receiving<br><small>85% Capacity</small>
-          </div>
-          <div class="zone-item zone-storage" onclick="selectZone('storage')">
-            Storage<br><small>72% Capacity</small>
-          </div>
-          <div class="zone-item zone-picking" onclick="selectZone('picking')">
-            Picking<br><small>45% Capacity</small>
-          </div>
-          <div class="zone-item zone-shipping" onclick="selectZone('shipping')">
-            Shipping<br><small>68% Capacity</small>
-          </div>
-          <div class="zone-item zone-returns" onclick="selectZone('returns')">
-            Returns<br><small>30% Capacity</small>
-          </div>
-          <div class="text-center">
-            <i class="bi bi-layout-wtf text-muted" style="font-size: 3rem;"></i>
-            <p class="text-muted mt-2">Interactive Warehouse Layout<br><small>Click on zones for detailed information</small></p>
-          </div>
+        <div class="warehouse-map" id="warehouseMap">
+          <!-- Zones will be dynamically loaded here -->
         </div>
       </div>
 
@@ -693,75 +711,8 @@
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><strong>A-1</strong></td>
-                  <td>Main Receiving</td>
-                  <td><span class="badge bg-primary">Receiving</span></td>
-                  <td>2,500</td>
-                  <td>100 pallets</td>
-                  <td>85 pallets (85%)</td>
-                  <td>92%</td>
-                  <td><span class="status-badge status-needs-improvement">Needs Improvement</span></td>
-                  <td>2025-01-10</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('A-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('A-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('A-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('A-1')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>B-1</strong></td>
-                  <td>High-Value Storage</td>
-                  <td><span class="badge bg-success">Storage</span></td>
-                  <td>3,000</td>
-                  <td>200 units</td>
-                  <td>144 units (72%)</td>
-                  <td>88%</td>
-                  <td><span class="status-badge status-optimal">Optimal</span></td>
-                  <td>2025-01-12</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('B-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('B-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('B-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('B-1')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>C-1</strong></td>
-                  <td>Fast Pick Zone</td>
-                  <td><span class="badge bg-info">Picking</span></td>
-                  <td>1,800</td>
-                  <td>150 SKUs</td>
-                  <td>68 SKUs (45%)</td>
-                  <td>95%</td>
-                  <td><span class="status-badge status-optimal">Optimal</span></td>
-                  <td>2025-01-14</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('C-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('C-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('C-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('C-1')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>D-1</strong></td>
-                  <td>Shipping Dock</td>
-                  <td><span class="badge bg-warning text-dark">Shipping</span></td>
-                  <td>2,200</td>
-                  <td>80 orders</td>
-                  <td>54 orders (68%)</td>
-                  <td>78%</td>
-                  <td><span class="status-badge status-critical">Critical</span></td>
-                  <td>2025-01-08</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('D-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('D-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('D-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('D-1')"></i>
-                  </td>
-                </tr>
+              <tbody id="zonesTableBody">
+                <!-- Zones will be dynamically loaded here -->
               </tbody>
             </table>
           </div>
@@ -769,43 +720,8 @@
       </div>
 
       <!-- Statistics Cards -->
-      <div class="row mt-4">
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-layout-wtf text-primary fs-1"></i>
-              <h4 class="mt-2">12</h4>
-              <p class="text-muted mb-0">Total Zones</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-check-circle text-success fs-1"></i>
-              <h4 class="mt-2">8</h4>
-              <p class="text-muted mb-0">Optimized Zones</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-exclamation-triangle text-warning fs-1"></i>
-              <h4 class="mt-2">3</h4>
-              <p class="text-muted mb-0">Need Attention</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-speedometer2 text-info fs-1"></i>
-              <h4 class="mt-2">87%</h4>
-              <p class="text-muted mb-0">Avg. Efficiency</p>
-            </div>
-          </div>
-        </div>
+      <div class="row mt-4" id="statsCards">
+        <!-- Statistics will be dynamically loaded here -->
       </div>
 
       <!-- Optimization Recommendations -->
@@ -821,42 +737,13 @@
               </div>
             </div>
             <div class="card-body">
-              <div class="row">
-                <div class="col-md-4">
-                  <div class="text-center p-3 border rounded">
-                    <i class="bi bi-exclamation-triangle text-warning fs-2"></i>
-                    <h6 class="mt-2">High Priority</h6>
-                    <p class="text-muted mb-1">Immediate attention required</p>
-                    <div class="fw-bold text-warning">Shipping Dock D-1</div>
-                    <small class="text-muted">Efficiency dropped to 78% - consider layout restructure</small>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="text-center p-3 border rounded">
-                    <i class="bi bi-info-circle text-info fs-2"></i>
-                    <h6 class="mt-2">Medium Priority</h6>
-                    <p class="text-muted mb-1">Optimization opportunities</p>
-                    <div class="fw-bold text-info">Receiving Zone A-1</div>
-                    <small class="text-muted">Consider expanding capacity or improving flow</small>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="text-center p-3 border rounded">
-                    <i class="bi bi-check-circle text-success fs-2"></i>
-                    <h6 class="mt-2">Good Performance</h6>
-                    <p class="text-muted mb-1">Maintaining efficiency</p>
-                    <div class="fw-bold text-success">8 zones performing well</div>
-                    <small class="text-muted">Continue current optimization strategies</small>
-                  </div>
-                </div>
+              <div class="row" id="recommendationsContainer">
+                <!-- Recommendations will be dynamically loaded here -->
               </div>
               <div class="mt-3">
                 <div class="d-flex justify-content-between align-items-center">
                   <span class="fw-bold">Quick Actions:</span>
                   <div>
-                    <button class="btn btn-sm btn-outline-primary me-2" onclick="window.open('Inventory_Master_Data.html', '_blank')">
-                      <i class="bi bi-box-seam me-1"></i>View Inventory Impact
-                    </button>
                     <button class="btn btn-sm btn-outline-success" onclick="generateOptimizationReport()">
                       <i class="bi bi-file-earmark-text me-1"></i>Generate Report
                     </button>
@@ -871,14 +758,408 @@
   </div>
 </div>
 
+<!-- New Zone Modal -->
+<div class="modal fade" id="newZoneModal" tabindex="-1" aria-labelledby="newZoneModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newZoneModalLabel">Create New Zone</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="newZoneForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="zoneId" class="form-label">Zone ID *</label>
+                <input type="text" class="form-control" id="zoneId" required>
+              </div>
+              <div class="mb-3">
+                <label for="zoneName" class="form-label">Zone Name *</label>
+                <input type="text" class="form-control" id="zoneName" required>
+              </div>
+              <div class="mb-3">
+                <label for="warehouseId" class="form-label">Warehouse *</label>
+                <select class="form-select" id="warehouseId" required>
+                  <option value="">Select Warehouse</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="zoneType" class="form-label">Zone Type *</label>
+                <select class="form-select" id="zoneType" required>
+                  <option value="">Select Type</option>
+                  <option value="Receiving">Receiving</option>
+                  <option value="Storage">Storage</option>
+                  <option value="Picking">Picking</option>
+                  <option value="Shipping">Shipping</option>
+                  <option value="Returns">Returns</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="areaSqft" class="form-label">Area (sq ft)</label>
+                <input type="number" class="form-control" id="areaSqft">
+              </div>
+              <div class="mb-3">
+                <label for="capacity" class="form-label">Capacity</label>
+                <input type="number" class="form-control" id="capacity">
+              </div>
+              <div class="mb-3">
+                <label for="capacityUnit" class="form-label">Capacity Unit</label>
+                <input type="text" class="form-control" id="capacityUnit" placeholder="e.g., pallets, units, SKUs">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveNewZone()">Create Zone</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Zone Details Modal -->
+<div class="modal fade" id="zoneDetailsModal" tabindex="-1" aria-labelledby="zoneDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="zoneDetailsModalLabel">Zone Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="zoneDetailsContent">
+        <!-- Zone details will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="editZoneFromModal()">Edit Zone</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // Global variables
+  let zonesData = [];
+  let warehousesData = [];
+  let currentZoneId = null;
+
   // Set current date
   document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
 
-  // Sample functions for interactivity
+  // Initialize the page
+  document.addEventListener('DOMContentLoaded', function() {
+    loadZones();
+    loadWarehouses();
+    loadZoneStats();
+    loadRecommendations();
+  });
+
+  // Load zones from database
+  async function loadZones() {
+    try {
+      const response = await fetch('/api/zones');
+      const result = await response.json();
+      if (result.success) {
+        zonesData = result.data;
+        renderZonesTable();
+        renderWarehouseMap();
+        updateTotalZones();
+      }
+    } catch (error) {
+      console.error('Error loading zones:', error);
+    }
+  }
+
+  // Load warehouses from database
+  async function loadWarehouses() {
+    try {
+      const response = await fetch('/api/warehouses');
+      const result = await response.json();
+      if (result.success) {
+        warehousesData = result.data;
+        populateWarehouseSelect();
+      }
+    } catch (error) {
+      console.error('Error loading warehouses:', error);
+    }
+  }
+
+  // Load zone statistics
+  async function loadZoneStats() {
+    try {
+      const response = await fetch('/api/zones/stats');
+      const result = await response.json();
+      if (result.success) {
+        renderStatsCards(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading zone stats:', error);
+    }
+  }
+
+  // Load optimization recommendations
+  async function loadRecommendations() {
+    try {
+      const response = await fetch('/api/zones');
+      const result = await response.json();
+      if (result.success) {
+        renderRecommendations(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+    }
+  }
+
+  // Render zones table
+  function renderZonesTable() {
+    const tbody = document.getElementById('zonesTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    zonesData.forEach(zone => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${zone.zone_id}</strong></td>
+        <td>${zone.zone_name}</td>
+        <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+        <td>${zone.area_sqft || '-'}</td>
+        <td>${zone.capacity || '-'} ${zone.capacity_unit || ''}</td>
+        <td>${zone.current_usage || 0} ${zone.capacity_unit || ''} (${Math.round((zone.current_usage / zone.capacity) * 100) || 0}%)</td>
+        <td>${zone.efficiency || 0}%</td>
+        <td><span class="status-badge status-${zone.status}">${formatStatus(zone.status)}</span></td>
+        <td>${zone.last_optimized || '-'}</td>
+        <td class="item-actions">
+          <i class="bi bi-eye" title="View Details" onclick="viewZone('${zone.zone_id}')"></i>
+          <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('${zone.zone_id}')"></i>
+          <i class="bi bi-pencil" title="Edit" onclick="editZone('${zone.zone_id}')"></i>
+          <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('${zone.zone_id}')"></i>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  // Render warehouse map
+  function renderWarehouseMap() {
+    const mapContainer = document.getElementById('warehouseMap');
+    if (!mapContainer) return;
+
+    mapContainer.innerHTML = '';
+    
+    if (zonesData.length === 0) {
+      mapContainer.innerHTML = `
+        <div class="text-center">
+          <i class="bi bi-layout-wtf text-muted" style="font-size: 3rem;"></i>
+          <p class="text-muted mt-2">No zones found<br><small>Create zones to see the warehouse layout</small></p>
+        </div>
+      `;
+      return;
+    }
+
+    // Calculate positions for zones
+    const positions = calculateZonePositions(zonesData.length);
+    
+    zonesData.forEach((zone, index) => {
+      const zoneElement = document.createElement('div');
+      zoneElement.className = 'zone-item';
+      zoneElement.style.position = 'absolute';
+      zoneElement.style.top = positions[index].top + 'px';
+      zoneElement.style.left = positions[index].left + 'px';
+      zoneElement.style.background = getZoneTypeColor(zone.zone_type) === 'primary' ? 'var(--primary-color)' :
+                                   getZoneTypeColor(zone.zone_type) === 'success' ? 'var(--success-color)' :
+                                   getZoneTypeColor(zone.zone_type) === 'info' ? 'var(--pie-color3)' :
+                                   getZoneTypeColor(zone.zone_type) === 'warning' ? 'var(--warning-color)' :
+                                   'var(--secondary-color)';
+      zoneElement.onclick = () => selectZone(zone.zone_id);
+      zoneElement.innerHTML = `
+        ${zone.zone_name}<br><small>${Math.round((zone.current_usage / zone.capacity) * 100) || 0}% Capacity</small>
+      `;
+      mapContainer.appendChild(zoneElement);
+    });
+
+    // Add interactive layout text
+    const textElement = document.createElement('div');
+    textElement.className = 'text-center';
+    textElement.style.position = 'absolute';
+    textElement.style.bottom = '20px';
+    textElement.style.left = '50%';
+    textElement.style.transform = 'translateX(-50%)';
+    textElement.innerHTML = `
+      <i class="bi bi-layout-wtf text-muted" style="font-size: 3rem;"></i>
+      <p class="text-muted mt-2">Interactive Warehouse Layout<br><small>Click on zones for detailed information</small></p>
+    `;
+    mapContainer.appendChild(textElement);
+  }
+
+  // Calculate positions for zones in the warehouse map
+  function calculateZonePositions(zoneCount) {
+    const positions = [];
+    const mapWidth = 600; // Approximate map width
+    const mapHeight = 300; // Approximate map height
+    
+    if (zoneCount === 1) {
+      positions.push({ top: mapHeight / 2 - 30, left: mapWidth / 2 - 60 });
+    } else if (zoneCount === 2) {
+      positions.push({ top: mapHeight / 2 - 30, left: 50 });
+      positions.push({ top: mapHeight / 2 - 30, left: mapWidth - 170 });
+    } else if (zoneCount === 3) {
+      positions.push({ top: 30, left: 50 });
+      positions.push({ top: mapHeight / 2 - 30, left: mapWidth / 2 - 60 });
+      positions.push({ top: mapHeight - 90, left: 50 });
+    } else if (zoneCount === 4) {
+      positions.push({ top: 30, left: 50 });
+      positions.push({ top: 30, left: mapWidth - 170 });
+      positions.push({ top: mapHeight - 90, left: 50 });
+      positions.push({ top: mapHeight - 90, left: mapWidth - 170 });
+    } else {
+      // For 5+ zones, use a grid layout
+      const cols = Math.ceil(Math.sqrt(zoneCount));
+      const rows = Math.ceil(zoneCount / cols);
+      const cellWidth = mapWidth / cols;
+      const cellHeight = mapHeight / rows;
+      
+      for (let i = 0; i < zoneCount; i++) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        positions.push({
+          top: row * cellHeight + cellHeight / 2 - 30,
+          left: col * cellWidth + cellWidth / 2 - 60
+        });
+      }
+    }
+    
+    return positions;
+  }
+
+  // Render statistics cards
+  function renderStatsCards(stats) {
+    const container = document.getElementById('statsCards');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-layout-wtf text-primary fs-1"></i>
+            <h4 class="mt-2">${stats.total_zones || 0}</h4>
+            <p class="text-muted mb-0">Total Zones</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-check-circle text-success fs-1"></i>
+            <h4 class="mt-2">${stats.optimized_zones || 0}</h4>
+            <p class="text-muted mb-0">Optimized Zones</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-exclamation-triangle text-warning fs-1"></i>
+            <h4 class="mt-2">${stats.need_attention || 0}</h4>
+            <p class="text-muted mb-0">Need Attention</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-speedometer2 text-info fs-1"></i>
+            <h4 class="mt-2">${Math.round(stats.avg_efficiency || 0)}%</h4>
+            <p class="text-muted mb-0">Avg. Efficiency</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Render recommendations
+  function renderRecommendations(zones) {
+    const container = document.getElementById('recommendationsContainer');
+    if (!container) return;
+
+    const criticalZones = zones.filter(z => z.status === 'critical');
+    const needsImprovement = zones.filter(z => z.status === 'needs_improvement');
+    const optimalZones = zones.filter(z => z.status === 'optimal');
+
+    container.innerHTML = `
+      <div class="col-md-4">
+        <div class="text-center p-3 border rounded">
+          <i class="bi bi-exclamation-triangle text-warning fs-2"></i>
+          <h6 class="mt-2">High Priority</h6>
+          <p class="text-muted mb-1">Immediate attention required</p>
+          <div class="fw-bold text-warning">${criticalZones.length} zones critical</div>
+          <small class="text-muted">${criticalZones.length > 0 ? criticalZones[0].zone_name : 'No critical zones'}</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-center p-3 border rounded">
+          <i class="bi bi-info-circle text-info fs-2"></i>
+          <h6 class="mt-2">Medium Priority</h6>
+          <p class="text-muted mb-1">Optimization opportunities</p>
+          <div class="fw-bold text-info">${needsImprovement.length} zones need improvement</div>
+          <small class="text-muted">${needsImprovement.length > 0 ? needsImprovement[0].zone_name : 'No zones need improvement'}</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-center p-3 border rounded">
+          <i class="bi bi-check-circle text-success fs-2"></i>
+          <h6 class="mt-2">Good Performance</h6>
+          <p class="text-muted mb-1">Maintaining efficiency</p>
+          <div class="fw-bold text-success">${optimalZones.length} zones performing well</div>
+          <small class="text-muted">Continue current optimization strategies</small>
+        </div>
+      </div>
+    `;
+  }
+
+  // Helper functions
+  function getZoneTypeColor(type) {
+    const colors = {
+      'Receiving': 'primary',
+      'Storage': 'success',
+      'Picking': 'info',
+      'Shipping': 'warning',
+      'Returns': 'secondary'
+    };
+    return colors[type] || 'secondary';
+  }
+
+  function formatStatus(status) {
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
+  function updateTotalZones() {
+    const totalZonesElement = document.getElementById('totalZones');
+    if (totalZonesElement) {
+      totalZonesElement.textContent = zonesData.length;
+    }
+  }
+
+  function populateWarehouseSelect() {
+    const select = document.getElementById('warehouseId');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">Select Warehouse</option>';
+    warehousesData.forEach(warehouse => {
+      const option = document.createElement('option');
+      option.value = warehouse.warehouse_id;
+      option.textContent = warehouse.warehouse_name;
+      select.appendChild(option);
+    });
+  }
+
+  // Create new zone function
   function createNewZone() {
-    alert('Create New Zone functionality would be implemented here');
+    const modal = new bootstrap.Modal(document.getElementById('newZoneModal'));
+    modal.show();
   }
 
   function optimizeLayout() {
@@ -897,47 +1178,200 @@
     alert('Export Layout functionality would be implemented here');
   }
 
-  function selectZone(zoneType) {
-    alert('Selected zone: ' + zoneType + '. Detailed view would be implemented here.');
-  }
+  // Save new zone
+  async function saveNewZone() {
+    const form = document.getElementById('newZoneForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
 
-  function viewZone(id) {
-    alert('View zone details for: ' + id);
-  }
+    const zoneData = {
+      zone_id: document.getElementById('zoneId').value,
+      zone_name: document.getElementById('zoneName').value,
+      warehouse_id: document.getElementById('warehouseId').value,
+      zone_type: document.getElementById('zoneType').value,
+      area_sqft: parseInt(document.getElementById('areaSqft').value) || null,
+      capacity: parseInt(document.getElementById('capacity').value) || null,
+      capacity_unit: document.getElementById('capacityUnit').value || null
+    };
 
-  function optimizeZone(id) {
-    if (confirm('Optimize zone ' + id + '? This may take a few minutes.')) {
-      alert('Zone ' + id + ' optimization started');
+    try {
+      const response = await fetch('/api/zones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(zoneData)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('Zone created successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('newZoneModal')).hide();
+        form.reset();
+        await loadZones();
+        await loadZoneStats();
+        await loadRecommendations();
+      } else {
+        alert('Error creating zone: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error creating zone:', error);
+      alert('Error creating zone. Please try again.');
     }
   }
 
+  // Select zone from map
+  function selectZone(zoneId) {
+    currentZoneId = zoneId;
+    viewZone(zoneId);
+  }
+
+  // View zone details
+  async function viewZone(id) {
+    try {
+      const response = await fetch(`/api/zones/${id}`);
+      const result = await response.json();
+      if (result.success) {
+        const zone = result.data;
+        const modal = new bootstrap.Modal(document.getElementById('zoneDetailsModal'));
+        
+        document.getElementById('zoneDetailsModalLabel').textContent = `Zone Details - ${zone.zone_name}`;
+        document.getElementById('zoneDetailsContent').innerHTML = `
+          <div class="row">
+            <div class="col-md-6">
+              <h6>Basic Information</h6>
+              <p><strong>Zone ID:</strong> ${zone.zone_id}</p>
+              <p><strong>Zone Name:</strong> ${zone.zone_name}</p>
+              <p><strong>Warehouse:</strong> ${zone.warehouse_name || zone.warehouse_id}</p>
+              <p><strong>Type:</strong> <span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></p>
+            </div>
+            <div class="col-md-6">
+              <h6>Capacity & Usage</h6>
+              <p><strong>Area:</strong> ${zone.area_sqft || 'N/A'} sq ft</p>
+              <p><strong>Capacity:</strong> ${zone.capacity || 'N/A'} ${zone.capacity_unit || ''}</p>
+              <p><strong>Current Usage:</strong> ${zone.current_usage || 0} ${zone.capacity_unit || ''}</p>
+              <p><strong>Usage Percentage:</strong> ${Math.round((zone.current_usage / zone.capacity) * 100) || 0}%</p>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <h6>Performance</h6>
+              <p><strong>Efficiency:</strong> ${zone.efficiency || 0}%</p>
+              <p><strong>Status:</strong> <span class="status-badge status-${zone.status}">${formatStatus(zone.status)}</span></p>
+              <p><strong>Last Optimized:</strong> ${zone.last_optimized || 'Never'}</p>
+            </div>
+            <div class="col-md-6">
+              <h6>Timestamps</h6>
+              <p><strong>Created:</strong> ${new Date(zone.created_at).toLocaleDateString()}</p>
+              <p><strong>Last Updated:</strong> ${new Date(zone.updated_at).toLocaleDateString()}</p>
+            </div>
+          </div>
+        `;
+        
+        modal.show();
+      } else {
+        alert('Error loading zone details: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error viewing zone:', error);
+      alert('Error loading zone details. Please try again.');
+    }
+  }
+
+  // Optimize zone
+  async function optimizeZone(id) {
+    if (confirm('Optimize zone ' + id + '? This may take a few minutes.')) {
+      try {
+        // Update last optimized date
+        const response = await fetch(`/api/zones/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            last_optimized: new Date().toISOString().split('T')[0]
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('Zone ' + id + ' optimization started and date updated');
+          await loadZones();
+          await loadZoneStats();
+        } else {
+          alert('Error updating zone: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Error optimizing zone:', error);
+        alert('Error optimizing zone. Please try again.');
+      }
+    }
+  }
+
+  // Edit zone
   function editZone(id) {
-    alert('Edit zone: ' + id);
+    // For now, just show the zone details modal
+    // In a full implementation, you would populate an edit form
+    viewZone(id);
   }
 
+  // Edit zone from modal
+  function editZoneFromModal() {
+    // This would open an edit form
+    alert('Edit functionality would be implemented here');
+  }
+
+  // View analytics
   function viewAnalytics(id) {
-    alert('View analytics for zone: ' + id);
+    alert('Analytics view for zone ' + id + ' would be implemented here');
   }
 
-  function applyFilters() {
+  // Apply filters to zones
+  async function applyFilters() {
     const searchTerm = document.getElementById('searchZone').value;
     const status = document.getElementById('statusFilter').value;
     const type = document.getElementById('typeFilter').value;
     const capacity = document.getElementById('capacityRange').value;
     
-    // Filter functionality would be implemented here
-    console.log('Applying filters:', { searchTerm, status, type, capacity });
+    try {
+      const params = new URLSearchParams();
+      if (searchTerm) params.append('search', searchTerm);
+      if (status) params.append('status', status);
+      if (type) params.append('zone_type', type);
+      
+      const response = await fetch(`/api/zones?${params.toString()}`);
+      const result = await response.json();
+      if (result.success) {
+        zonesData = result.data;
+        renderZonesTable();
+        renderWarehouseMap();
+        updateTotalZones();
+      }
+    } catch (error) {
+      console.error('Error applying filters:', error);
+    }
   }
 
   // Search functionality
   document.getElementById('searchZone').addEventListener('input', function(e) {
-    // Real-time search functionality would be implemented here
-    console.log('Searching for:', e.target.value);
+    // Debounce search to avoid too many API calls
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+      applyFilters();
+    }, 300);
   });
 
-  function refreshRecommendations() {
-    alert('Optimization recommendations refreshed');
-    // In a real application, this would fetch updated data from the server
+  // Refresh recommendations
+  async function refreshRecommendations() {
+    try {
+      await loadRecommendations();
+      alert('Optimization recommendations refreshed');
+    } catch (error) {
+      console.error('Error refreshing recommendations:', error);
+      alert('Error refreshing recommendations');
+    }
   }
 
   function generateOptimizationReport() {

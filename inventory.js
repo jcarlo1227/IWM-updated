@@ -117,6 +117,39 @@ const initializeInventoryTable = async () => {
       ON CONFLICT (warehouse_id) DO NOTHING;
     `;
     console.log('✅ Warehouse inserted');
+
+    // Create zones table
+    await sql`
+      CREATE TABLE IF NOT EXISTS zones (
+        id SERIAL PRIMARY KEY,
+        zone_id VARCHAR(50) UNIQUE NOT NULL,
+        zone_name VARCHAR(255) NOT NULL,
+        warehouse_id VARCHAR(50) REFERENCES warehouses(warehouse_id) ON DELETE CASCADE,
+        zone_type VARCHAR(100) NOT NULL,
+        area_sqft INTEGER,
+        capacity INTEGER,
+        capacity_unit VARCHAR(50),
+        current_usage INTEGER DEFAULT 0,
+        efficiency DECIMAL(5,2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'active',
+        last_optimized DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    console.log('✅ Zones table created/verified');
+
+    // Insert default zones
+    await sql`
+      INSERT INTO zones (zone_id, zone_name, warehouse_id, zone_type, area_sqft, capacity, capacity_unit, current_usage, efficiency, status, last_optimized) VALUES
+        ('Z-001', 'Main Receiving', 'WH001', 'Receiving', 2500, 100, 'pallets', 85, 92.0, 'needs_improvement', '2025-01-10'),
+        ('Z-002', 'High-Value Storage', 'WH001', 'Storage', 3000, 200, 'units', 144, 88.0, 'optimal', '2025-01-12'),
+        ('Z-003', 'Fast Pick Zone', 'WH001', 'Picking', 1800, 150, 'SKUs', 68, 95.0, 'optimal', '2025-01-14'),
+        ('Z-004', 'Shipping Dock', 'WH001', 'Shipping', 2200, 80, 'orders', 54, 78.0, 'critical', '2025-01-08'),
+        ('Z-005', 'Returns Processing', 'WH001', 'Returns', 1200, 50, 'items', 15, 85.0, 'optimal', '2025-01-15')
+      ON CONFLICT (zone_id) DO NOTHING;
+    `;
+    console.log('✅ Default zones inserted');
   } catch (err) {
     console.error('❌ Error inserting default data:', err);
     throw err;
@@ -1040,6 +1073,147 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
   }
 };
 
+// Zone management functions
+const getAllZones = async (filters = {}) => {
+  try {
+    const sql = await database.sql();
+    let query = sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE 1=1
+    `;
+    
+    if (filters.warehouse_id) {
+      query = sql`${query} AND z.warehouse_id = ${filters.warehouse_id}`;
+    }
+    if (filters.zone_type) {
+      query = sql`${query} AND z.zone_type = ${filters.zone_type}`;
+    }
+    if (filters.status) {
+      query = sql`${query} AND z.status = ${filters.status}`;
+    }
+    if (filters.search) {
+      query = sql`${query} AND (z.zone_name ILIKE ${'%' + filters.search + '%'} OR z.zone_id ILIKE ${'%' + filters.search + '%'})`;
+    }
+    
+    query = sql`${query} ORDER BY z.zone_id`;
+    const result = await query;
+    return result;
+  } catch (err) {
+    console.error('Error fetching zones:', err);
+    throw err;
+  }
+};
+
+const getZoneById = async (zoneId) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.zone_id = ${zoneId}
+    `;
+    return result[0] || null;
+  } catch (err) {
+    console.error('Error fetching zone by ID:', err);
+    throw err;
+  }
+};
+
+const createZone = async (zoneData) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      INSERT INTO zones (
+        zone_id, zone_name, warehouse_id, zone_type, area_sqft, 
+        capacity, capacity_unit, current_usage, efficiency, status
+      ) VALUES (
+        ${zoneData.zone_id}, ${zoneData.zone_name}, ${zoneData.warehouse_id}, 
+        ${zoneData.zone_type}, ${zoneData.area_sqft}, ${zoneData.capacity}, 
+        ${zoneData.capacity_unit}, ${zoneData.current_usage || 0}, 
+        ${zoneData.efficiency || 0}, ${zoneData.status || 'active'}
+      ) RETURNING *
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error creating zone:', err);
+    throw err;
+  }
+};
+
+const updateZone = async (zoneId, zoneData) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      UPDATE zones SET
+        zone_name = ${zoneData.zone_name},
+        warehouse_id = ${zoneData.warehouse_id},
+        zone_type = ${zoneData.zone_type},
+        area_sqft = ${zoneData.area_sqft},
+        capacity = ${zoneData.capacity},
+        capacity_unit = ${zoneData.capacity_unit},
+        current_usage = ${zoneData.current_usage},
+        efficiency = ${zoneData.efficiency},
+        status = ${zoneData.status},
+        last_optimized = ${zoneData.last_optimized || null},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE zone_id = ${zoneId}
+      RETURNING *
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error updating zone:', err);
+    throw err;
+  }
+};
+
+const deleteZone = async (zoneId) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      DELETE FROM zones WHERE zone_id = ${zoneId} RETURNING *
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error deleting zone:', err);
+    throw err;
+  }
+};
+
+const getZoneStats = async () => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT 
+        COUNT(*) as total_zones,
+        COUNT(CASE WHEN status = 'optimal' THEN 1 END) as optimized_zones,
+        COUNT(CASE WHEN status IN ('needs_improvement', 'critical') THEN 1 END) as need_attention,
+        AVG(efficiency) as avg_efficiency
+      FROM zones
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error fetching zone stats:', err);
+    throw err;
+  }
+};
+
+const getZonesByWarehouse = async (warehouseId) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT * FROM zones WHERE warehouse_id = ${warehouseId}
+      ORDER BY zone_id
+    `;
+    return result;
+  } catch (err) {
+    console.error('Error fetching zones by warehouse:', err);
+    throw err;
+  }
+};
+
 module.exports = {
   initializeInventoryTable,
   initializeOrderShipmentsTable,
@@ -1063,5 +1237,12 @@ module.exports = {
   getStockOverview,
   getStockByCategory,
   getStockByWarehouse,
-  getRecentOrderShipmentActivity
+  getRecentOrderShipmentActivity,
+  getAllZones,
+  getZoneById,
+  createZone,
+  updateZone,
+  deleteZone,
+  getZoneStats,
+  getZonesByWarehouse
 };

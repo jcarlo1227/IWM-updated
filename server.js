@@ -38,7 +38,14 @@ const {
   getRecentOrderShipmentActivity,
   getStockOverview,
   getStockByCategory,
-  getStockByWarehouse
+  getStockByWarehouse,
+  getAllZones,
+  getZoneById,
+  createZone,
+  updateZone,
+  deleteZone,
+  getZoneStats,
+  getZonesByWarehouse
 } = require('./inventory');
 require('dotenv').config();
 
@@ -796,6 +803,102 @@ app.get('/api/order-shipments/recent-activity', requireAuth, async (req, res) =>
   } catch (error) {
     console.error('Error fetching recent activity:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch recent activity' });
+  }
+});
+
+// Zone management endpoints
+app.get('/api/zones', requireAuth, async (req, res) => {
+  try {
+    const { search, warehouse_id, zone_type, status } = req.query;
+    const filters = { search, warehouse_id, zone_type, status };
+    const zones = await getAllZones(filters);
+    res.json({ success: true, data: zones || [], count: zones ? zones.length : 0 });
+  } catch (error) {
+    console.error('Error fetching zones:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zones' });
+  }
+});
+
+app.get('/api/zones/:zoneId', requireAuth, async (req, res) => {
+  try {
+    const zone = await getZoneById(req.params.zoneId);
+    if (zone) {
+      res.json({ success: true, data: zone });
+    } else {
+      res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zone' });
+  }
+});
+
+app.post('/api/zones', requireAuth, async (req, res) => {
+  try {
+    const newZone = await createZone(req.body);
+    res.json({ success: true, message: 'Zone created successfully', data: newZone });
+  } catch (error) {
+    console.error('Error creating zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to create zone' });
+  }
+});
+
+app.put('/api/zones/:zoneId', requireAuth, async (req, res) => {
+  try {
+    const updatedZone = await updateZone(req.params.zoneId, req.body);
+    if (updatedZone) {
+      res.json({ success: true, message: 'Zone updated successfully', data: updatedZone });
+    } else {
+      res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+  } catch (error) {
+    console.error('Error updating zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to update zone' });
+  }
+});
+
+app.delete('/api/zones/:zoneId', requireAuth, async (req, res) => {
+  try {
+    const deleted = await deleteZone(req.params.zoneId);
+    if (deleted) {
+      res.json({ success: true, message: 'Zone deleted successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete zone' });
+  }
+});
+
+app.get('/api/zones/stats', requireAuth, async (req, res) => {
+  try {
+    const stats = await getZoneStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching zone stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zone statistics' });
+  }
+});
+
+app.get('/api/zones/warehouse/:warehouseId', requireAuth, async (req, res) => {
+  try {
+    const zones = await getZonesByWarehouse(req.params.warehouseId);
+    res.json({ success: true, data: zones || [], count: zones ? zones.length : 0 });
+  } catch (error) {
+    console.error('Error fetching zones by warehouse:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zones by warehouse' });
+  }
+});
+
+// Warehouses endpoint
+app.get('/api/warehouses', requireAuth, async (req, res) => {
+  try {
+    const warehouses = await getAllWarehouses();
+    res.json({ success: true, data: warehouses || [], count: warehouses ? warehouses.length : 0 });
+  } catch (error) {
+    console.error('Error fetching warehouses:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch warehouses' });
   }
 });
 
