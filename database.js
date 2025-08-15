@@ -17,13 +17,20 @@ async function initializeConnection() {
           
           const connection = neon(process.env.DATABASE_URL);
           
+          // For Neon databases, add initial delay to allow startup
+          if (process.env.DATABASE_URL.includes('neon')) {
+            console.log('🌅 Neon database detected, allowing startup time...');
+            await new Promise(resolve => setTimeout(resolve, 3000)); // Wait 3 seconds for Neon to be ready
+          }
+          
           // Test connection with timeout and retry logic
-          let retries = 3;
+          let retries = 5;
           let lastError = null;
+          let delay = 1000; // Start with 1 second delay
           
           while (retries > 0) {
             try {
-              console.log(`🔄 Connection attempt ${4 - retries}/3...`);
+              console.log(`🔄 Connection attempt ${6 - retries}/5...`);
               await connection`SELECT 1`;
               sql = connection;
               module.exports.sql = async () => connection;
@@ -33,8 +40,10 @@ async function initializeConnection() {
               lastError = testError;
               retries--;
               if (retries > 0) {
-                console.log(`⚠️ Connection test failed, retrying in 2 seconds... (${retries} attempts left)`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
+                console.log(`⚠️ Connection test failed, retrying in ${delay/1000} seconds... (${retries} attempts left)`);
+                console.log(`💡 Error: ${testError.message}`);
+                await new Promise(resolve => setTimeout(resolve, delay));
+                delay = Math.min(delay * 1.5, 5000); // Increase delay up to 5 seconds
               }
             }
           }
@@ -57,6 +66,16 @@ async function initializeConnection() {
             console.log('💡 If using Neon database, ensure the database is accessible from your network.');
             console.log('💡 Check if your firewall or antivirus is blocking the connection.');
             console.log('💡 Try accessing the database from a different network.');
+            
+            // Specific Neon database "fetch failed" troubleshooting
+            if (error.message.includes('fetch failed') && process.env.DATABASE_URL.includes('neon')) {
+              console.log('💡 Neon "fetch failed" specific solutions:');
+              console.log('💡 1. This often happens during cold starts - wait a few minutes and retry');
+              console.log('💡 2. Check if your Neon database is in "Idle" state in the dashboard');
+              console.log('💡 3. Try accessing the database from Neon dashboard to wake it up');
+              console.log('💡 4. Check if you have IP restrictions enabled that might block your connection');
+              console.log('💡 5. Verify your DATABASE_URL is correct and includes the right password');
+            }
           }
           
           // Check for common Neon database issues
@@ -85,7 +104,12 @@ async function initializeConnection() {
 // Get SQL connection
 async function getSql() {
   if (!sql) {
-    await initializeConnection();
+    try {
+      await initializeConnection();
+    } catch (error) {
+      console.log('⚠️ Failed to initialize database connection, returning null');
+      return null;
+    }
   }
   return sql;
 }
@@ -93,6 +117,21 @@ async function getSql() {
 // Check if database is available
 function isDatabaseAvailable() {
   return sql !== null;
+}
+
+// Check if database is actually working (can execute queries)
+async function isDatabaseWorking() {
+  if (!sql) {
+    return false;
+  }
+  
+  try {
+    await sql`SELECT 1`;
+    return true;
+  } catch (error) {
+    console.log('⚠️ Database connection test failed:', error.message);
+    return false;
+  }
 }
 
 // Get database status
@@ -445,13 +484,24 @@ async function testDatabaseConnection() {
   console.log('- DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
   console.log('- NODE_ENV:', process.env.NODE_ENV || 'Not set');
   
+  if (process.env.DATABASE_URL) {
+    console.log('- DATABASE_URL format:', process.env.DATABASE_URL.includes('neon') ? 'Neon' : 'Other');
+    console.log('- DATABASE_URL length:', process.env.DATABASE_URL.length);
+    console.log('- DATABASE_URL starts with:', process.env.DATABASE_URL.substring(0, 20) + '...');
+  }
+  
   try {
     const connection = await getSql();
     if (connection) {
       console.log('✅ Database connection successful');
-      const result = await connection`SELECT version()`;
-      console.log('Database version:', result[0].version);
-      return true;
+      try {
+        const result = await connection`SELECT version()`;
+        console.log('Database version:', result[0].version);
+        return true;
+      } catch (queryError) {
+        console.log('⚠️ Connection object exists but query failed:', queryError.message);
+        return false;
+      }
     } else {
       console.log('❌ Database connection failed - no connection returned');
       return false;
@@ -477,6 +527,7 @@ module.exports = {
   testConnection,
   initializeDatabase,
   isDatabaseAvailable,
+  isDatabaseWorking,
   getDatabaseStatus,
   testDatabaseConnection,
   authenticateUser,

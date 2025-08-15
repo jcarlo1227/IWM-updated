@@ -695,7 +695,13 @@ const startServer = async () => {
     // Try to initialize database, but don't fail if it doesn't work
     try {
       await initializeDatabase();
-      console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
+      // Check if database is actually available
+      const { isDatabaseAvailable } = require('./database');
+      if (isDatabaseAvailable()) {
+        console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
+      } else {
+        console.log(`⚠️ Database initialization completed but connection not available`);
+      }
     } catch (dbError) {
       console.log(`⚠️ Database connection failed, running in mock mode`);
     }

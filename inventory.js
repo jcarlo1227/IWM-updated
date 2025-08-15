@@ -4,6 +4,11 @@ const database = require('./database');
 const initializeInventoryTable = async () => {
   try {
     const sql = await database.sql();
+    if (!sql) {
+      console.log('⚠️ Database not available, skipping inventory table creation');
+      return;
+    }
+    
     await sql`
       CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
