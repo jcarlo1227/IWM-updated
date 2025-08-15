@@ -31,7 +31,15 @@ async function initializeConnection() {
           while (retries > 0) {
             try {
               console.log(`🔄 Connection attempt ${6 - retries}/5...`);
-              await connection`SELECT 1`;
+              
+              // Add timeout to the connection test
+              const connectionPromise = connection`SELECT 1`;
+              const timeoutPromise = new Promise((_, reject) => 
+                setTimeout(() => reject(new Error('Connection timeout')), 10000) // 10 second timeout
+              );
+              
+              await Promise.race([connectionPromise, timeoutPromise]);
+              
               sql = connection;
               module.exports.sql = async () => connection;
               console.log('✅ Database connection initialized successfully');
@@ -42,8 +50,16 @@ async function initializeConnection() {
               if (retries > 0) {
                 console.log(`⚠️ Connection test failed, retrying in ${delay/1000} seconds... (${retries} attempts left)`);
                 console.log(`💡 Error: ${testError.message}`);
+                
+                // For timeout errors, increase delay more aggressively
+                if (testError.message.includes('timeout') || testError.message.includes('ETIMEDOUT')) {
+                  delay = Math.min(delay * 2, 8000); // Double delay for timeouts, max 8 seconds
+                  console.log(`⏰ Timeout detected, increasing delay to ${delay/1000} seconds`);
+                } else {
+                  delay = Math.min(delay * 1.5, 5000); // Normal delay increase
+                }
+                
                 await new Promise(resolve => setTimeout(resolve, delay));
-                delay = Math.min(delay * 1.5, 5000); // Increase delay up to 5 seconds
               }
             }
           }
@@ -488,6 +504,15 @@ async function testDatabaseConnection() {
     console.log('- DATABASE_URL format:', process.env.DATABASE_URL.includes('neon') ? 'Neon' : 'Other');
     console.log('- DATABASE_URL length:', process.env.DATABASE_URL.length);
     console.log('- DATABASE_URL starts with:', process.env.DATABASE_URL.substring(0, 20) + '...');
+    
+    // Extract host from DATABASE_URL for network testing
+    try {
+      const url = new URL(process.env.DATABASE_URL);
+      console.log('- Database host:', url.hostname);
+      console.log('- Database port:', url.port || '5432 (default)');
+    } catch (urlError) {
+      console.log('- DATABASE_URL parsing failed:', urlError.message);
+    }
   }
   
   try {
@@ -513,6 +538,65 @@ async function testDatabaseConnection() {
       message: error.message,
       stack: error.stack
     });
+    
+    // Additional error analysis
+    if (error.message.includes('ETIMEDOUT')) {
+      console.log('💡 ETIMEDOUT indicates a network connectivity issue:');
+      console.log('💡 1. Check if your internet connection is stable');
+      console.log('💡 2. Try pinging the database host');
+      console.log('💡 3. Check if your firewall is blocking outbound connections');
+      console.log('💡 4. Try using a different network (mobile hotspot)');
+    }
+    
+    return false;
+  }
+}
+
+// Test network connectivity to database host
+async function testNetworkConnectivity() {
+  if (!process.env.DATABASE_URL) {
+    console.log('⚠️ No DATABASE_URL to test network connectivity');
+    return false;
+  }
+  
+  try {
+    const url = new URL(process.env.DATABASE_URL);
+    const hostname = url.hostname;
+    const port = url.port || '5432';
+    
+    console.log(`🌐 Testing network connectivity to ${hostname}:${port}...`);
+    
+    // Simple TCP connection test using net module
+    const net = require('net');
+    
+    return new Promise((resolve) => {
+      const socket = new net.Socket();
+      let connected = false;
+      
+      socket.setTimeout(5000); // 5 second timeout
+      
+      socket.on('connect', () => {
+        connected = true;
+        socket.destroy();
+        console.log(`✅ Network connectivity to ${hostname}:${port} successful`);
+        resolve(true);
+      });
+      
+      socket.on('timeout', () => {
+        socket.destroy();
+        console.log(`⏰ Network connectivity to ${hostname}:${port} timed out`);
+        resolve(false);
+      });
+      
+      socket.on('error', (error) => {
+        console.log(`❌ Network connectivity to ${hostname}:${port} failed: ${error.message}`);
+        resolve(false);
+      });
+      
+      socket.connect(parseInt(port), hostname);
+    });
+  } catch (error) {
+    console.log('❌ Network connectivity test failed:', error.message);
     return false;
   }
 }
@@ -530,6 +614,7 @@ module.exports = {
   isDatabaseWorking,
   getDatabaseStatus,
   testDatabaseConnection,
+  testNetworkConnectivity,
   authenticateUser,
   createNotification,
   getNotifications,

@@ -286,7 +286,7 @@ app.post('/api/notifications', requireAuth, async (req, res) => {
   }
 });
 
-// API route to check database connection status
+// API route to check database connection status (simplified)
 app.get('/api/db-status', async (req, res) => {
   try {
     // First check if we have DATABASE_URL
@@ -298,45 +298,55 @@ app.get('/api/db-status', async (req, res) => {
       });
     }
 
-    // Try to get a new connection
-    const database = require('./database');
-    const sqlConnection = await database.sql();
+    // Use the enhanced database status functions instead of direct SQL
+    const { getDatabaseStatus, isDatabaseAvailable } = require('./database');
+    const dbStatus = getDatabaseStatus();
+    const isAvailable = isDatabaseAvailable();
     
-    if (!sqlConnection) {
-      return res.json({
-        connected: false,
-        error: 'Could not initialize SQL connection',
-        timestamp: new Date().toISOString()
-      });
+    let connectionInfo = null;
+    if (isAvailable) {
+      try {
+        const sql = await require('./database').sql();
+        if (sql) {
+          // Simple query that's less likely to timeout
+          const result = await sql`SELECT 1 as test`;
+          connectionInfo = {
+            test: result[0].test === 1,
+            connected: true
+          };
+        } else {
+          connectionInfo = {
+            error: 'SQL connection not available',
+            connected: false
+          };
+        }
+      } catch (error) {
+        connectionInfo = {
+          error: error.message,
+          connected: false
+        };
+      }
     }
-
-    const result = await sqlConnection`
-      SELECT current_database(), 
-             version(), 
-             current_user,
-             inet_server_addr() as server_ip,
-             inet_server_port() as server_port
-    `;
     
     res.json({
-      connected: true,
-      database: result[0].current_database,
-      version: result[0].version,
-      user: result[0].current_user,
-      server: {
-        ip: result[0].server_ip,
-        port: result[0].server_port
+      success: true,
+      database: {
+        available: isAvailable,
+        status: dbStatus,
+        connection: connectionInfo
       },
-      host: 'Neon PostgreSQL Serverless',
+      environment: {
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        nodeEnv: process.env.NODE_ENV || 'development'
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Database status check failed:', error);
-    res.json({
-      connected: false,
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check database status',
       error: error.message,
-      errorType: error.name,
-      errorCode: error.code,
       timestamp: new Date().toISOString()
     });
   }
@@ -987,50 +997,7 @@ app.get('/api/health/db', requireAuth, async (req, res) => {
   }
 });
 
-// Enhanced database status endpoint
-app.get('/api/db-status', async (req, res) => {
-  try {
-    const dbStatus = getDatabaseStatus();
-    const isAvailable = isDatabaseAvailable();
-    
-    let connectionInfo = null;
-    if (isAvailable) {
-      try {
-        const sql = await require('./database').sql();
-        const result = await sql`SELECT version()`;
-        connectionInfo = {
-          version: result[0].version,
-          connected: true
-        };
-      } catch (error) {
-        connectionInfo = {
-          error: error.message,
-          connected: false
-        };
-      }
-    }
-    
-    res.json({
-      success: true,
-      database: {
-        available: isAvailable,
-        status: dbStatus,
-        connection: connectionInfo
-      },
-      environment: {
-        hasDatabaseUrl: !!process.env.DATABASE_URL,
-        nodeEnv: process.env.NODE_ENV || 'development'
-      }
-    });
-  } catch (error) {
-    console.error('Database status check failed:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to check database status',
-      error: error.message
-    });
-  }
-});
+
 
 startServer();
 
