@@ -1394,12 +1394,6 @@
   // Refresh shipping statistics for a specific zone
   async function refreshShippingStats(zoneId) {
     try {
-      // Show loading state
-      const refreshBtn = event.target.closest('button');
-      const originalText = refreshBtn.innerHTML;
-      refreshBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Loading...';
-      refreshBtn.disabled = true;
-      
       // Fetch updated shipping stats
       const response = await fetch('/api/shipping-zone-stats');
       const result = await response.json();
@@ -1407,6 +1401,7 @@
       if (result.success) {
         // Update the shipping stats section
         const stats = result.data;
+        const refreshBtn = event.target.closest('button');
         const shippingSection = refreshBtn.closest('.col-12').querySelector('.row:first-child');
         
         // Update overall statistics
@@ -1473,10 +1468,6 @@
     } catch (error) {
       console.error('Error refreshing shipping stats:', error);
       showNotification('Error refreshing shipping statistics', 'error');
-    } finally {
-      // Restore button state
-      refreshBtn.innerHTML = originalText;
-      refreshBtn.disabled = false;
     }
   }
   
@@ -1925,12 +1916,6 @@
     
     if (confirm('This will analyze and optimize the layout for warehouse: ' + warehouseSelect.options[warehouseSelect.selectedIndex].text + '\n\nThis may take a few moments. Continue?')) {
       try {
-        // Show loading state
-        const optimizeBtn = document.querySelector('button[onclick="optimizeLayout()"]');
-        const originalText = optimizeBtn.innerHTML;
-        optimizeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Optimizing...';
-        optimizeBtn.disabled = true;
-        
         // Call the optimization API
         const response = await fetch(`/api/warehouses/${warehouseId}/optimize`, {
           method: 'POST',
@@ -1957,11 +1942,6 @@
       } catch (error) {
         console.error('Error optimizing layout:', error);
         alert('Error during optimization. Please try again.');
-      } finally {
-        // Restore button state
-        const optimizeBtn = document.querySelector('button[onclick="optimizeLayout()"]');
-        optimizeBtn.innerHTML = originalText;
-        optimizeBtn.disabled = false;
       }
     }
   }
@@ -2123,12 +2103,6 @@
     
     if (confirm('This will analyze traffic patterns for warehouse: ' + warehouseSelect.options[warehouseSelect.selectedIndex].text + '\n\nThis may take a few moments. Continue?')) {
       try {
-        // Show loading state
-        const trafficBtn = document.querySelector('button[onclick="analyzeTraffic()"]');
-        const originalText = trafficBtn.innerHTML;
-        trafficBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
-        trafficBtn.disabled = true;
-        
         // Call the traffic analysis API
         const response = await fetch(`/api/warehouses/${warehouseId}/analyze-traffic`, {
           method: 'POST',
@@ -2149,11 +2123,6 @@
       } catch (error) {
         console.error('Error analyzing traffic:', error);
         alert('Error during traffic analysis. Please try again.');
-      } finally {
-        // Restore button state
-        const trafficBtn = document.querySelector('button[onclick="analyzeTraffic()"]');
-        trafficBtn.innerHTML = originalText;
-        trafficBtn.disabled = false;
       }
     }
   }
@@ -2426,12 +2395,6 @@
     bootstrap.Modal.getInstance(document.getElementById('heatmapTypeModal')).hide();
     
     try {
-      // Show loading state
-      const heatmapBtn = document.querySelector('button[onclick="generateHeatmap()"]');
-      const originalText = heatmapBtn.innerHTML;
-      heatmapBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';
-      heatmapBtn.disabled = true;
-      
       // Call the heatmap generation API
       const response = await fetch(`/api/warehouses/${warehouseId}/heatmap`, {
         method: 'POST',
@@ -2453,11 +2416,6 @@
     } catch (error) {
       console.error('Error generating heatmap:', error);
       alert('Error generating heatmap. Please try again.');
-    } finally {
-      // Restore button state
-      const heatmapBtn = document.querySelector('button[onclick="generateHeatmap()"]');
-      heatmapBtn.innerHTML = originalText;
-      heatmapBtn.disabled = false;
     }
   }
   
@@ -2693,12 +2651,6 @@
     bootstrap.Modal.getInstance(document.getElementById('exportFormatModal')).hide();
     
     try {
-      // Show loading state
-      const exportBtn = document.querySelector('button[onclick="exportLayout()"]');
-      const originalText = exportBtn.innerHTML;
-      exportBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Exporting...';
-      exportBtn.disabled = true;
-      
       // Call the layout export API
       const response = await fetch(`/api/warehouses/${warehouseId}/export`, {
         method: 'POST',
@@ -2727,11 +2679,6 @@
     } catch (error) {
       console.error('Error exporting layout:', error);
       alert('Error exporting layout. Please try again.');
-    } finally {
-      // Restore button state
-      const exportBtn = document.querySelector('button[onclick="exportLayout()"]');
-      exportBtn.innerHTML = originalText;
-      exportBtn.disabled = false;
     }
   }
 
