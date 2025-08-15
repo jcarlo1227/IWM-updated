@@ -85,6 +85,16 @@
       padding: 0.75rem;
       transition: all 0.3s ease;
     }
+    
+    .action-buttons .form-label {
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .action-buttons .form-select {
+      min-width: 200px;
+      font-size: 0.875rem;
+    }
 
     .action-buttons .btn:hover {
       background-color: var(--tertiary-header);
@@ -594,6 +604,13 @@
           </div>
         </div>
         <div class="d-flex flex-wrap justify-content-start action-buttons">
+          <div class="me-3 mb-2">
+            <label for="quickWarehouseSelect" class="form-label text-white mb-1">Quick Warehouse Select:</label>
+            <select class="form-select form-select-sm" id="quickWarehouseSelect" onchange="quickWarehouseChange()">
+              <option value="">Select Warehouse</option>
+              <!-- Will be populated dynamically -->
+            </select>
+          </div>
           <button class="btn" onclick="createNewZone()">
             <i class="bi bi-plus-circle"></i>
             New Zone
@@ -620,7 +637,16 @@
       <!-- Search and Filter Section -->
       <div class="search-filter-section">
         <div class="row">
-          <div class="col-md-3">
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="warehouseFilter">Warehouse</label>
+              <select class="form-select" id="warehouseFilter">
+                <option value="">All Warehouses</option>
+                <!-- Will be populated dynamically -->
+              </select>
+            </div>
+          </div>
+          <div class="col-md-2">
             <div class="filter-group">
               <label for="searchZone">Search Zones</label>
               <input type="text" class="form-control" id="searchZone" placeholder="Search by zone, type, or location...">
@@ -650,7 +676,7 @@
               </select>
             </div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <div class="filter-group">
               <label for="capacityRange">Capacity Range</label>
               <select class="form-select" id="capacityRange">
@@ -926,12 +952,36 @@
   let zonesData = [];
   let warehousesData = [];
   let currentZoneId = null;
+  
+  // Utility function to safely get element value
+  function getElementValue(elementId, defaultValue = '') {
+    const element = document.getElementById(elementId);
+    return element ? element.value : defaultValue;
+  }
+  
+  // Utility function to safely get element
+  function getElement(elementId) {
+    return document.getElementById(elementId);
+  }
+  
+  // Quick warehouse change handler
+  function quickWarehouseChange() {
+    const quickSelect = document.getElementById('quickWarehouseSelect');
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    
+    if (quickSelect && warehouseFilter) {
+      warehouseFilter.value = quickSelect.value;
+      // Trigger filter application
+      applyFilters();
+    }
+  }
 
   // Set current date
   document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
 
   // Initialize the page
   document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, initializing...');
     loadZones();
     loadWarehouses();
     loadZoneStats();
@@ -957,10 +1007,12 @@
   // Load warehouses from database
   async function loadWarehouses() {
     try {
+      console.log('Loading warehouses...');
       const response = await fetch('/api/warehouses');
       const result = await response.json();
       if (result.success) {
         warehousesData = result.data;
+        console.log('Warehouses loaded:', warehousesData);
         populateWarehouseSelect();
       }
     } catch (error) {
@@ -1224,12 +1276,20 @@
   }
 
   function populateWarehouseSelect() {
+    console.log('Populating warehouse selects...');
     const warehouseFilter = document.getElementById('warehouseFilter');
     const newZoneWarehouseSelect = document.getElementById('warehouseId');
     const editWarehouseSelect = document.getElementById('editWarehouseId');
+    const quickWarehouseSelect = document.getElementById('quickWarehouseSelect');
+    
+    console.log('Warehouse filter element:', warehouseFilter);
+    console.log('New zone warehouse select element:', newZoneWarehouseSelect);
+    console.log('Edit warehouse select element:', editWarehouseSelect);
+    console.log('Quick warehouse select element:', quickWarehouseSelect);
     
     // Populate warehouse filter
     if (warehouseFilter) {
+      console.log('Populating warehouse filter...');
       warehouseFilter.innerHTML = '<option value="">All Warehouses</option>';
       warehousesData.forEach(warehouse => {
         const option = document.createElement('option');
@@ -1237,6 +1297,16 @@
         option.textContent = warehouse.warehouse_name;
         warehouseFilter.appendChild(option);
       });
+      
+      // If there's only one warehouse, select it by default
+      if (warehousesData.length === 1) {
+        warehouseFilter.value = warehousesData[0].warehouse_id;
+        console.log('Auto-selected warehouse:', warehousesData[0].warehouse_id);
+        // Trigger filter application
+        setTimeout(() => applyFilters(), 100);
+      }
+    } else {
+      console.error('Warehouse filter element not found!');
     }
     
     // Populate new zone warehouse select
@@ -1260,6 +1330,22 @@
         editWarehouseSelect.appendChild(option);
       });
     }
+    
+    // Populate quick warehouse select
+    if (quickWarehouseSelect) {
+      quickWarehouseSelect.innerHTML = '<option value="">Select Warehouse</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        quickWarehouseSelect.appendChild(option);
+      });
+      
+      // If there's only one warehouse, select it by default
+      if (warehousesData.length === 1) {
+        quickWarehouseSelect.value = warehousesData[0].warehouse_id;
+      }
+    }
   }
 
   // Create new zone function
@@ -1271,9 +1357,26 @@
   async function optimizeLayout() {
     // Get the current warehouse ID from the warehouse selector
     const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
     const warehouseId = warehouseSelect.value;
     
     if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
       alert('Please select a warehouse first to optimize its layout.');
       return;
     }
@@ -1452,9 +1555,26 @@
   async function analyzeTraffic() {
     // Get the current warehouse ID from the warehouse selector
     const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
     const warehouseId = warehouseSelect.value;
     
     if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
       alert('Please select a warehouse first to analyze traffic patterns.');
       return;
     }
@@ -1673,9 +1793,26 @@
   async function generateHeatmap() {
     // Get the current warehouse ID from the warehouse selector
     const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
     const warehouseId = warehouseSelect.value;
     
     if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
       alert('Please select a warehouse first to generate a heatmap.');
       return;
     }
@@ -1736,6 +1873,11 @@
   async function generateHeatmapWithType() {
     const heatmapType = document.getElementById('heatmapTypeSelect').value;
     const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
     const warehouseId = warehouseSelect.value;
     
     // Close the type selection modal
@@ -1918,9 +2060,26 @@
   async function exportLayout() {
     // Get the current warehouse ID from the warehouse selector
     const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
     const warehouseId = warehouseSelect.value;
     
     if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
       alert('Please select a warehouse first to export its layout.');
       return;
     }
@@ -1981,6 +2140,11 @@
   async function exportLayoutWithFormat() {
     const exportFormat = document.getElementById('exportFormatSelect').value;
     const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
     const warehouseId = warehouseSelect.value;
     
     // Close the format selection modal
@@ -2457,13 +2621,15 @@
 
   // Apply filters to zones
   async function applyFilters() {
-    const searchTerm = document.getElementById('searchZone').value;
-    const status = document.getElementById('statusFilter').value;
-    const type = document.getElementById('typeFilter').value;
-    const capacity = document.getElementById('capacityRange').value;
+    const warehouseId = getElementValue('warehouseFilter', '');
+    const searchTerm = getElementValue('searchZone', '');
+    const status = getElementValue('statusFilter', '');
+    const type = getElementValue('typeFilter', '');
+    const capacity = getElementValue('capacityRange', '');
     
     try {
       const params = new URLSearchParams();
+      if (warehouseId) params.append('warehouse_id', warehouseId);
       if (searchTerm) params.append('search', searchTerm);
       if (status) params.append('status', status);
       if (type) params.append('zone_type', type);
@@ -2488,6 +2654,28 @@
     this.searchTimeout = setTimeout(() => {
       applyFilters();
     }, 300);
+  });
+
+  // Filter change event listeners
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for filter changes
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const capacityFilter = document.getElementById('capacityRange');
+    
+    if (warehouseFilter) {
+      warehouseFilter.addEventListener('change', applyFilters);
+    }
+    if (statusFilter) {
+      statusFilter.addEventListener('change', applyFilters);
+    }
+    if (typeFilter) {
+      typeFilter.addEventListener('change', applyFilters);
+    }
+    if (capacityFilter) {
+      capacityFilter.addEventListener('change', applyFilters);
+    }
   });
 
   // Refresh recommendations
