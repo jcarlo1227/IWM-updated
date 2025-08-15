@@ -46,7 +46,10 @@ const {
   deleteZone,
   getZoneStats,
   getZonesByWarehouse,
-  optimizeWarehouseLayout
+  optimizeWarehouseLayout,
+  analyzeWarehouseTraffic,
+  generateWarehouseHeatmap,
+  exportWarehouseLayout
 } = require('./inventory');
 require('dotenv').config();
 
@@ -899,6 +902,41 @@ app.post('/api/warehouses/:warehouseId/optimize', requireAuth, async (req, res) 
     res.json(result);
   } catch (error) {
     console.error('Error optimizing warehouse layout:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Warehouse traffic analysis endpoint
+app.post('/api/warehouses/:warehouseId/analyze-traffic', requireAuth, async (req, res) => {
+  try {
+    const result = await analyzeWarehouseTraffic(req.params.warehouseId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error analyzing warehouse traffic:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Warehouse heatmap generation endpoint
+app.post('/api/warehouses/:warehouseId/heatmap', requireAuth, async (req, res) => {
+  try {
+    const { heatmapType = 'utilization' } = req.body;
+    const result = await generateWarehouseHeatmap(req.params.warehouseId, heatmapType);
+    res.json(result);
+  } catch (error) {
+    console.error('Error generating warehouse heatmap:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Warehouse layout export endpoint
+app.post('/api/warehouses/:warehouseId/export', requireAuth, async (req, res) => {
+  try {
+    const { exportFormat = 'json' } = req.body;
+    const result = await exportWarehouseLayout(req.params.warehouseId, exportFormat);
+    res.json(result);
+  } catch (error) {
+    console.error('Error exporting warehouse layout:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

@@ -1435,6 +1435,385 @@ const generateOverallRecommendations = async (zones, warehouse) => {
   return recommendations;
 };
 
+// Traffic analysis functions
+const analyzeWarehouseTraffic = async (warehouseId) => {
+  try {
+    const sql = await database.sql();
+    
+    // Get zones with traffic patterns
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_type, z.zone_id
+    `;
+    
+    if (zones.length === 0) {
+      throw new Error('No zones found for this warehouse');
+    }
+    
+    const trafficAnalysis = {
+      warehouse_id: warehouseId,
+      warehouse_name: zones[0].warehouse_name,
+      analysis_date: new Date().toISOString(),
+      total_zones: zones.length,
+      traffic_patterns: {},
+      bottlenecks: [],
+      optimization_suggestions: [],
+      zone_flow_analysis: []
+    };
+    
+    // Analyze zone types and their relationships
+    const zoneTypes = {};
+    zones.forEach(zone => {
+      if (!zoneTypes[zone.zone_type]) {
+        zoneTypes[zone.zone_type] = [];
+      }
+      zoneTypes[zone.zone_type].push(zone);
+    });
+    
+    // Analyze traffic flow between zone types
+    if (zoneTypes.receiving && zoneTypes.storage) {
+      trafficAnalysis.traffic_patterns['receiving_to_storage'] = {
+        description: 'Receiving to Storage Flow',
+        zones_involved: zoneTypes.receiving.length + zoneTypes.storage.length,
+        efficiency_score: calculateFlowEfficiency(zoneTypes.receiving, zoneTypes.storage),
+        recommendations: generateFlowRecommendations('receiving', 'storage')
+      };
+    }
+    
+    if (zoneTypes.storage && zoneTypes.picking) {
+      trafficAnalysis.traffic_patterns['storage_to_picking'] = {
+        description: 'Storage to Picking Flow',
+        zones_involved: zoneTypes.storage.length + zoneTypes.picking.length,
+        efficiency_score: calculateFlowEfficiency(zoneTypes.storage, zoneTypes.picking),
+        recommendations: generateFlowRecommendations('storage', 'picking')
+      };
+    }
+    
+    if (zoneTypes.picking && zoneTypes.shipping) {
+      trafficAnalysis.traffic_patterns['picking_to_shipping'] = {
+        description: 'Picking to Shipping Flow',
+        zones_involved: zoneTypes.picking.length + zoneTypes.shipping.length,
+        efficiency_score: calculateFlowEfficiency(zoneTypes.picking, zoneTypes.shipping),
+        recommendations: generateFlowRecommendations('picking', 'shipping')
+      };
+    }
+    
+    // Identify bottlenecks
+    Object.entries(trafficAnalysis.traffic_patterns).forEach(([flow, data]) => {
+      if (data.efficiency_score < 70) {
+        trafficAnalysis.bottlenecks.push({
+          flow: flow,
+          description: data.description,
+          efficiency_score: data.efficiency_score,
+          impact: 'High',
+          suggestions: data.recommendations
+        });
+      }
+    });
+    
+    // Generate zone-specific flow analysis
+    zones.forEach(zone => {
+      const flowAnalysis = analyzeZoneFlow(zone, zones);
+      trafficAnalysis.zone_flow_analysis.push(flowAnalysis);
+    });
+    
+    // Overall optimization suggestions
+    if (trafficAnalysis.bottlenecks.length > 0) {
+      trafficAnalysis.optimization_suggestions.push('Implement cross-docking to reduce storage time');
+      trafficAnalysis.optimization_suggestions.push('Consider zone reallocation to minimize travel distances');
+      trafficAnalysis.optimization_suggestions.push('Review zone capacity to prevent bottlenecks');
+    }
+    
+    return {
+      success: true,
+      data: trafficAnalysis
+    };
+    
+  } catch (err) {
+    console.error('Error analyzing warehouse traffic:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
+const calculateFlowEfficiency = (sourceZones, targetZones) => {
+  // Calculate efficiency based on zone proximity, capacity, and utilization
+  let totalEfficiency = 0;
+  let count = 0;
+  
+  sourceZones.forEach(source => {
+    targetZones.forEach(target => {
+      if (source.capacity && source.current_usage && target.capacity && target.current_usage) {
+        const sourceUtilization = (source.current_usage / source.capacity) * 100;
+        const targetUtilization = (target.current_usage / target.capacity) * 100;
+        
+        // Efficiency decreases if either zone is over-utilized
+        let efficiency = 100;
+        if (sourceUtilization > 90 || targetUtilization > 90) efficiency -= 30;
+        else if (sourceUtilization > 80 || targetUtilization > 80) efficiency -= 20;
+        else if (sourceUtilization < 20 || targetUtilization < 20) efficiency -= 15;
+        
+        totalEfficiency += efficiency;
+        count++;
+      }
+    });
+  });
+  
+  return count > 0 ? Math.round(totalEfficiency / count) : 0;
+};
+
+const generateFlowRecommendations = (sourceType, targetType) => {
+  const recommendations = [];
+  
+  if (sourceType === 'receiving' && targetType === 'storage') {
+    recommendations.push('Ensure receiving zones are positioned near storage zones');
+    recommendations.push('Implement just-in-time storage to reduce holding time');
+  } else if (sourceType === 'storage' && targetType === 'picking') {
+    recommendations.push('Position high-demand items closer to picking zones');
+    recommendations.push('Consider zone consolidation for frequently picked items');
+  } else if (sourceType === 'picking' && targetType === 'shipping') {
+    recommendations.push('Optimize picking routes to minimize travel time');
+    recommendations.push('Implement batch picking for multiple orders');
+  }
+  
+  return recommendations;
+};
+
+const analyzeZoneFlow = (zone, allZones) => {
+  const analysis = {
+    zone_id: zone.zone_id,
+    zone_name: zone.zone_name,
+    zone_type: zone.zone_type,
+    flow_efficiency: 0,
+    connected_zones: [],
+    flow_issues: []
+  };
+  
+  // Find connected zones based on type
+  const connectedZones = allZones.filter(z => z.zone_id !== zone.zone_id);
+  
+  if (zone.zone_type === 'receiving') {
+    analysis.connected_zones = connectedZones.filter(z => z.zone_type === 'storage');
+  } else if (zone.zone_type === 'storage') {
+    analysis.connected_zones = connectedZones.filter(z => z.zone_type === 'picking');
+  } else if (zone.zone_type === 'picking') {
+    analysis.connected_zones = connectedZones.filter(z => z.zone_type === 'shipping');
+  }
+  
+  // Calculate flow efficiency
+  if (analysis.connected_zones.length > 0) {
+    analysis.flow_efficiency = Math.round((zone.efficiency || 0) * 0.7 + 
+                                        (analysis.connected_zones.length / allZones.length) * 100 * 0.3);
+  }
+  
+  // Identify flow issues
+  if (zone.current_usage && zone.capacity) {
+    const utilization = (zone.current_usage / zone.capacity) * 100;
+    if (utilization > 90) {
+      analysis.flow_issues.push('Zone is over-utilized, creating flow bottlenecks');
+    } else if (utilization < 20) {
+      analysis.flow_issues.push('Zone is under-utilized, inefficient for flow');
+    }
+  }
+  
+  return analysis;
+};
+
+// Heatmap generation functions
+const generateWarehouseHeatmap = async (warehouseId, heatmapType = 'utilization') => {
+  try {
+    const sql = await database.sql();
+    
+    // Get zones for heatmap
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
+    `;
+    
+    if (zones.length === 0) {
+      throw new Error('No zones found for this warehouse');
+    }
+    
+    const heatmapData = {
+      warehouse_id: warehouseId,
+      warehouse_name: zones[0].warehouse_name,
+      generated_date: new Date().toISOString(),
+      heatmap_type: heatmapType,
+      zones: [],
+      color_scale: {},
+      insights: []
+    };
+    
+    // Generate heatmap data based on type
+    zones.forEach(zone => {
+      let heatValue = 0;
+      let color = '#00ff00'; // Green
+      
+      if (heatmapType === 'utilization') {
+        if (zone.capacity && zone.current_usage) {
+          heatValue = Math.round((zone.current_usage / zone.capacity) * 100);
+        }
+      } else if (heatmapType === 'efficiency') {
+        heatValue = zone.efficiency || 0;
+      } else if (heatmapType === 'activity') {
+        // Simulate activity based on last_optimized and efficiency
+        const daysSinceOptimized = zone.last_optimized ? 
+          Math.floor((new Date() - new Date(zone.last_optimized)) / (1000 * 60 * 60 * 24)) : 30;
+        heatValue = Math.max(0, 100 - (daysSinceOptimized * 2));
+      }
+      
+      // Assign color based on heat value
+      if (heatValue >= 80) color = '#ff0000'; // Red
+      else if (heatValue >= 60) color = '#ffa500'; // Orange
+      else if (heatValue >= 40) color = '#ffff00'; // Yellow
+      else if (heatValue >= 20) color = '#00ff00'; // Green
+      else color = '#0000ff'; // Blue
+      
+      heatmapData.zones.push({
+        zone_id: zone.zone_id,
+        zone_name: zone.zone_name,
+        zone_type: zone.zone_type,
+        heat_value: heatValue,
+        color: color,
+        area_sqft: zone.area_sqft,
+        capacity: zone.capacity,
+        current_usage: zone.current_usage
+      });
+    });
+    
+    // Generate insights
+    const highHeatZones = heatmapData.zones.filter(z => z.heat_value >= 80);
+    const lowHeatZones = heatmapData.zones.filter(z => z.heat_value <= 20);
+    
+    if (highHeatZones.length > 0) {
+      heatmapData.insights.push(`${highHeatZones.length} zones showing high ${heatmapType} (${heatmapType === 'utilization' ? 'over-utilized' : 'high activity'})`);
+    }
+    
+    if (lowHeatZones.length > 0) {
+      heatmapData.insights.push(`${lowHeatZones.length} zones showing low ${heatmapType} (${heatmapType === 'utilization' ? 'under-utilized' : 'low activity'})`);
+    }
+    
+    // Color scale legend
+    heatmapData.color_scale = {
+      red: 'High (80-100%)',
+      orange: 'Medium-High (60-79%)',
+      yellow: 'Medium (40-59%)',
+      green: 'Medium-Low (20-39%)',
+      blue: 'Low (0-19%)'
+    };
+    
+    return {
+      success: true,
+      data: heatmapData
+    };
+    
+  } catch (err) {
+    console.error('Error generating warehouse heatmap:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
+// Layout export functions
+const exportWarehouseLayout = async (warehouseId, exportFormat = 'json') => {
+  try {
+    const sql = await database.sql();
+    
+    // Get comprehensive warehouse data
+    const warehouse = await sql`
+      SELECT * FROM warehouses WHERE warehouse_id = ${warehouseId}
+    `;
+    
+    if (warehouse.length === 0) {
+      throw new Error('Warehouse not found');
+    }
+    
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
+    `;
+    
+    const layoutData = {
+      export_info: {
+        warehouse_id: warehouseId,
+        warehouse_name: warehouse[0].warehouse_name,
+        export_date: new Date().toISOString(),
+        export_format: exportFormat,
+        total_zones: zones.length,
+        total_area: zones.reduce((sum, z) => sum + (z.area_sqft || 0), 0)
+      },
+      warehouse_details: warehouse[0],
+      zones: zones,
+      layout_summary: {
+        zone_types: {},
+        capacity_summary: {
+          total_capacity: zones.reduce((sum, z) => sum + (z.capacity || 0), 0),
+          total_usage: zones.reduce((sum, z) => sum + (z.current_usage || 0), 0),
+          average_utilization: 0
+        },
+        efficiency_summary: {
+          average_efficiency: 0,
+          optimal_zones: 0,
+          needs_improvement_zones: 0,
+          critical_zones: 0
+        }
+      }
+    };
+    
+    // Calculate summaries
+    const zoneTypes = {};
+    zones.forEach(zone => {
+      if (!zoneTypes[zone.zone_type]) zoneTypes[zone.zone_type] = 0;
+      zoneTypes[zone.zone_type]++;
+    });
+    layoutData.layout_summary.zone_types = zoneTypes;
+    
+    if (layoutData.layout_summary.capacity_summary.total_capacity > 0) {
+      layoutData.layout_summary.capacity_summary.average_utilization = 
+        Math.round((layoutData.layout_summary.capacity_summary.total_usage / 
+                   layoutData.layout_summary.capacity_summary.total_capacity) * 100);
+    }
+    
+    const efficiencies = zones.map(z => z.efficiency || 0).filter(e => e > 0);
+    if (efficiencies.length > 0) {
+      layoutData.layout_summary.efficiency_summary.average_efficiency = 
+        Math.round(efficiencies.reduce((sum, e) => sum + e, 0) / efficiencies.length);
+    }
+    
+    layoutData.layout_summary.efficiency_summary.optimal_zones = 
+      zones.filter(z => z.status === 'optimal').length;
+    layoutData.layout_summary.efficiency_summary.needs_improvement_zones = 
+      zones.filter(z => z.status === 'needs-improvement').length;
+    layoutData.layout_summary.efficiency_summary.critical_zones = 
+      zones.filter(z => z.status === 'critical').length;
+    
+    return {
+      success: true,
+      data: layoutData
+    };
+    
+  } catch (err) {
+    console.error('Error exporting warehouse layout:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
 module.exports = {
   initializeInventoryTable,
   initializeOrderShipmentsTable,
@@ -1466,5 +1845,8 @@ module.exports = {
   deleteZone,
   getZoneStats,
   getZonesByWarehouse,
-  optimizeWarehouseLayout
+  optimizeWarehouseLayout,
+  analyzeWarehouseTraffic,
+  generateWarehouseHeatmap,
+  exportWarehouseLayout
 };

@@ -840,6 +840,86 @@
   </div>
 </div>
 
+<!-- Edit Zone Modal -->
+<div class="modal fade" id="editZoneModal" tabindex="-1" aria-labelledby="editZoneModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editZoneModalLabel">Edit Zone</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editZoneForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editZoneId" class="form-label">Zone ID</label>
+                <input type="text" class="form-control" id="editZoneId" readonly>
+              </div>
+              <div class="mb-3">
+                <label for="editZoneName" class="form-label">Zone Name</label>
+                <input type="text" class="form-control" id="editZoneName" required>
+              </div>
+              <div class="mb-3">
+                <label for="editWarehouseId" class="form-label">Warehouse</label>
+                <select class="form-select" id="editWarehouseId" required>
+                  <!-- Will be populated dynamically -->
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="editZoneType" class="form-label">Zone Type</label>
+                <select class="form-select" id="editZoneType" required>
+                  <option value="receiving">Receiving</option>
+                  <option value="storage">Storage</option>
+                  <option value="picking">Picking</option>
+                  <option value="shipping">Shipping</option>
+                  <option value="returns">Returns</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editAreaSqft" class="form-label">Area (sq ft)</label>
+                <input type="number" class="form-control" id="editAreaSqft">
+              </div>
+              <div class="mb-3">
+                <label for="editCapacity" class="form-label">Capacity</label>
+                <input type="number" class="form-control" id="editCapacity">
+              </div>
+              <div class="mb-3">
+                <label for="editCapacityUnit" class="form-label">Capacity Unit</label>
+                <input type="text" class="form-control" id="editCapacityUnit" placeholder="e.g., pallets, units, SKUs">
+              </div>
+              <div class="mb-3">
+                <label for="editCurrentUsage" class="form-label">Current Usage</label>
+                <input type="number" class="form-control" id="editCurrentUsage" min="0">
+              </div>
+              <div class="mb-3">
+                <label for="editEfficiency" class="form-label">Efficiency (%)</label>
+                <input type="number" class="form-control" id="editEfficiency" min="0" max="100">
+              </div>
+              <div class="mb-3">
+                <label for="editStatus" class="form-label">Status</label>
+                <select class="form-select" id="editStatus">
+                  <option value="active">Active</option>
+                  <option value="optimal">Optimal</option>
+                  <option value="needs-improvement">Needs Improvement</option>
+                  <option value="critical">Critical</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveZoneEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   // Global variables
@@ -1144,16 +1224,42 @@
   }
 
   function populateWarehouseSelect() {
-    const select = document.getElementById('warehouseId');
-    if (!select) return;
-
-    select.innerHTML = '<option value="">Select Warehouse</option>';
-    warehousesData.forEach(warehouse => {
-      const option = document.createElement('option');
-      option.value = warehouse.warehouse_id;
-      option.textContent = warehouse.warehouse_name;
-      select.appendChild(option);
-    });
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    const newZoneWarehouseSelect = document.getElementById('warehouseId');
+    const editWarehouseSelect = document.getElementById('editWarehouseId');
+    
+    // Populate warehouse filter
+    if (warehouseFilter) {
+      warehouseFilter.innerHTML = '<option value="">All Warehouses</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        warehouseFilter.appendChild(option);
+      });
+    }
+    
+    // Populate new zone warehouse select
+    if (newZoneWarehouseSelect) {
+      newZoneWarehouseSelect.innerHTML = '<option value="">Select Warehouse</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        newZoneWarehouseSelect.appendChild(option);
+      });
+    }
+    
+    // Populate edit zone warehouse select
+    if (editWarehouseSelect) {
+      editWarehouseSelect.innerHTML = '<option value="">Select Warehouse</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        editWarehouseSelect.appendChild(option);
+      });
+    }
   }
 
   // Create new zone function
@@ -1343,16 +1449,584 @@
     modal.show();
   }
 
-  function analyzeTraffic() {
-    alert('Traffic Analysis functionality would be implemented here');
+  async function analyzeTraffic() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      alert('Please select a warehouse first to analyze traffic patterns.');
+      return;
+    }
+    
+    if (confirm('This will analyze traffic patterns for warehouse: ' + warehouseSelect.options[warehouseSelect.selectedIndex].text + '\n\nThis may take a few moments. Continue?')) {
+      try {
+        // Show loading state
+        const trafficBtn = document.querySelector('button[onclick="analyzeTraffic()"]');
+        const originalText = trafficBtn.innerHTML;
+        trafficBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Analyzing...';
+        trafficBtn.disabled = true;
+        
+        // Call the traffic analysis API
+        const response = await fetch(`/api/warehouses/${warehouseId}/analyze-traffic`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Display traffic analysis results
+          displayTrafficAnalysisResults(result.data);
+          alert('Traffic analysis completed successfully!');
+        } else {
+          alert('Error during traffic analysis: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Error analyzing traffic:', error);
+        alert('Error during traffic analysis. Please try again.');
+      } finally {
+        // Restore button state
+        const trafficBtn = document.querySelector('button[onclick="analyzeTraffic()"]');
+        trafficBtn.innerHTML = originalText;
+        trafficBtn.disabled = false;
+      }
+    }
   }
-
-  function generateHeatmap() {
-    alert('Heat Map Generation functionality would be implemented here');
+  
+  function displayTrafficAnalysisResults(results) {
+    // Create a modal to display traffic analysis results
+    const modalHtml = `
+      <div class="modal fade" id="trafficAnalysisModal" tabindex="-1" aria-labelledby="trafficAnalysisModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="trafficAnalysisModalLabel">
+                <i class="bi bi-graph-up text-info"></i> 
+                Traffic Analysis Results - ${results.warehouse_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Total Zones</h6>
+                      <h3 class="text-primary">${results.total_zones}</h3>
+                      <small class="text-muted">${new Date(results.analysis_date).toLocaleDateString()}</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Traffic Patterns</h6>
+                      <h3 class="text-info">${Object.keys(results.traffic_patterns).length}</h3>
+                      <small class="text-muted">Flow paths analyzed</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Bottlenecks</h6>
+                      <h3 class="text-danger">${results.bottlenecks.length}</h3>
+                      <small class="text-muted">Requires attention</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Suggestions</h6>
+                      <h3 class="text-success">${results.optimization_suggestions.length}</h3>
+                      <small class="text-muted">Optimization tips</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-arrow-left-right text-primary"></i> Traffic Flow Patterns</h6>
+                  <div class="row">
+                    ${Object.entries(results.traffic_patterns).map(([flow, data]) => `
+                      <div class="col-md-6 mb-3">
+                        <div class="card ${data.efficiency_score < 70 ? 'border-danger' : data.efficiency_score < 85 ? 'border-warning' : 'border-success'}">
+                          <div class="card-header d-flex justify-content-between align-items-center">
+                            <strong>${data.description}</strong>
+                            <span class="badge bg-${data.efficiency_score < 70 ? 'danger' : data.efficiency_score < 85 ? 'warning' : 'success'}">${data.efficiency_score}%</span>
+                          </div>
+                          <div class="card-body">
+                            <p><strong>Zones Involved:</strong> ${data.zones_involved}</p>
+                            <p><strong>Efficiency Score:</strong> ${data.efficiency_score}%</p>
+                            <div class="progress mb-2" style="height: 8px;">
+                              <div class="progress-bar bg-${data.efficiency_score < 70 ? 'danger' : data.efficiency_score < 85 ? 'warning' : 'success'}" 
+                                   style="width: ${data.efficiency_score}%"></div>
+                            </div>
+                            <h6>Recommendations:</h6>
+                            <ul class="mb-0">
+                              ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              
+              ${results.bottlenecks.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-exclamation-triangle text-danger"></i> Identified Bottlenecks</h6>
+                    <div class="alert alert-danger">
+                      <ul class="mb-0">
+                        ${results.bottlenecks.map(bottleneck => `
+                          <li><strong>${bottleneck.description}</strong> (${bottleneck.efficiency_score}% efficiency)
+                            <ul>
+                              ${bottleneck.suggestions.map(sug => `<li>${sug}</li>`).join('')}
+                            </ul>
+                          </li>
+                        `).join('')}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${results.optimization_suggestions.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-lightbulb text-warning"></i> Optimization Suggestions</h6>
+                    <ul class="list-group">
+                      ${results.optimization_suggestions.map(sug => `<li class="list-group-item"><i class="bi bi-check-circle text-success me-2"></i>${sug}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              ` : ''}
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-diagram-3 text-secondary"></i> Zone Flow Analysis</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Zone</th>
+                          <th>Type</th>
+                          <th>Flow Efficiency</th>
+                          <th>Connected Zones</th>
+                          <th>Issues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${results.zone_flow_analysis.map(zone => `
+                          <tr>
+                            <td><strong>${zone.zone_name}</strong><br><small class="text-muted">${zone.zone_id}</small></td>
+                            <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+                            <td>
+                              <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-${zone.flow_efficiency < 50 ? 'danger' : zone.flow_efficiency < 75 ? 'warning' : 'success'}" 
+                                     style="width: ${zone.flow_efficiency}%"></div>
+                              </div>
+                              <small>${zone.flow_efficiency}%</small>
+                            </td>
+                            <td>${zone.connected_zones.length}</td>
+                            <td>${zone.flow_issues.length > 0 ? zone.flow_issues.join(', ') : 'None'}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportTrafficReport()">
+                <i class="bi bi-download"></i> Export Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('trafficAnalysisModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('trafficAnalysisModal'));
+    modal.show();
   }
-
-  function exportLayout() {
-    alert('Export Layout functionality would be implemented here');
+  
+  async function generateHeatmap() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      alert('Please select a warehouse first to generate a heatmap.');
+      return;
+    }
+    
+    // Show heatmap type selection modal
+    const heatmapTypeModal = `
+      <div class="modal fade" id="heatmapTypeModal" tabindex="-1" aria-labelledby="heatmapTypeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="heatmapTypeModalLabel">
+                <i class="bi bi-thermometer-half text-warning"></i> Select Heatmap Type
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Choose the type of heatmap to generate:</label>
+                <select class="form-select" id="heatmapTypeSelect">
+                  <option value="utilization">Capacity Utilization</option>
+                  <option value="efficiency">Zone Efficiency</option>
+                  <option value="activity">Zone Activity</option>
+                </select>
+              </div>
+              <div class="alert alert-info">
+                <small>
+                  <strong>Capacity Utilization:</strong> Shows how full each zone is<br>
+                  <strong>Zone Efficiency:</strong> Shows performance efficiency scores<br>
+                  <strong>Zone Activity:</strong> Shows recent activity levels
+                </small>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" onclick="generateHeatmapWithType()">
+                <i class="bi bi-thermometer-half"></i> Generate Heatmap
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('heatmapTypeModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', heatmapTypeModal);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('heatmapTypeModal'));
+    modal.show();
+  }
+  
+  async function generateHeatmapWithType() {
+    const heatmapType = document.getElementById('heatmapTypeSelect').value;
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    const warehouseId = warehouseSelect.value;
+    
+    // Close the type selection modal
+    bootstrap.Modal.getInstance(document.getElementById('heatmapTypeModal')).hide();
+    
+    try {
+      // Show loading state
+      const heatmapBtn = document.querySelector('button[onclick="generateHeatmap()"]');
+      const originalText = heatmapBtn.innerHTML;
+      heatmapBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Generating...';
+      heatmapBtn.disabled = true;
+      
+      // Call the heatmap generation API
+      const response = await fetch(`/api/warehouses/${warehouseId}/heatmap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ heatmapType })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Display heatmap results
+        displayHeatmapResults(result.data);
+        alert('Heatmap generated successfully!');
+      } else {
+        alert('Error generating heatmap: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error generating heatmap:', error);
+      alert('Error generating heatmap. Please try again.');
+    } finally {
+      // Restore button state
+      const heatmapBtn = document.querySelector('button[onclick="generateHeatmap()"]');
+      heatmapBtn.innerHTML = originalText;
+      heatmapBtn.disabled = false;
+    }
+  }
+  
+  function displayHeatmapResults(results) {
+    // Create a modal to display heatmap results
+    const modalHtml = `
+      <div class="modal fade" id="heatmapResultsModal" tabindex="-1" aria-labelledby="heatmapResultsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="heatmapResultsModalLabel">
+                <i class="bi bi-thermometer-half text-warning"></i> 
+                ${results.heatmap_type.charAt(0).toUpperCase() + results.heatmap_type.slice(1)} Heatmap - ${results.warehouse_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Zones Analyzed</h6>
+                      <h3 class="text-primary">${results.zones.length}</h3>
+                      <small class="text-muted">${new Date(results.generated_date).toLocaleDateString()}</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Heatmap Type</h6>
+                      <h3 class="text-warning">${results.heatmap_type.charAt(0).toUpperCase() + results.heatmap_type.slice(1)}</h3>
+                      <small class="text-muted">Analysis metric</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-palette text-secondary"></i> Color Scale Legend</h6>
+                  <div class="row">
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #ff0000; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">High (80-100%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #ffa500; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Medium-High (60-79%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #ffff00; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Medium (40-59%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #00ff00; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Medium-Low (20-39%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #0000ff; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Low (0-19%)</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-lightbulb text-info"></i> Key Insights</h6>
+                  <ul class="list-group">
+                    ${results.insights.map(insight => `<li class="list-group-item"><i class="bi bi-info-circle text-info me-2"></i>${insight}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-grid-3x3-gap text-primary"></i> Zone Heatmap Data</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Zone</th>
+                          <th>Type</th>
+                          <th>Heat Value</th>
+                          <th>Color</th>
+                          <th>Area (sq ft)</th>
+                          <th>Capacity</th>
+                          <th>Current Usage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${results.zones.map(zone => `
+                          <tr>
+                            <td><strong>${zone.zone_name}</strong><br><small class="text-muted">${zone.zone_id}</small></td>
+                            <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+                            <td>
+                              <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" style="width: ${zone.heat_value}%; background-color: ${zone.color};"></div>
+                              </div>
+                              <small>${zone.heat_value}%</small>
+                            </td>
+                            <td>
+                              <div style="width: 20px; height: 20px; background-color: ${zone.color}; border-radius: 3px;"></div>
+                            </td>
+                            <td>${zone.area_sqft || 'N/A'}</td>
+                            <td>${zone.capacity || 'N/A'}</td>
+                            <td>${zone.current_usage || 'N/A'}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportHeatmapReport()">
+                <i class="bi bi-download"></i> Export Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('heatmapResultsModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('heatmapResultsModal'));
+    modal.show();
+  }
+  
+  async function exportLayout() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      alert('Please select a warehouse first to export its layout.');
+      return;
+    }
+    
+    // Show export format selection modal
+    const exportFormatModal = `
+      <div class="modal fade" id="exportFormatModal" tabindex="-1" aria-labelledby="exportFormatModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exportFormatModalLabel">
+                <i class="bi bi-download text-success"></i> Select Export Format
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Choose the export format:</label>
+                <select class="form-select" id="exportFormatSelect">
+                  <option value="json">JSON (Structured Data)</option>
+                  <option value="csv">CSV (Spreadsheet)</option>
+                  <option value="txt">Text Report</option>
+                </select>
+              </div>
+              <div class="alert alert-info">
+                <small>
+                  <strong>JSON:</strong> Best for data processing and integration<br>
+                  <strong>CSV:</strong> Best for spreadsheet analysis<br>
+                  <strong>Text:</strong> Best for human reading and reporting
+                </small>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" onclick="exportLayoutWithFormat()">
+                <i class="bi bi-download"></i> Export Layout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('exportFormatModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', exportFormatModal);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('exportFormatModal'));
+    modal.show();
+  }
+  
+  async function exportLayoutWithFormat() {
+    const exportFormat = document.getElementById('exportFormatSelect').value;
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    const warehouseId = warehouseSelect.value;
+    
+    // Close the format selection modal
+    bootstrap.Modal.getInstance(document.getElementById('exportFormatModal')).hide();
+    
+    try {
+      // Show loading state
+      const exportBtn = document.querySelector('button[onclick="exportLayout()"]');
+      const originalText = exportBtn.innerHTML;
+      exportBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Exporting...';
+      exportBtn.disabled = true;
+      
+      // Call the layout export API
+      const response = await fetch(`/api/warehouses/${warehouseId}/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ exportFormat })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Handle the export based on format
+        if (exportFormat === 'json') {
+          downloadJSON(result.data, `warehouse_layout_${result.data.export_info.warehouse_name.replace(/\s+/g, '_')}.json`);
+        } else if (exportFormat === 'csv') {
+          downloadCSV(result.data, `warehouse_layout_${result.data.export_info.warehouse_name.replace(/\s+/g, '_')}.csv`);
+        } else {
+          downloadTextReport(result.data, `warehouse_layout_${result.data.export_info.warehouse_name.replace(/\s+/g, '_')}.txt`);
+        }
+        
+        alert('Layout exported successfully!');
+      } else {
+        alert('Error exporting layout: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error exporting layout:', error);
+      alert('Error exporting layout. Please try again.');
+    } finally {
+      // Restore button state
+      const exportBtn = document.querySelector('button[onclick="exportLayout()"]');
+      exportBtn.innerHTML = originalText;
+      exportBtn.disabled = false;
+    }
   }
 
   // Save new zone
@@ -1489,9 +2163,85 @@
 
   // Edit zone
   function editZone(id) {
-    // For now, just show the zone details modal
-    // In a full implementation, you would populate an edit form
-    viewZone(id);
+    // Load zone data and populate edit form
+    loadZoneForEdit(id);
+  }
+  
+  async function loadZoneForEdit(zoneId) {
+    try {
+      const response = await fetch(`/api/zones/${zoneId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        const zone = result.data;
+        
+        // Populate the edit form
+        document.getElementById('editZoneId').value = zone.zone_id;
+        document.getElementById('editZoneName').value = zone.zone_name;
+        document.getElementById('editWarehouseId').value = zone.warehouse_id;
+        document.getElementById('editZoneType').value = zone.zone_type;
+        document.getElementById('editAreaSqft').value = zone.area_sqft || '';
+        document.getElementById('editCapacity').value = zone.capacity || '';
+        document.getElementById('editCapacityUnit').value = zone.capacity_unit || '';
+        document.getElementById('editCurrentUsage').value = zone.current_usage || '';
+        document.getElementById('editEfficiency').value = zone.efficiency || '';
+        document.getElementById('editStatus').value = zone.status || 'active';
+        
+        // Show the edit modal
+        const modal = new bootstrap.Modal(document.getElementById('editZoneModal'));
+        modal.show();
+      } else {
+        alert('Error loading zone for editing: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error loading zone for editing:', error);
+      alert('Error loading zone for editing. Please try again.');
+    }
+  }
+  
+  async function saveZoneEdit() {
+    const form = document.getElementById('editZoneForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    
+    const zoneId = document.getElementById('editZoneId').value;
+    const zoneData = {
+      zone_name: document.getElementById('editZoneName').value,
+      warehouse_id: document.getElementById('editWarehouseId').value,
+      zone_type: document.getElementById('editZoneType').value,
+      area_sqft: parseInt(document.getElementById('editAreaSqft').value) || null,
+      capacity: parseInt(document.getElementById('editCapacity').value) || null,
+      capacity_unit: document.getElementById('editCapacityUnit').value || null,
+      current_usage: parseInt(document.getElementById('editCurrentUsage').value) || 0,
+      efficiency: parseInt(document.getElementById('editEfficiency').value) || 0,
+      status: document.getElementById('editStatus').value
+    };
+    
+    try {
+      const response = await fetch(`/api/zones/${zoneId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(zoneData)
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        alert('Zone updated successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('editZoneModal')).hide();
+        await loadZones();
+        await loadZoneStats();
+        await loadRecommendations();
+      } else {
+        alert('Error updating zone: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error updating zone:', error);
+      alert('Error updating zone. Please try again.');
+    }
   }
 
   // Edit zone from modal
@@ -1502,7 +2252,207 @@
 
   // View analytics
   function viewAnalytics(id) {
-    alert('Analytics view for zone ' + id + ' would be implemented here');
+    // Find the zone data
+    const zone = zonesData.find(z => z.zone_id === id);
+    if (!zone) {
+      alert('Zone not found');
+      return;
+    }
+    
+    // Create analytics modal
+    const analyticsModal = `
+      <div class="modal fade" id="zoneAnalyticsModal" tabindex="-1" aria-labelledby="zoneAnalyticsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="zoneAnalyticsModalLabel">
+                <i class="bi bi-graph-up text-success"></i> 
+                Zone Analytics - ${zone.zone_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Efficiency</h6>
+                      <h3 class="text-${zone.efficiency >= 80 ? 'success' : zone.efficiency >= 60 ? 'warning' : 'danger'}">${zone.efficiency || 0}%</h3>
+                      <small class="text-muted">Performance score</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Utilization</h6>
+                      <h3 class="text-${zone.capacity && zone.current_usage ? ((zone.current_usage / zone.capacity) * 100 > 80 ? 'danger' : (zone.current_usage / zone.capacity) * 100 > 60 ? 'warning' : 'success') : 'secondary'}">${zone.capacity && zone.current_usage ? Math.round((zone.current_usage / zone.capacity) * 100) : 0}%</h3>
+                      <small class="text-muted">Capacity usage</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Area</h6>
+                      <h3 class="text-primary">${zone.area_sqft || 'N/A'}</h3>
+                      <small class="text-muted">Square feet</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Status</h6>
+                      <h3 class="text-${zone.status === 'optimal' ? 'success' : zone.status === 'needs-improvement' ? 'warning' : zone.status === 'critical' ? 'danger' : 'secondary'}">${zone.status || 'N/A'}</h3>
+                      <small class="text-muted">Current status</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-chart-line text-info"></i> Performance Metrics</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <tbody>
+                        <tr>
+                          <td><strong>Zone ID:</strong></td>
+                          <td>${zone.zone_id}</td>
+                          <td><strong>Zone Type:</strong></td>
+                          <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>Capacity:</strong></td>
+                          <td>${zone.capacity || 'N/A'} ${zone.capacity_unit || ''}</td>
+                          <td><strong>Current Usage:</strong></td>
+                          <td>${zone.current_usage || 'N/A'} ${zone.capacity_unit || ''}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Last Optimized:</strong></td>
+                          <td>${zone.last_optimized || 'Never'}</td>
+                          <td><strong>Created:</strong></td>
+                          <td>${zone.created_at ? new Date(zone.created_at).toLocaleDateString() : 'N/A'}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-lightbulb text-warning"></i> Recommendations</h6>
+                  <ul class="list-group">
+                    ${generateZoneRecommendations(zone).map(rec => `<li class="list-group-item"><i class="bi bi-arrow-right text-primary me-2"></i>${rec}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportZoneAnalytics()">
+                <i class="bi bi-download"></i> Export Analytics
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('zoneAnalyticsModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', analyticsModal);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('zoneAnalyticsModal'));
+    modal.show();
+  }
+  
+  function generateZoneRecommendations(zone) {
+    const recommendations = [];
+    
+    if (zone.efficiency < 70) {
+      recommendations.push('Zone efficiency is below optimal. Consider process optimization and training.');
+    }
+    
+    if (zone.capacity && zone.current_usage) {
+      const utilization = (zone.current_usage / zone.capacity) * 100;
+      if (utilization > 90) {
+        recommendations.push('Zone is over-utilized. Consider redistributing inventory or expanding capacity.');
+      } else if (utilization < 30) {
+        recommendations.push('Zone is under-utilized. Consider consolidating with other zones or reallocating space.');
+      }
+    }
+    
+    if (zone.status === 'critical') {
+      recommendations.push('Zone status is critical. Immediate attention and optimization required.');
+    }
+    
+    if (!zone.last_optimized) {
+      recommendations.push('Zone has never been optimized. Schedule optimization analysis.');
+    }
+    
+    if (recommendations.length === 0) {
+      recommendations.push('Zone is performing well. Continue monitoring and maintenance.');
+    }
+    
+    return recommendations;
+  }
+  
+  function exportZoneAnalytics() {
+    const modal = document.getElementById('zoneAnalyticsModal');
+    if (!modal) {
+      alert('No analytics data to export.');
+      return;
+    }
+    
+    const zoneName = document.getElementById('zoneAnalyticsModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `ZONE ANALYTICS REPORT\n`;
+    report += `=====================\n\n`;
+    report += `Zone: ${zoneName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add performance metrics
+    const metrics = modal.querySelectorAll('.card-body h3');
+    const labels = modal.querySelectorAll('.card-title');
+    
+    report += `PERFORMANCE METRICS:\n`;
+    report += `===================\n`;
+    for (let i = 0; i < metrics.length; i++) {
+      report += `${labels[i].textContent}: ${metrics[i].textContent}\n`;
+    }
+    
+    // Add recommendations
+    const recommendations = modal.querySelectorAll('.list-group-item');
+    if (recommendations.length > 0) {
+      report += `\nRECOMMENDATIONS:\n`;
+      report += `================\n`;
+      recommendations.forEach((rec, index) => {
+        report += `${index + 1}. ${rec.textContent.trim()}\n`;
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zone_analytics_${zoneName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Zone analytics report exported successfully!');
   }
 
   // Apply filters to zones
@@ -1629,6 +2579,207 @@
     if (confirm('Are you sure you want to sign out?')) {
       alert('Signing out...');
     }
+  }
+
+  // Export functions
+  function exportTrafficReport() {
+    const modal = document.getElementById('trafficAnalysisModal');
+    if (!modal) {
+      alert('No traffic analysis results to export.');
+      return;
+    }
+    
+    const warehouseName = document.getElementById('trafficAnalysisModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `WAREHOUSE TRAFFIC ANALYSIS REPORT\n`;
+    report += `=====================================\n\n`;
+    report += `Warehouse: ${warehouseName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add traffic patterns
+    const trafficPatterns = modal.querySelectorAll('.card-header strong');
+    if (trafficPatterns.length > 0) {
+      report += `TRAFFIC FLOW PATTERNS:\n`;
+      report += `======================\n`;
+      trafficPatterns.forEach((pattern, index) => {
+        const card = pattern.closest('.card');
+        const efficiency = card.querySelector('.badge').textContent;
+        const zonesInvolved = card.querySelector('p').textContent;
+        const recommendations = Array.from(card.querySelectorAll('li')).map(li => li.textContent);
+        
+        report += `\n${index + 1}. ${pattern.textContent}\n`;
+        report += `   Efficiency: ${efficiency}\n`;
+        report += `   ${zonesInvolved}\n`;
+        report += `   Recommendations:\n`;
+        recommendations.forEach(rec => report += `     - ${rec}\n`);
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `traffic_analysis_${warehouseName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Traffic analysis report exported successfully!');
+  }
+  
+  function exportHeatmapReport() {
+    const modal = document.getElementById('heatmapResultsModal');
+    if (!modal) {
+      alert('No heatmap results to export.');
+      return;
+    }
+    
+    const warehouseName = document.getElementById('heatmapResultsModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `WAREHOUSE HEATMAP REPORT\n`;
+    report += `=========================\n\n`;
+    report += `Warehouse: ${warehouseName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add zone data
+    const zoneRows = modal.querySelectorAll('tbody tr');
+    if (zoneRows.length > 0) {
+      report += `ZONE HEATMAP DATA:\n`;
+      report += `==================\n`;
+      zoneRows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        const zoneName = cells[0].querySelector('strong').textContent;
+        const zoneId = cells[0].querySelector('small').textContent;
+        const zoneType = cells[1].textContent;
+        const heatValue = cells[2].querySelector('small').textContent;
+        const area = cells[4].textContent;
+        const capacity = cells[5].textContent;
+        const usage = cells[6].textContent;
+        
+        report += `\n${index + 1}. ${zoneName} (${zoneId})\n`;
+        report += `   Type: ${zoneType}\n`;
+        report += `   Heat Value: ${heatValue}\n`;
+        report += `   Area: ${area}\n`;
+        report += `   Capacity: ${capacity}\n`;
+        report += `   Current Usage: ${usage}\n`;
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `heatmap_${warehouseName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Heatmap report exported successfully!');
+  }
+  
+  // Download utility functions
+  function downloadJSON(data, filename) {
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+  
+  function downloadCSV(data, filename) {
+    let csvContent = '';
+    
+    // Add export info
+    csvContent += 'Export Info\n';
+    csvContent += `Warehouse ID,${data.export_info.warehouse_id}\n`;
+    csvContent += `Warehouse Name,${data.export_info.warehouse_name}\n`;
+    csvContent += `Export Date,${data.export_info.export_date}\n`;
+    csvContent += `Total Zones,${data.export_info.total_zones}\n`;
+    csvContent += `Total Area,${data.export_info.total_area}\n\n`;
+    
+    // Add layout summary
+    csvContent += 'Layout Summary\n';
+    csvContent += `Zone Types,${Object.entries(data.layout_summary.zone_types).map(([type, count]) => `${type}: ${count}`).join('; ')}\n`;
+    csvContent += `Total Capacity,${data.layout_summary.capacity_summary.total_capacity}\n`;
+    csvContent += `Total Usage,${data.layout_summary.capacity_summary.total_usage}\n`;
+    csvContent += `Average Utilization,${data.layout_summary.capacity_summary.average_utilization}%\n`;
+    csvContent += `Average Efficiency,${data.layout_summary.efficiency_summary.average_efficiency}%\n`;
+    csvContent += `Optimal Zones,${data.layout_summary.efficiency_summary.optimal_zones}\n`;
+    csvContent += `Needs Improvement,${data.layout_summary.efficiency_summary.needs_improvement_zones}\n`;
+    csvContent += `Critical Zones,${data.layout_summary.efficiency_summary.critical_zones}\n\n`;
+    
+    // Add zones data
+    csvContent += 'Zones Data\n';
+    csvContent += 'Zone ID,Zone Name,Warehouse ID,Zone Type,Area (sq ft),Capacity,Capacity Unit,Current Usage,Efficiency,Status,Last Optimized,Created At,Updated At\n';
+    
+    data.zones.forEach(zone => {
+      csvContent += `${zone.zone_id},${zone.zone_name},${zone.warehouse_id},${zone.zone_type},${zone.area_sqft || ''},${zone.capacity || ''},${zone.capacity_unit || ''},${zone.current_usage || ''},${zone.efficiency || ''},${zone.status || ''},${zone.last_optimized || ''},${zone.created_at || ''},${zone.updated_at || ''}\n`;
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+  
+  function downloadTextReport(data, filename) {
+    let report = `WAREHOUSE LAYOUT EXPORT REPORT\n`;
+    report += `================================\n\n`;
+    report += `Export Information:\n`;
+    report += `- Warehouse ID: ${data.export_info.warehouse_id}\n`;
+    report += `- Warehouse Name: ${data.export_info.warehouse_name}\n`;
+    report += `- Export Date: ${data.export_info.export_date}\n`;
+    report += `- Total Zones: ${data.export_info.total_zones}\n`;
+    report += `- Total Area: ${data.export_info.total_area} sq ft\n\n`;
+    
+    report += `Layout Summary:\n`;
+    report += `- Zone Types: ${Object.entries(data.layout_summary.zone_types).map(([type, count]) => `${type}: ${count}`).join(', ')}\n`;
+    report += `- Total Capacity: ${data.layout_summary.capacity_summary.total_capacity}\n`;
+    report += `- Total Usage: ${data.layout_summary.capacity_summary.total_usage}\n`;
+    report += `- Average Utilization: ${data.layout_summary.capacity_summary.average_utilization}%\n`;
+    report += `- Average Efficiency: ${data.layout_summary.efficiency_summary.average_efficiency}%\n`;
+    report += `- Optimal Zones: ${data.layout_summary.efficiency_summary.optimal_zones}\n`;
+    report += `- Needs Improvement: ${data.layout_summary.efficiency_summary.needs_improvement_zones}\n`;
+    report += `- Critical Zones: ${data.layout_summary.efficiency_summary.critical_zones}\n\n`;
+    
+    report += `Zones Details:\n`;
+    report += `==============\n`;
+    data.zones.forEach((zone, index) => {
+      report += `\n${index + 1}. ${zone.zone_name} (${zone.zone_id})\n`;
+      report += `   Type: ${zone.zone_type}\n`;
+      report += `   Area: ${zone.area_sqft || 'N/A'} sq ft\n`;
+      report += `   Capacity: ${zone.capacity || 'N/A'} ${zone.capacity_unit || ''}\n`;
+      report += `   Current Usage: ${zone.current_usage || 'N/A'}\n`;
+      report += `   Efficiency: ${zone.efficiency || 'N/A'}%\n`;
+      report += `   Status: ${zone.status || 'N/A'}\n`;
+      report += `   Last Optimized: ${zone.last_optimized || 'Never'}\n`;
+    });
+    
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   }
 </script>
 </body>
