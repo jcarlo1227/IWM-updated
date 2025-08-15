@@ -431,6 +431,111 @@
         padding: 0.75rem;
       }
     }
+    
+    /* Real-time Status Bar Styling */
+    .real-time-status-bar {
+      background: linear-gradient(135deg, var(--primary-color), var(--tertiary-header));
+      color: white;
+      padding: 0.75rem 0;
+      margin-bottom: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .real-time-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+    
+    .real-time-indicator.active {
+      background-color: #00ff00;
+      box-shadow: 0 0 10px #00ff00;
+    }
+    
+    .real-time-indicator.inactive {
+      background-color: #ff0000;
+      box-shadow: 0 0 10px #ff0000;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    /* Notification Badge Styling */
+    .notification-badge {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .notification-badge:hover {
+      transform: scale(1.1);
+    }
+    
+    /* Overview Sections Styling */
+    .inventory-overview-section,
+    .order-shipment-overview-section,
+    .scan-history-overview-section {
+      transition: all 0.3s ease;
+    }
+    
+    .inventory-overview-section:hover,
+    .order-shipment-overview-section:hover,
+    .scan-history-overview-section:hover {
+      transform: translateY(-2px);
+    }
+    
+    .inventory-overview-section .card,
+    .order-shipment-overview-section .card,
+    .scan-history-overview-section .card {
+      transition: all 0.3s ease;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .inventory-overview-section .card:hover,
+    .order-shipment-overview-section .card:hover,
+    .scan-history-overview-section .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    /* Real-time Update Animations */
+    .real-time-update {
+      animation: realTimeUpdate 0.5s ease-in-out;
+    }
+    
+    @keyframes realTimeUpdate {
+      0% { opacity: 0.7; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.02); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    
+    /* Responsive Design for Overview Sections */
+    @media (max-width: 768px) {
+      .real-time-status-bar {
+        padding: 0.5rem 0;
+      }
+      
+      .real-time-status-bar .col-md-6 {
+        margin-bottom: 0.5rem;
+      }
+      
+      .real-time-status-bar .text-end {
+        text-align: left !important;
+      }
+      
+      .inventory-overview-section .col-md-3,
+      .order-shipment-overview-section .col-md-3,
+      .scan-history-overview-section .col-md-3 {
+        margin-bottom: 1rem;
+      }
+    }
 
     .action-buttons .btn:hover {
       background-color: var(--tertiary-header);
@@ -1328,6 +1433,21 @@
   let zonesData = [];
   let warehousesData = [];
   let currentZoneId = null;
+  let realTimeInterval = null;
+  let lastUpdateTime = null;
+  let isRealTimeEnabled = true;
+  
+  // Real-time configuration
+  const REAL_TIME_CONFIG = {
+    zones: 30000,        // 30 seconds
+    warehouses: 60000,   // 1 minute
+    stats: 45000,        // 45 seconds
+    recommendations: 90000, // 1.5 minutes
+    notifications: 15000,   // 15 seconds
+    inventory: 60000,    // 1 minute
+    orderShipments: 30000, // 30 seconds
+    scanHistory: 45000   // 45 seconds
+  };
   
   // Utility function to safely get element value
   function getElementValue(elementId, defaultValue = '') {
@@ -1499,16 +1619,524 @@
   // Initialize the page
   document.addEventListener('DOMContentLoaded', function() {
     console.log('Page loaded, initializing...');
-    loadZones();
-    loadWarehouses();
-    loadZoneStats();
-    loadRecommendations();
+    
+    // Initial data load
+    initializeData();
+    
+    // Start real-time updates
+    startRealTimeUpdates();
     
     // Enhance warehouse selection experience
     setTimeout(() => {
       enhanceWarehouseSelection();
     }, 1000); // Wait for elements to be populated
+    
+    // Add real-time controls
+    addRealTimeControls();
   });
+  
+  // Cleanup when page is unloaded
+  window.addEventListener('beforeunload', function() {
+    if (realTimeInterval) {
+      clearInterval(realTimeInterval);
+      realTimeInterval = null;
+    }
+    console.log('Real-time updates stopped');
+  });
+  
+  // Pause real-time updates when page is hidden
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      if (realTimeInterval) {
+        clearInterval(realTimeInterval);
+        realTimeInterval = null;
+      }
+      console.log('Real-time updates paused (page hidden)');
+    } else {
+      if (isRealTimeEnabled && !realTimeInterval) {
+        startRealTimeUpdates();
+        console.log('Real-time updates resumed (page visible)');
+      }
+    }
+  });
+  
+  // Initialize all data
+  async function initializeData() {
+    try {
+      console.log('Initializing data...');
+      
+      // Load all data in parallel for faster initialization
+      const promises = [
+        loadZones(),
+        loadWarehouses(),
+        loadZoneStats(),
+        loadRecommendations(),
+        loadNotifications(),
+        loadInventoryOverview(),
+        loadOrderShipmentStats(),
+        loadScanHistory()
+      ];
+      
+      await Promise.all(promises);
+      
+      console.log('All data initialized successfully');
+      lastUpdateTime = new Date();
+      updateLastUpdateIndicator();
+      
+    } catch (error) {
+      console.error('Error initializing data:', error);
+    }
+  }
+  
+  // Start real-time updates
+  function startRealTimeUpdates() {
+    if (realTimeInterval) {
+      clearInterval(realTimeInterval);
+    }
+    
+    realTimeInterval = setInterval(() => {
+      if (isRealTimeEnabled) {
+        performRealTimeUpdates();
+      }
+    }, 10000); // Check every 10 seconds
+    
+    console.log('Real-time updates started');
+  }
+  
+  // Perform real-time updates
+  async function performRealTimeUpdates() {
+    try {
+      const currentTime = new Date();
+      
+      // Update zones if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.zones) {
+        await loadZones();
+      }
+      
+      // Update warehouses if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.warehouses) {
+        await loadWarehouses();
+      }
+      
+      // Update stats if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.stats) {
+        await loadZoneStats();
+      }
+      
+      // Update recommendations if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.recommendations) {
+        await loadRecommendations();
+      }
+      
+      // Update notifications if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.notifications) {
+        await loadNotifications();
+      }
+      
+      // Update inventory if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.inventory) {
+        await loadInventoryOverview();
+      }
+      
+      // Update order shipments if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.orderShipments) {
+        await loadOrderShipmentStats();
+      }
+      
+      // Update scan history if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.scanHistory) {
+        await loadScanHistory();
+      }
+      
+      lastUpdateTime = currentTime;
+      updateLastUpdateIndicator();
+      
+    } catch (error) {
+      console.error('Error during real-time updates:', error);
+    }
+  }
+  
+  // Add real-time controls to the page
+  function addRealTimeControls() {
+    // Add real-time status bar
+    const statusBar = document.createElement('div');
+    statusBar.className = 'real-time-status-bar';
+    statusBar.innerHTML = `
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center">
+              <div class="real-time-indicator ${isRealTimeEnabled ? 'active' : 'inactive'}"></div>
+              <span class="ms-2 text-white">
+                <i class="bi bi-radio-button-on me-1"></i>
+                Real-time Updates: <strong>${isRealTimeEnabled ? 'ON' : 'OFF'}</strong>
+              </span>
+            </div>
+          </div>
+          <div class="col-md-6 text-end">
+            <div class="d-flex align-items-center justify-content-end">
+              <small class="text-white-50 me-3">
+                Last Update: <span id="lastUpdateTime">Just now</span>
+              </small>
+              <button class="btn btn-sm btn-outline-light me-2" onclick="toggleRealTime()">
+                <i class="bi bi-${isRealTimeEnabled ? 'pause' : 'play'}"></i>
+                ${isRealTimeEnabled ? 'Pause' : 'Resume'}
+              </button>
+              <button class="btn btn-sm btn-outline-light" onclick="forceRefresh()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Insert at the top of the page
+    const topPanel = document.querySelector('.top-panel');
+    if (topPanel) {
+      topPanel.parentNode.insertBefore(statusBar, topPanel);
+    }
+  }
+  
+  // Toggle real-time updates
+  function toggleRealTime() {
+    isRealTimeEnabled = !isRealTimeEnabled;
+    
+    if (isRealTimeEnabled) {
+      startRealTimeUpdates();
+      showNotification('Real-time updates resumed', 'success');
+    } else {
+      if (realTimeInterval) {
+        clearInterval(realTimeInterval);
+        realTimeInterval = null;
+      }
+      showNotification('Real-time updates paused', 'warning');
+    }
+    
+    // Update UI
+    updateRealTimeIndicator();
+    updateRealTimeControls();
+  }
+  
+  // Force refresh all data
+  async function forceRefresh() {
+    try {
+      showNotification('Refreshing all data...', 'info');
+      
+      // Disable real-time temporarily
+      const wasEnabled = isRealTimeEnabled;
+      isRealTimeEnabled = false;
+      
+      // Refresh all data
+      await initializeData();
+      
+      // Re-enable if it was enabled before
+      if (wasEnabled) {
+        isRealTimeEnabled = true;
+        startRealTimeUpdates();
+      }
+      
+      showNotification('All data refreshed successfully!', 'success');
+      
+    } catch (error) {
+      console.error('Error during force refresh:', error);
+      showNotification('Error refreshing data', 'error');
+    }
+  }
+  
+  // Update real-time indicator
+  function updateRealTimeIndicator() {
+    const indicator = document.querySelector('.real-time-indicator');
+    if (indicator) {
+      indicator.className = `real-time-indicator ${isRealTimeEnabled ? 'active' : 'inactive'}`;
+    }
+  }
+  
+  // Update real-time controls
+  function updateRealTimeControls() {
+    const toggleBtn = document.querySelector('button[onclick="toggleRealTime()"]');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = `
+        <i class="bi bi-${isRealTimeEnabled ? 'pause' : 'play'}"></i>
+        ${isRealTimeEnabled ? 'Pause' : 'Resume'}
+      `;
+    }
+    
+    const statusText = document.querySelector('.real-time-status-bar .text-white strong');
+    if (statusText) {
+      statusText.textContent = isRealTimeEnabled ? 'ON' : 'OFF';
+    }
+  }
+  
+  // Update last update indicator
+  function updateLastUpdateIndicator() {
+    const lastUpdateElement = document.getElementById('lastUpdateTime');
+    if (lastUpdateElement && lastUpdateTime) {
+      const timeDiff = Date.now() - lastUpdateTime.getTime();
+      if (timeDiff < 60000) { // Less than 1 minute
+        lastUpdateElement.textContent = 'Just now';
+      } else if (timeDiff < 3600000) { // Less than 1 hour
+        const minutes = Math.floor(timeDiff / 60000);
+        lastUpdateElement.textContent = `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+      } else {
+        const hours = Math.floor(timeDiff / 3600000);
+        lastUpdateElement.textContent = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      }
+    }
+  }
+  
+  // Update notification badge with real-time data
+  function updateNotificationBadge(notifications) {
+    const unreadCount = notifications.filter(n => !n.read).length;
+    
+    // Create or update notification badge in the top panel
+    let badge = document.querySelector('.notification-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'notification-badge';
+      badge.innerHTML = `
+        <div class="position-relative">
+          <i class="bi bi-bell text-white fs-5"></i>
+          ${unreadCount > 0 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">${unreadCount}</span>` : ''}
+        </div>
+      `;
+      
+      // Add to top panel
+      const topPanel = document.querySelector('.top-panel');
+      if (topPanel) {
+        const badgeContainer = topPanel.querySelector('.d-flex.justify-content-between');
+        if (badgeContainer) {
+          badgeContainer.appendChild(badge);
+        }
+      }
+    } else {
+      // Update existing badge
+      badge.innerHTML = `
+        <div class="position-relative">
+          <i class="bi bi-bell text-white fs-5"></i>
+          ${unreadCount > 0 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">${unreadCount}</span>` : ''}
+        </div>
+      `;
+    }
+  }
+  
+  // Update inventory overview with real-time data
+  function updateInventoryOverview(data) {
+    // Create or update inventory overview section
+    let inventorySection = document.querySelector('.inventory-overview-section');
+    if (!inventorySection) {
+      inventorySection = document.createElement('div');
+      inventorySection.className = 'inventory-overview-section mt-4';
+      inventorySection.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-box me-2"></i>Real-time Inventory Overview</h6>
+          </div>
+          <div class="card-body">
+            <div class="row" id="inventoryOverviewCards">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert after the recommendations section
+      const recommendationsSection = document.querySelector('.row.mt-4');
+      if (recommendationsSection) {
+        recommendationsSection.parentNode.insertBefore(inventorySection, recommendationsSection.nextSibling);
+      }
+    }
+    
+    // Update inventory cards
+    const cardsContainer = inventorySection.querySelector('#inventoryOverviewCards');
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `
+        <div class="col-md-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Items</h6>
+              <h3>${data.total_items || 0}</h3>
+              <small>${data.total_categories || 0} Categories</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">In Stock</h6>
+              <h3>${data.in_stock || 0}</h3>
+              <small>${data.in_stock_percentage || 0}% Available</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Low Stock</h6>
+              <h3>${data.low_stock || 0}</h3>
+              <small>Requires Attention</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Out of Stock</h6>
+              <h3>${data.out_of_stock || 0}</h3>
+              <small>Needs Restocking</small>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  // Update order shipment overview with real-time data
+  function updateOrderShipmentOverview(data) {
+    // Create or update order shipment overview section
+    let shipmentSection = document.querySelector('.order-shipment-overview-section');
+    if (!shipmentSection) {
+      shipmentSection = document.createElement('div');
+      shipmentSection.className = 'order-shipment-overview-section mt-4';
+      shipmentSection.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-truck me-2"></i>Real-time Order Shipment Overview</h6>
+          </div>
+          <div class="card-body">
+            <div class="row" id="orderShipmentOverviewCards">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert after the inventory overview section
+      const inventorySection = document.querySelector('.inventory-overview-section');
+      if (inventorySection) {
+        inventorySection.parentNode.insertBefore(shipmentSection, inventorySection.nextSibling);
+      }
+    }
+    
+    // Update shipment cards
+    const cardsContainer = shipmentSection.querySelector('#orderShipmentOverviewCards');
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `
+        <div class="col-md-3">
+          <div class="card bg-info text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Orders</h6>
+              <h3>${data.total_orders || 0}</h3>
+              <small>All Time</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Shipped</h6>
+              <h3>${data.shipped_orders || 0}</h3>
+              <small>${data.shipped_percentage || 0}% Success Rate</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Processing</h6>
+              <h3>${data.processing_orders || 0}</h3>
+              <small>In Progress</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Value</h6>
+              <h3>$${(data.total_value || 0).toLocaleString()}</h3>
+              <small>Orders Value</small>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  // Update scan history overview with real-time data
+  function updateScanHistoryOverview(data) {
+    // Create or update scan history overview section
+    let scanSection = document.querySelector('.scan-history-overview-section');
+    if (!scanSection) {
+      scanSection = document.createElement('div');
+      scanSection.className = 'scan-history-overview-section mt-4';
+      scanSection.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-upc-scan me-2"></i>Real-time Scan Activity</h6>
+          </div>
+          <div class="card-body">
+            <div class="row" id="scanHistoryOverviewCards">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert after the order shipment overview section
+      const shipmentSection = document.querySelector('.order-shipment-overview-section');
+      if (shipmentSection) {
+        shipmentSection.parentNode.insertBefore(scanSection, shipmentSection.nextSibling);
+      }
+    }
+    
+    // Update scan history cards
+    const cardsContainer = scanSection.querySelector('#scanHistoryOverviewCards');
+    if (cardsContainer) {
+      const recentScans = data.recent_scans || [];
+      const todayScans = data.today_scans || 0;
+      const totalScans = data.total_scans || 0;
+      
+      cardsContainer.innerHTML = `
+        <div class="col-md-3">
+          <div class="card bg-secondary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Scans</h6>
+              <h3>${totalScans}</h3>
+              <small>All Time</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Today's Scans</h6>
+              <h3>${todayScans}</h3>
+              <small>${new Date().toLocaleDateString()}</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-info text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Recent Activity</h6>
+              <h3>${recentScans.length}</h3>
+              <small>Last 10 Scans</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Success Rate</h6>
+              <h3>${data.success_rate || 0}%</h3>
+              <small>Successful Scans</small>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
 
   // Load zones from database
   async function loadZones() {
@@ -1565,6 +2193,58 @@
       }
     } catch (error) {
       console.error('Error loading recommendations:', error);
+    }
+  }
+  
+  // Load notifications from database
+  async function loadNotifications() {
+    try {
+      const response = await fetch('/api/notifications');
+      const result = await response.json();
+      if (result.success) {
+        updateNotificationBadge(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  }
+  
+  // Load inventory overview from database
+  async function loadInventoryOverview() {
+    try {
+      const response = await fetch('/api/stock/overview');
+      const result = await response.json();
+      if (result.success) {
+        updateInventoryOverview(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading inventory overview:', error);
+    }
+  }
+  
+  // Load order shipment statistics from database
+  async function loadOrderShipmentStats() {
+    try {
+      const response = await fetch('/api/order-shipments/stats');
+      const result = await response.json();
+      if (result.success) {
+        updateOrderShipmentOverview(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading order shipment stats:', error);
+    }
+  }
+  
+  // Load scan history from database
+  async function loadScanHistory() {
+    try {
+      const response = await fetch('/api/scan-history');
+      const result = await response.json();
+      if (result.success) {
+        updateScanHistoryOverview(result.data);
+      }
+    } catch (error) {
+        console.error('Error loading scan history:', error);
     }
   }
 
