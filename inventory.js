@@ -1165,7 +1165,7 @@ const getAllZones = async (filters = {}) => {
     console.error('Error fetching zones:', err);
     throw err;
   }
- };
+};
 
 const getZoneById = async (zoneId) => {
   try {
