@@ -36,6 +36,7 @@ const {
   getOrderShipmentStats,
   updateOrderShipmentStatus,
   getRecentOrderShipmentActivity,
+  getShippingZoneStats,
   getStockOverview,
   getStockByCategory,
   getStockByWarehouse,
@@ -807,6 +808,17 @@ app.get('/api/order-shipments/recent-activity', requireAuth, async (req, res) =>
   } catch (error) {
     console.error('Error fetching recent activity:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch recent activity' });
+  }
+});
+
+// Shipping zone statistics endpoint
+app.get('/api/shipping-zone-stats', requireAuth, async (req, res) => {
+  try {
+    const stats = await getShippingZoneStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching shipping zone stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch shipping zone statistics' });
   }
 });
 

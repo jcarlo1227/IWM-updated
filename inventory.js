@@ -919,6 +919,84 @@ const getOrderShipmentById = async (id) => {
   }
 };
 
+// Get shipping statistics for shipping dock zones
+const getShippingZoneStats = async () => {
+  try {
+    const sql = await database.sql();
+    
+    // Get overall shipping statistics
+    const overallStats = await sql`
+      SELECT 
+        COUNT(*) as total_shipments,
+        COUNT(CASE WHEN status = 'shipped' THEN 1 END) as shipped_count,
+        COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing_count,
+        COUNT(CASE WHEN status = 'delivered' THEN 1 END) as delivered_count,
+        COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_count,
+        AVG(CASE WHEN ship_date IS NOT NULL AND order_date IS NOT NULL 
+            THEN EXTRACT(EPOCH FROM (ship_date - order_date))/86400 END) as avg_processing_days,
+        AVG(CASE WHEN delivery_date IS NOT NULL AND ship_date IS NOT NULL 
+            THEN EXTRACT(EPOCH FROM (delivery_date - ship_date))/86400 END) as avg_transit_days,
+        SUM(total_value) as total_value,
+        AVG(total_value) as avg_order_value
+      FROM order_shipments
+      WHERE status != 'cancelled'
+    `;
+    
+    // Get recent shipments
+    const recentShipments = await sql`
+      SELECT 
+        order_id,
+        product_name,
+        quantity,
+        status,
+        order_date,
+        ship_date,
+        delivery_date,
+        tracking_number,
+        total_value
+      FROM order_shipments
+      WHERE status != 'cancelled'
+      ORDER BY updated_at DESC
+      LIMIT 10
+    `;
+    
+    // Get shipments by status
+    const statusBreakdown = await sql`
+      SELECT 
+        status,
+        COUNT(*) as count,
+        AVG(total_value) as avg_value
+      FROM order_shipments
+      WHERE status != 'cancelled'
+      GROUP BY status
+      ORDER BY count DESC
+    `;
+    
+    // Get daily shipping volume for the last 7 days
+    const dailyVolume = await sql`
+      SELECT 
+        DATE(order_date) as date,
+        COUNT(*) as shipments,
+        SUM(total_value) as total_value
+      FROM order_shipments
+      WHERE order_date >= CURRENT_DATE - INTERVAL '7 days'
+        AND status != 'cancelled'
+      GROUP BY DATE(order_date)
+      ORDER BY date DESC
+    `;
+    
+    return {
+      overall: overallStats[0] || {},
+      recent: recentShipments || [],
+      statusBreakdown: statusBreakdown || [],
+      dailyVolume: dailyVolume || []
+    };
+  } catch (err) {
+    console.error('Error fetching shipping zone stats:', err);
+    throw err;
+  }
+};
+
 // Create new order shipment
 const createOrderShipment = async (orderData) => {
   try {
@@ -1838,6 +1916,7 @@ module.exports = {
   getStockByCategory,
   getStockByWarehouse,
   getRecentOrderShipmentActivity,
+  getShippingZoneStats,
   getAllZones,
   getZoneById,
   createZone,

@@ -341,6 +341,96 @@
       color: var(--primary-color);
       transition: color 0.3s ease;
     }
+    
+    /* Shipping Stats Cards Styling */
+    .shipping-stats-card {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+    }
+    
+    .shipping-stats-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    }
+    
+    .shipping-stats-card h6 {
+      color: var(--sub-header);
+      font-weight: 600;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid var(--primary-color);
+      padding-bottom: 0.5rem;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary-color);
+      transition: all 0.3s ease;
+    }
+    
+    .stat-item:hover {
+      transform: translateX(5px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .stat-label {
+      font-weight: 500;
+      color: var(--sub-header);
+      font-size: 0.875rem;
+    }
+    
+    .stat-value {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--header-color);
+    }
+    
+    .text-success {
+      color: var(--success-color) !important;
+    }
+    
+    .text-warning {
+      color: var(--warning-color) !important;
+    }
+    
+    .text-info {
+      color: var(--secondary-color) !important;
+    }
+    
+    .text-danger {
+      color: var(--danger-color) !important;
+    }
+    
+    /* Responsive adjustments for shipping stats */
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+      
+      .shipping-stats-card {
+        padding: 1rem;
+      }
+      
+      .stat-item {
+        padding: 0.75rem;
+      }
+    }
 
     .action-buttons .btn:hover {
       background-color: var(--tertiary-header);
@@ -1300,6 +1390,117 @@
       });
     }
   }
+  
+  // Refresh shipping statistics for a specific zone
+  async function refreshShippingStats(zoneId) {
+    try {
+      // Show loading state
+      const refreshBtn = event.target.closest('button');
+      const originalText = refreshBtn.innerHTML;
+      refreshBtn.innerHTML = '<i class="bi bi-hourglass-split me-1"></i>Loading...';
+      refreshBtn.disabled = true;
+      
+      // Fetch updated shipping stats
+      const response = await fetch('/api/shipping-zone-stats');
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update the shipping stats section
+        const stats = result.data;
+        const shippingSection = refreshBtn.closest('.col-12').querySelector('.row:first-child');
+        
+        // Update overall statistics
+        const overallStats = shippingSection.querySelector('.col-md-6:first-child .stats-grid');
+        overallStats.innerHTML = `
+          <div class="stat-item">
+            <span class="stat-label">Total Shipments:</span>
+            <span class="stat-value">${stats.overall.total_shipments || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Shipped:</span>
+            <span class="stat-value text-success">${stats.overall.shipped_count || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Processing:</span>
+            <span class="stat-value text-warning">${stats.overall.processing_count || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Delivered:</span>
+            <span class="stat-value text-info">${stats.overall.delivered_count || 0}</span>
+          </div>
+        `;
+        
+        // Update performance metrics
+        const performanceStats = shippingSection.querySelector('.col-md-6:last-child .stats-grid');
+        performanceStats.innerHTML = `
+          <div class="stat-item">
+            <span class="stat-label">Avg Processing:</span>
+            <span class="stat-value">${Math.round(stats.overall.avg_processing_days || 0)} days</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg Transit:</span>
+            <span class="stat-value">${Math.round(stats.overall.avg_transit_days || 0)} days</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Total Value:</span>
+            <span class="stat-value">$${(stats.overall.total_value || 0).toLocaleString()}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg Order Value:</span>
+            <span class="stat-value">$${Math.round(stats.overall.avg_order_value || 0)}</span>
+          </div>
+        `;
+        
+        // Update recent shipments table
+        const recentShipmentsTable = refreshBtn.closest('.col-12').querySelector('.table tbody');
+        recentShipmentsTable.innerHTML = (stats.recent || []).map(shipment => `
+          <tr>
+            <td><strong>${shipment.order_id}</strong></td>
+            <td>${shipment.product_name || 'N/A'}</td>
+            <td>${shipment.quantity || 0}</td>
+            <td><span class="badge bg-${getShipmentStatusColor(shipment.status)}">${shipment.status}</span></td>
+            <td>${shipment.order_date ? new Date(shipment.order_date).toLocaleDateString() : 'N/A'}</td>
+            <td>${shipment.ship_date ? new Date(shipment.ship_date).toLocaleDateString() : 'N/A'}</td>
+            <td>$${(shipment.total_value || 0).toLocaleString()}</td>
+          </tr>
+        `).join('');
+        
+        // Show success message
+        showNotification('Shipping statistics refreshed successfully!', 'success');
+      } else {
+        showNotification('Failed to refresh shipping statistics', 'error');
+      }
+    } catch (error) {
+      console.error('Error refreshing shipping stats:', error);
+      showNotification('Error refreshing shipping statistics', 'error');
+    } finally {
+      // Restore button state
+      refreshBtn.innerHTML = originalText;
+      refreshBtn.disabled = false;
+    }
+  }
+  
+  // Show notification function
+  function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 5000);
+  }
 
   // Set current date
   document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
@@ -1596,6 +1797,17 @@
 
   function formatStatus(status) {
     return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+  
+  function getShipmentStatusColor(status) {
+    const colors = {
+      'processing': 'warning',
+      'shipped': 'info',
+      'delivered': 'success',
+      'cancelled': 'danger',
+      'pending': 'secondary'
+    };
+    return colors[status] || 'secondary';
   }
 
   function updateTotalZones() {
@@ -2583,6 +2795,127 @@
         const modal = new bootstrap.Modal(document.getElementById('zoneDetailsModal'));
         
         document.getElementById('zoneDetailsModalLabel').textContent = `Zone Details - ${zone.zone_name}`;
+        
+        // Check if this is a shipping zone to show shipping information
+        let shippingInfo = '';
+        if (zone.zone_type === 'shipping') {
+          try {
+            const shippingResponse = await fetch('/api/shipping-zone-stats');
+            const shippingResult = await shippingResponse.json();
+            if (shippingResult.success) {
+              const stats = shippingResult.data;
+              shippingInfo = `
+                <div class="row mt-4">
+                  <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h6 class="text-primary mb-0"><i class="bi bi-truck me-2"></i>Shipping Operations</h6>
+                      <button class="btn btn-sm btn-outline-primary" onclick="refreshShippingStats('${zone.zone_id}')">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                      </button>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="shipping-stats-card">
+                          <h6>Overall Statistics</h6>
+                          <div class="stats-grid">
+                            <div class="stat-item">
+                              <span class="stat-label">Total Shipments:</span>
+                              <span class="stat-value">${stats.overall.total_shipments || 0}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Shipped:</span>
+                              <span class="stat-value text-success">${stats.overall.shipped_count || 0}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Processing:</span>
+                              <span class="stat-value text-warning">${stats.overall.processing_count || 0}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Delivered:</span>
+                              <span class="stat-value text-info">${stats.overall.delivered_count || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="shipping-stats-card">
+                          <h6>Performance Metrics</h6>
+                          <div class="stats-grid">
+                            <div class="stat-item">
+                              <span class="stat-label">Avg Processing:</span>
+                              <span class="stat-value">${Math.round(stats.overall.avg_processing_days || 0)} days</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Avg Transit:</span>
+                              <span class="stat-value">${Math.round(stats.overall.avg_transit_days || 0)} days</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Total Value:</span>
+                              <span class="stat-value">$${(stats.overall.total_value || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Avg Order Value:</span>
+                              <span class="stat-value">$${Math.round(stats.overall.avg_order_value || 0)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                      <div class="col-12">
+                        <div class="shipping-stats-card">
+                          <h6>Recent Shipments</h6>
+                          <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                              <thead>
+                                <tr>
+                                  <th>Order ID</th>
+                                  <th>Product</th>
+                                  <th>Quantity</th>
+                                  <th>Status</th>
+                                  <th>Order Date</th>
+                                  <th>Ship Date</th>
+                                  <th>Value</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                ${(stats.recent || []).map(shipment => `
+                                  <tr>
+                                    <td><strong>${shipment.order_id}</strong></td>
+                                    <td>${shipment.product_name || 'N/A'}</td>
+                                    <td>${shipment.quantity || 0}</td>
+                                    <td><span class="badge bg-${getShipmentStatusColor(shipment.status)}">${shipment.status}</span></td>
+                                    <td>${shipment.order_date ? new Date(shipment.order_date).toLocaleDateString() : 'N/A'}</td>
+                                    <td>${shipment.ship_date ? new Date(shipment.ship_date).toLocaleDateString() : 'N/A'}</td>
+                                    <td>$${(shipment.total_value || 0).toLocaleString()}</td>
+                                  </tr>
+                                `).join('')}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          } catch (shippingError) {
+            console.error('Error loading shipping stats:', shippingError);
+            shippingInfo = `
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Unable to load shipping statistics at this time.
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        }
+        
         document.getElementById('zoneDetailsContent').innerHTML = `
           <div class="row">
             <div class="col-md-6">
@@ -2613,6 +2946,7 @@
               <p><strong>Last Updated:</strong> ${new Date(zone.updated_at).toLocaleDateString()}</p>
             </div>
           </div>
+          ${shippingInfo}
         `;
         
         modal.show();
