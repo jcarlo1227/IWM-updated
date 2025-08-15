@@ -1119,34 +1119,53 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
 const getAllZones = async (filters = {}) => {
   try {
     const sql = await database.sql();
-    let query = sql`
+    
+    // First, let's check if the zones table exists and has data
+    const tableCheck = await sql`SELECT COUNT(*) as count FROM zones`;
+    console.log('Zones table check:', tableCheck[0]);
+    
+    let queryText = `
       SELECT z.*, w.warehouse_name 
       FROM zones z 
       LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
       WHERE 1=1
     `;
     
+    const params = [];
+    
     if (filters.warehouse_id) {
-      query = sql`${query} AND z.warehouse_id = ${filters.warehouse_id}`;
+      params.push(filters.warehouse_id);
+      queryText += ` AND z.warehouse_id = $${params.length}`;
     }
     if (filters.zone_type) {
-      query = sql`${query} AND z.zone_type = ${filters.zone_type}`;
+      params.push(filters.zone_type);
+      queryText += ` AND z.zone_type = $${params.length}`;
     }
     if (filters.status) {
-      query = sql`${query} AND z.status = ${filters.status}`;
+      params.push(filters.status);
+      queryText += ` AND z.status = $${params.length}`;
     }
     if (filters.search) {
-      query = sql`${query} AND (z.zone_name ILIKE ${'%' + filters.search + '%'} OR z.zone_id ILIKE ${'%' + filters.search + '%'})`;
+      const searchTerm = `%${filters.search}%`;
+      params.push(searchTerm);
+      queryText += ` AND (z.zone_name ILIKE $${params.length}`;
+      params.push(searchTerm);
+      queryText += ` OR z.zone_id ILIKE $${params.length})`;
     }
     
-    query = sql`${query} ORDER BY z.zone_id`;
-    const result = await query;
+    queryText += ` ORDER BY z.zone_id`;
+    
+    console.log('Query:', queryText);
+    console.log('Params:', params);
+    
+    const result = await sql(queryText, params);
+    console.log('Query result:', result);
     return result;
   } catch (err) {
     console.error('Error fetching zones:', err);
     throw err;
   }
-};
+ };
 
 const getZoneById = async (zoneId) => {
   try {
