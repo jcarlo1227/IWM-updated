@@ -149,14 +149,14 @@ const initializeOrderShipmentsTable = async () => {
     await sql`
       CREATE TABLE IF NOT EXISTS production_planning (
         plan_id SERIAL PRIMARY KEY,
-        order_id INTEGER UNIQUE,
-        product_id INTEGER,
+        order_id INT UNIQUE,
+        customer_id INT,
+        product_id INT UNIQUE,
         product_name VARCHAR(255),
         work_order_id SERIAL UNIQUE,
         planned_date DATE,
-        shipping_date DATE,
         status VARCHAR(50),
-        quantity INTEGER
+        quantity INT
       )
     `;
 
@@ -164,38 +164,80 @@ const initializeOrderShipmentsTable = async () => {
       CREATE OR REPLACE FUNCTION insert_pp_after_orders_insert()
       RETURNS TRIGGER AS $$
       BEGIN
-          INSERT INTO production_planning (
-              order_id, 
-              product_id, 
-              product_name, 
-              planned_date, 
-              status, 
-              quantity
-          )
-          VALUES (
-              NEW.order_id,
-              NEW.product_id,
-              (SELECT product_name FROM products WHERE product_id = NEW.product_id),
-              NEW.order_date,
-              NEW.order_status,
-              NEW.quantity
-          );
+      IF NEW.payment_status = 'paid' THEN
+      INSERT INTO production_planning (
+      order_id,
+      customer_id,
+      product_id,
+      product_name,
+      planned_date,
+      status,
+      quantity
+      )
+      VALUES (
+      NEW.order_id,
+      NEW.customer_id,
+      NEW.product_id,
+      (SELECT product_name FROM products WHERE product_id = NEW.product_id),
+      NEW.order_date,
+      'processing',
+      NEW.quantity
+      );
+      END IF;
 
-          RETURN NEW;
+
+      RETURN NEW;
+
       END;
       $$ LANGUAGE plpgsql;`;
     await sql(createPPTriggerFunction);
+
+    // Add customer_id column to production_planning if it doesn't exist
+    await sql`ALTER TABLE production_planning ADD COLUMN IF NOT EXISTS customer_id INT`;
+    
+    // Handle duplicate product_id values before adding UNIQUE constraint
+    await sql`
+      DO $$ 
+      BEGIN
+        -- First, check if there are duplicates
+        IF EXISTS (
+          SELECT product_id FROM production_planning 
+          WHERE product_id IS NOT NULL 
+          GROUP BY product_id 
+          HAVING COUNT(*) > 1
+        ) THEN
+          -- Remove duplicates, keeping only the latest record for each product_id
+          DELETE FROM production_planning 
+          WHERE plan_id NOT IN (
+            SELECT MAX(plan_id) 
+            FROM production_planning 
+            WHERE product_id IS NOT NULL 
+            GROUP BY product_id
+          ) AND product_id IS NOT NULL;
+        END IF;
+        
+        -- Now add the UNIQUE constraint if it doesn't exist
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.table_constraints 
+          WHERE table_name = 'production_planning' 
+          AND constraint_name = 'production_planning_product_id_key'
+        ) THEN
+          ALTER TABLE production_planning ADD CONSTRAINT production_planning_product_id_key UNIQUE (product_id);
+        END IF;
+      END $$;
+    `;
 
     await sql(`
       DO $$
       BEGIN
           IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'sales_orders') THEN
-              IF NOT EXISTS (SELECT 1 FROM pg_trigger WHERE tgname = 'trg_insert_pp') THEN
-                  CREATE TRIGGER trg_insert_pp
-                  AFTER INSERT ON sales_orders
-                  FOR EACH ROW
-                  EXECUTE FUNCTION insert_pp_after_orders_insert();
-              END IF;
+              -- Drop existing trigger if it exists
+              DROP TRIGGER IF EXISTS trg_insert_pp ON sales_orders;
+              -- Create the new trigger
+              CREATE TRIGGER trg_insert_pp
+              AFTER INSERT ON sales_orders
+              FOR EACH ROW
+              EXECUTE FUNCTION insert_pp_after_orders_insert();
           END IF;
       END $$;
     `);
@@ -301,6 +343,18 @@ const initializeOrderShipmentsTable = async () => {
     // Drop any legacy FK to sales_orders
     await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_sales_order') THEN ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_sales_order; END IF; END $$;`;
 
+    // Drop any existing FK to production_planning to avoid conflicts during migration
+    await sql`DO $$ BEGIN IF EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments DROP CONSTRAINT fk_shipments_planning_order; END IF; END $$;`;
+
+    // Clean up orphaned order_shipments records that don't have corresponding production_planning entries
+    await sql`
+      DELETE FROM order_shipments 
+      WHERE order_id::text NOT IN (
+        SELECT order_id::text FROM production_planning WHERE order_id IS NOT NULL
+      )
+      AND order_id IS NOT NULL
+    `;
+
     if (hasUniqueOnPP) {
       await sql`DO $$ BEGIN IF NOT EXISTS (SELECT 1 FROM information_schema.table_constraints WHERE table_name = 'order_shipments' AND constraint_name = 'fk_shipments_planning_order') THEN ALTER TABLE order_shipments ADD CONSTRAINT fk_shipments_planning_order FOREIGN KEY (order_id) REFERENCES production_planning(order_id) ON DELETE CASCADE; END IF; END $$;`;
     }
@@ -369,7 +423,7 @@ const syncProcessedPlansIntoShipments = async () => {
   const queryText = `
     INSERT INTO order_shipments (
       order_id, product_id, product_name, quantity,
-      status, order_date, ship_date, updated_at
+      status, order_date, updated_at
     )
     SELECT
       pp.order_id,
@@ -378,7 +432,6 @@ const syncProcessedPlansIntoShipments = async () => {
       pp.quantity,
       'processed' AS status,
       pp.planned_date AS order_date,
-      pp.shipping_date AS ship_date,
       CURRENT_TIMESTAMP
     FROM production_planning pp
     WHERE pp.status = 'processed'

@@ -114,29 +114,37 @@ const initializeDatabase = async () => {
   try {
     await testConnection();
     
-    // Check if admin user exists, if not create it
-    const adminCheck = await sql`SELECT * FROM users WHERE username = 'admin'`;
-    
-    if (adminCheck.length === 0) {
-      const bcrypt = require('bcryptjs');
-      const hashedPassword = await bcrypt.hash('admin', 10);
+    // Check if admin user exists, if not create it (only if database is available)
+    if (sql) {
+      const adminCheck = await sql`SELECT * FROM users WHERE username = 'admin'`;
       
-      await sql`
-        INSERT INTO users (username, password, role) 
-        VALUES ('admin', ${hashedPassword}, 'admin')
-      `;
-      
-      console.log('✅ Default admin user created (username: admin, password: admin)');
+      if (adminCheck.length === 0) {
+        const bcrypt = require('bcryptjs');
+        const hashedPassword = await bcrypt.hash('admin', 10);
+        
+        await sql`
+          INSERT INTO users (username, password, role) 
+          VALUES ('admin', ${hashedPassword}, 'admin')
+        `;
+        
+        console.log('✅ Default admin user created (username: admin, password: admin)');
+      } else {
+        console.log('✅ Admin user already exists');
+      }
     } else {
-      console.log('✅ Admin user already exists');
+      console.log('⚠️ Database not available, skipping admin user creation');
     }
     
-    // Initialize inventory tables
-    const { initializeInventoryTable, initializeOrderShipmentsTable, getAllOrderShipments } = require('./inventory');
-    await initializeInventoryTable();
-    await initializeOrderShipmentsTable();
-    // Trigger initial sync from production_planning (processed) into order_shipments
-    try { await getAllOrderShipments({}); } catch (e) { console.warn('Initial sync from production_planning skipped:', e?.message); }
+    // Initialize inventory tables (only if database is available)
+    if (sql) {
+      const { initializeInventoryTable, initializeOrderShipmentsTable, getAllOrderShipments } = require('./inventory');
+      await initializeInventoryTable();
+      await initializeOrderShipmentsTable();
+      // Trigger initial sync from production_planning (processed) into order_shipments
+      try { await getAllOrderShipments({}); } catch (e) { console.warn('Initial sync from production_planning skipped:', e?.message); }
+    } else {
+      console.log('⚠️ Database not available, skipping inventory table initialization');
+    }
     
   } catch (err) {
     console.error('❌ Database initialization error:', err);
