@@ -195,10 +195,28 @@ const initializeOrderShipmentsTable = async () => {
     // Add customer_id column to production_planning if it doesn't exist
     await sql`ALTER TABLE production_planning ADD COLUMN IF NOT EXISTS customer_id INT`;
     
-    // Update product_id column to have UNIQUE constraint if it doesn't have one
+    // Handle duplicate product_id values before adding UNIQUE constraint
     await sql`
       DO $$ 
       BEGIN
+        -- First, check if there are duplicates
+        IF EXISTS (
+          SELECT product_id FROM production_planning 
+          WHERE product_id IS NOT NULL 
+          GROUP BY product_id 
+          HAVING COUNT(*) > 1
+        ) THEN
+          -- Remove duplicates, keeping only the latest record for each product_id
+          DELETE FROM production_planning 
+          WHERE plan_id NOT IN (
+            SELECT MAX(plan_id) 
+            FROM production_planning 
+            WHERE product_id IS NOT NULL 
+            GROUP BY product_id
+          ) AND product_id IS NOT NULL;
+        END IF;
+        
+        -- Now add the UNIQUE constraint if it doesn't exist
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.table_constraints 
           WHERE table_name = 'production_planning' 
