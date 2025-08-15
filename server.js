@@ -36,10 +36,28 @@ const {
   getOrderShipmentStats,
   updateOrderShipmentStatus,
   getRecentOrderShipmentActivity,
+  getShippingZoneStats,
   getStockOverview,
   getStockByCategory,
-  getStockByWarehouse
+  getStockByWarehouse,
+  getAllZones,
+  getZoneById,
+  createZone,
+  updateZone,
+  deleteZone,
+  getZoneStats,
+  getZonesByWarehouse,
+  optimizeWarehouseLayout,
+  analyzeWarehouseTraffic,
+  generateWarehouseHeatmap,
+  exportWarehouseLayout
 } = require('./inventory');
+
+const {
+  isDatabaseAvailable,
+  getDatabaseStatus
+} = require('./database');
+
 require('dotenv').config();
 
 const app = express();
@@ -268,7 +286,7 @@ app.post('/api/notifications', requireAuth, async (req, res) => {
   }
 });
 
-// API route to check database connection status
+// API route to check database connection status (simplified)
 app.get('/api/db-status', async (req, res) => {
   try {
     // First check if we have DATABASE_URL
@@ -280,45 +298,55 @@ app.get('/api/db-status', async (req, res) => {
       });
     }
 
-    // Try to get a new connection
-    const database = require('./database');
-    const sqlConnection = await database.sql();
+    // Use the enhanced database status functions instead of direct SQL
+    const { getDatabaseStatus, isDatabaseAvailable } = require('./database');
+    const dbStatus = getDatabaseStatus();
+    const isAvailable = isDatabaseAvailable();
     
-    if (!sqlConnection) {
-      return res.json({
-        connected: false,
-        error: 'Could not initialize SQL connection',
-        timestamp: new Date().toISOString()
-      });
+    let connectionInfo = null;
+    if (isAvailable) {
+      try {
+        const sql = await require('./database').sql();
+        if (sql) {
+          // Simple query that's less likely to timeout
+          const result = await sql`SELECT 1 as test`;
+          connectionInfo = {
+            test: result[0].test === 1,
+            connected: true
+          };
+        } else {
+          connectionInfo = {
+            error: 'SQL connection not available',
+            connected: false
+          };
+        }
+      } catch (error) {
+        connectionInfo = {
+          error: error.message,
+          connected: false
+        };
+      }
     }
-
-    const result = await sqlConnection`
-      SELECT current_database(), 
-             version(), 
-             current_user,
-             inet_server_addr() as server_ip,
-             inet_server_port() as server_port
-    `;
     
     res.json({
-      connected: true,
-      database: result[0].current_database,
-      version: result[0].version,
-      user: result[0].current_user,
-      server: {
-        ip: result[0].server_ip,
-        port: result[0].server_port
+      success: true,
+      database: {
+        available: isAvailable,
+        status: dbStatus,
+        connection: connectionInfo
       },
-      host: 'Neon PostgreSQL Serverless',
+      environment: {
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        nodeEnv: process.env.NODE_ENV || 'development'
+      },
       timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error('Database status check failed:', error);
-    res.json({
-      connected: false,
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check database status',
       error: error.message,
-      errorType: error.name,
-      errorCode: error.code,
       timestamp: new Date().toISOString()
     });
   }
@@ -677,7 +705,19 @@ const startServer = async () => {
     // Try to initialize database, but don't fail if it doesn't work
     try {
       await initializeDatabase();
-      console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
+      
+      // Check if database is actually working (not just available)
+      const { isDatabaseWorking } = require('./database');
+      try {
+        const isWorking = await isDatabaseWorking();
+        if (isWorking) {
+          console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
+        } else {
+          console.log(`⚠️ Database initialization completed but connection not working`);
+        }
+      } catch (workError) {
+        console.log(`⚠️ Database status check failed: ${workError.message}`);
+      }
     } catch (dbError) {
       console.log(`⚠️ Database connection failed, running in mock mode`);
     }
@@ -688,6 +728,16 @@ const startServer = async () => {
       console.log(`   Username: admin`);
       console.log(`   Password: admin`);
     });
+    
+    // Start periodic connection health check
+    const { maintainConnection } = require('./database');
+    setInterval(async () => {
+      try {
+        await maintainConnection();
+      } catch (error) {
+        console.log('⚠️ Periodic connection health check failed:', error.message);
+      }
+    }, 30000); // Check every 30 seconds
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);
@@ -799,6 +849,159 @@ app.get('/api/order-shipments/recent-activity', requireAuth, async (req, res) =>
   }
 });
 
+// Shipping zone statistics endpoint
+app.get('/api/shipping-zone-stats', requireAuth, async (req, res) => {
+  try {
+    const stats = await getShippingZoneStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching shipping zone stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch shipping zone statistics' });
+  }
+});
+
+// Zone management endpoints
+app.get('/api/zones', requireAuth, async (req, res) => {
+  try {
+    const { search, warehouse_id, zone_type, status } = req.query;
+    const filters = { search, warehouse_id, zone_type, status };
+    const zones = await getAllZones(filters);
+    res.json({ success: true, data: zones || [], count: zones ? zones.length : 0 });
+  } catch (error) {
+    console.error('Error fetching zones:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zones' });
+  }
+});
+
+app.get('/api/zones/:zoneId', requireAuth, async (req, res) => {
+  try {
+    const zone = await getZoneById(req.params.zoneId);
+    if (zone) {
+      res.json({ success: true, data: zone });
+    } else {
+      res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+  } catch (error) {
+    console.error('Error fetching zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zone' });
+  }
+});
+
+app.post('/api/zones', requireAuth, async (req, res) => {
+  try {
+    const newZone = await createZone(req.body);
+    res.json({ success: true, message: 'Zone created successfully', data: newZone });
+  } catch (error) {
+    console.error('Error creating zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to create zone' });
+  }
+});
+
+app.put('/api/zones/:zoneId', requireAuth, async (req, res) => {
+  try {
+    const updatedZone = await updateZone(req.params.zoneId, req.body);
+    if (updatedZone) {
+      res.json({ success: true, message: 'Zone updated successfully', data: updatedZone });
+    } else {
+      res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+  } catch (error) {
+    console.error('Error updating zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to update zone' });
+  }
+});
+
+app.delete('/api/zones/:zoneId', requireAuth, async (req, res) => {
+  try {
+    const deleted = await deleteZone(req.params.zoneId);
+    if (deleted) {
+      res.json({ success: true, message: 'Zone deleted successfully' });
+    } else {
+      res.status(404).json({ success: false, message: 'Zone not found' });
+    }
+  } catch (error) {
+    console.error('Error deleting zone:', error);
+    res.status(500).json({ success: false, message: 'Failed to delete zone' });
+  }
+});
+
+app.get('/api/zones/stats', requireAuth, async (req, res) => {
+  try {
+    const stats = await getZoneStats();
+    res.json({ success: true, data: stats });
+  } catch (error) {
+    console.error('Error fetching zone stats:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zone statistics' });
+  }
+});
+
+app.get('/api/zones/warehouse/:warehouseId', requireAuth, async (req, res) => {
+  try {
+    const zones = await getZonesByWarehouse(req.params.warehouseId);
+    res.json({ success: true, data: zones || [], count: zones ? zones.length : 0 });
+  } catch (error) {
+    console.error('Error fetching zones by warehouse:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch zones by warehouse' });
+  }
+});
+
+// Warehouse layout optimization endpoint
+app.post('/api/warehouses/:warehouseId/optimize', requireAuth, async (req, res) => {
+  try {
+    const result = await optimizeWarehouseLayout(req.params.warehouseId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error optimizing warehouse layout:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Warehouse traffic analysis endpoint
+app.post('/api/warehouses/:warehouseId/analyze-traffic', requireAuth, async (req, res) => {
+  try {
+    const result = await analyzeWarehouseTraffic(req.params.warehouseId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error analyzing warehouse traffic:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Warehouse heatmap generation endpoint
+app.post('/api/warehouses/:warehouseId/heatmap', requireAuth, async (req, res) => {
+  try {
+    const { heatmapType = 'utilization' } = req.body;
+    const result = await generateWarehouseHeatmap(req.params.warehouseId, heatmapType);
+    res.json(result);
+  } catch (error) {
+    console.error('Error generating warehouse heatmap:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Warehouse layout export endpoint
+app.post('/api/warehouses/:warehouseId/export', requireAuth, async (req, res) => {
+  try {
+    const { exportFormat = 'json' } = req.body;
+    const result = await exportWarehouseLayout(req.params.warehouseId, exportFormat);
+    res.json(result);
+  } catch (error) {
+    console.error('Error exporting warehouse layout:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// Warehouses endpoint
+app.get('/api/warehouses', requireAuth, async (req, res) => {
+  try {
+    const warehouses = await getAllWarehouses();
+    res.json({ success: true, data: warehouses || [], count: warehouses ? warehouses.length : 0 });
+  } catch (error) {
+    console.error('Error fetching warehouses:', error);
+    res.status(500).json({ success: false, message: 'Failed to fetch warehouses' });
+  }
+});
+
 app.get('/api/health/db', requireAuth, async (req, res) => {
   try {
     const db = require('./database');
@@ -809,6 +1012,8 @@ app.get('/api/health/db', requireAuth, async (req, res) => {
     res.json({ ok: false, error: e?.message });
   }
 });
+
+
 
 startServer();
 

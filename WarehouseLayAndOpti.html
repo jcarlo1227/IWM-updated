@@ -9,7 +9,10 @@
   <style>
     :root {
       --primary-color: #CC79F0;
+      --primary-color-rgb: 204, 121, 240;
       --secondary-color: #3E7EF7;
+      --tertiary-header: #2E2E38;
+      --tertiary-header-rgb: 46, 46, 56;
       --border-color: #F3F3F3;
       --success-color: #00B146;
       --danger-color: #CF2C3A;
@@ -23,7 +26,6 @@
       --confirmed: #1979FE;
       --header-color: #333135;
       --sub-header: #5F5B62;
-      --tertiary-header: #2E2E38;
       --body-font: #4A4A4A;
       --pie-color1: #8979FF;
       --pie-color2: #FF928A;
@@ -84,6 +86,455 @@
       border-radius: 8px;
       padding: 0.75rem;
       transition: all 0.3s ease;
+    }
+    
+    .action-buttons .form-label {
+      font-size: 0.875rem;
+      margin-bottom: 0.25rem;
+    }
+    
+    .action-buttons .form-select {
+      min-width: 200px;
+      font-size: 0.875rem;
+    }
+    
+    /* Quick Warehouse Selector Styling */
+    .quick-warehouse-selector {
+      background: linear-gradient(135deg, var(--primary-color), var(--tertiary-header));
+      border-radius: 12px;
+      padding: 1rem;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px);
+    }
+    
+    .quick-select-label {
+      color: white;
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      display: block;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+    
+    .select-wrapper {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .custom-select {
+      background: rgba(255,255,255,0.95);
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      padding: 0.5rem 2.5rem 0.5rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--sub-header);
+      min-width: 180px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+    }
+    
+    .custom-select:hover {
+      background: white;
+      border-color: rgba(255,255,255,0.6);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    .custom-select:focus {
+      outline: none;
+      background: white;
+      border-color: var(--tertiary-header);
+      box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+    }
+    
+    .select-arrow {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary-color);
+      pointer-events: none;
+      transition: transform 0.3s ease;
+    }
+    
+    .custom-select:hover + .select-arrow {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    
+    /* Filter Section Styling */
+    .filter-label {
+      color: var(--sub-header);
+      font-weight: 600;
+      font-size: 0.875rem;
+      margin-bottom: 0.5rem;
+      display: block;
+    }
+    
+    .filter-select-wrapper {
+      position: relative;
+      display: block;
+    }
+    
+    .filter-select {
+      background: white;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--sub-header);
+      cursor: pointer;
+      transition: all 0.3s ease;
+      appearance: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      width: 100%;
+    }
+    
+    .filter-select:hover {
+      border-color: var(--primary-color);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .filter-select:focus {
+      outline: none;
+      border-color: var(--primary-color);
+      box-shadow: 0 0 0 3px rgba(var(--primary-color-rgb), 0.1);
+    }
+    
+    .filter-select-arrow {
+      position: absolute;
+      right: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--primary-color);
+      pointer-events: none;
+      transition: transform 0.3s ease;
+      font-size: 0.875rem;
+    }
+    
+    .filter-select:hover + .filter-select-arrow {
+      transform: translateY(-50%) rotate(180deg);
+    }
+    
+    /* Enhanced Filter Group Styling */
+    .filter-group {
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+    
+    .filter-group:hover {
+      transform: translateY(-2px);
+    }
+    
+    .filter-group::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, rgba(204, 121, 240, 0.05), rgba(46, 46, 56, 0.05));
+      border-radius: 8px;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    
+    .filter-group:hover::before {
+      opacity: 1;
+    }
+    
+    /* Enhanced Search Section */
+    .search-filter-section {
+      background: linear-gradient(135deg, var(--main-bg), var(--bg-shadow));
+      border: 1px solid var(--border-color);
+      border-radius: 15px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+    }
+    
+    .search-filter-section:hover {
+      box-shadow: 0 6px 25px rgba(0,0,0,0.12);
+      transform: translateY(-2px);
+    }
+    
+    /* Responsive Design for Selects */
+    @media (max-width: 768px) {
+      .quick-warehouse-selector {
+        margin-bottom: 1rem;
+        width: 100%;
+      }
+      
+      .custom-select {
+        min-width: 100%;
+      }
+      
+      .filter-select {
+        font-size: 0.8rem;
+        padding: 0.5rem 2rem 0.5rem 0.5rem;
+      }
+    }
+    
+    /* Enhanced Dropdown Animations */
+    .custom-select option,
+    .filter-select option {
+      background: white;
+      color: var(--sub-header);
+      padding: 0.5rem;
+      font-weight: 500;
+    }
+    
+    .custom-select option:hover,
+    .filter-select option:hover {
+      background: var(--primary-color);
+      color: white;
+    }
+    
+    /* Loading State for Selects */
+    .select-loading {
+      opacity: 0.6;
+      pointer-events: none;
+    }
+    
+    .select-loading::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 2.5rem;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      border: 2px solid var(--primary-color);
+      border-top: 2px solid transparent;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: translateY(-50%) rotate(0deg); }
+      100% { transform: translateY(-50%) rotate(360deg); }
+    }
+    
+    /* Focus States Enhancement */
+    .quick-warehouse-selector:focus-within {
+      box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+      transform: translateY(-2px);
+    }
+    
+    .filter-group:focus-within {
+      transform: translateY(-3px);
+    }
+    
+    /* Hover Effects for Labels */
+    .quick-select-label:hover,
+    .filter-label:hover {
+      color: var(--primary-color);
+      transition: color 0.3s ease;
+    }
+    
+    /* Shipping Stats Cards Styling */
+    .shipping-stats-card {
+      background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      transition: all 0.3s ease;
+    }
+    
+    .shipping-stats-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+    }
+    
+    .shipping-stats-card h6 {
+      color: var(--sub-header);
+      font-weight: 600;
+      margin-bottom: 1rem;
+      border-bottom: 2px solid var(--primary-color);
+      padding-bottom: 0.5rem;
+    }
+    
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+    
+    .stat-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5rem;
+      background: white;
+      border-radius: 8px;
+      border-left: 4px solid var(--primary-color);
+      transition: all 0.3s ease;
+    }
+    
+    .stat-item:hover {
+      transform: translateX(5px);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .stat-label {
+      font-weight: 500;
+      color: var(--sub-header);
+      font-size: 0.875rem;
+    }
+    
+    .stat-value {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--header-color);
+    }
+    
+    .text-success {
+      color: var(--success-color) !important;
+    }
+    
+    .text-warning {
+      color: var(--warning-color) !important;
+    }
+    
+    .text-info {
+      color: var(--secondary-color) !important;
+    }
+    
+    .text-danger {
+      color: var(--danger-color) !important;
+    }
+    
+    /* Responsive adjustments for shipping stats */
+    @media (max-width: 768px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+        gap: 0.75rem;
+      }
+      
+      .shipping-stats-card {
+        padding: 1rem;
+      }
+      
+      .stat-item {
+        padding: 0.75rem;
+      }
+    }
+    
+    /* Real-time Status Bar Styling */
+    .real-time-status-bar {
+      background: linear-gradient(135deg, var(--primary-color), var(--tertiary-header));
+      color: white;
+      padding: 0.75rem 0;
+      margin-bottom: 1.5rem;
+      border-radius: 10px;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    .real-time-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+      animation: pulse 2s infinite;
+    }
+    
+    .real-time-indicator.active {
+      background-color: #00ff00;
+      box-shadow: 0 0 10px #00ff00;
+    }
+    
+    .real-time-indicator.inactive {
+      background-color: #ff0000;
+      box-shadow: 0 0 10px #ff0000;
+    }
+    
+    @keyframes pulse {
+      0% { opacity: 1; }
+      50% { opacity: 0.5; }
+      100% { opacity: 1; }
+    }
+    
+    /* Notification Badge Styling */
+    .notification-badge {
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .notification-badge:hover {
+      transform: scale(1.1);
+    }
+    
+    /* Overview Sections Styling */
+    .inventory-overview-section,
+    .order-shipment-overview-section,
+    .scan-history-overview-section {
+      transition: all 0.3s ease;
+    }
+    
+    .inventory-overview-section:hover,
+    .order-shipment-overview-section:hover,
+    .scan-history-overview-section:hover {
+      transform: translateY(-2px);
+    }
+    
+    .inventory-overview-section .card,
+    .order-shipment-overview-section .card,
+    .scan-history-overview-section .card {
+      transition: all 0.3s ease;
+      border: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    
+    .inventory-overview-section .card:hover,
+    .order-shipment-overview-section .card:hover,
+    .scan-history-overview-section .card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    
+    /* Real-time Update Animations */
+    .real-time-update {
+      animation: realTimeUpdate 0.5s ease-in-out;
+    }
+    
+    @keyframes realTimeUpdate {
+      0% { opacity: 0.7; transform: scale(0.98); }
+      50% { opacity: 1; transform: scale(1.02); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    
+    /* Responsive Design for Overview Sections */
+    @media (max-width: 768px) {
+      .real-time-status-bar {
+        padding: 0.5rem 0;
+      }
+      
+      .real-time-status-bar .col-md-6 {
+        margin-bottom: 0.5rem;
+      }
+      
+      .real-time-status-bar .text-end {
+        text-align: left !important;
+      }
+      
+      .inventory-overview-section .col-md-3,
+      .order-shipment-overview-section .col-md-3,
+      .scan-history-overview-section .col-md-3 {
+        margin-bottom: 1rem;
+      }
     }
 
     .action-buttons .btn:hover {
@@ -229,6 +680,42 @@
     .zone-picking { top: 20px; right: 20px; }
     .zone-shipping { bottom: 20px; right: 20px; }
     .zone-returns { bottom: 20px; left: 20px; }
+
+    /* Status badges */
+    .status-badge {
+      padding: 0.25rem 0.5rem;
+      border-radius: 15px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    .status-optimal {
+      background-color: var(--success-color);
+      color: white;
+    }
+
+    .status-needs_improvement {
+      background-color: var(--warning-color);
+      color: white;
+    }
+
+    .status-critical {
+      background-color: var(--danger-color);
+      color: white;
+    }
+
+    .status-active {
+      background-color: var(--secondary-color);
+      color: white;
+    }
+
+    /* Dynamic zone positioning */
+    .zone-item {
+      min-width: 120px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
 
     @media (max-width: 992px) {
       .sidebar {
@@ -558,6 +1045,21 @@
           </div>
         </div>
         <div class="d-flex flex-wrap justify-content-start action-buttons">
+          <div class="quick-warehouse-selector me-3 mb-2">
+            <label for="quickWarehouseSelect" class="quick-select-label">
+              <i class="bi bi-building me-1"></i>
+              Quick Warehouse Select
+            </label>
+            <div class="select-wrapper">
+              <select class="form-select custom-select" id="quickWarehouseSelect" onchange="quickWarehouseChange()">
+                <option value="">Choose Warehouse</option>
+                <!-- Will be populated dynamically -->
+              </select>
+              <div class="select-arrow">
+                <i class="bi bi-chevron-down"></i>
+              </div>
+            </div>
+          </div>
           <button class="btn" onclick="createNewZone()">
             <i class="bi bi-plus-circle"></i>
             New Zone
@@ -584,7 +1086,24 @@
       <!-- Search and Filter Section -->
       <div class="search-filter-section">
         <div class="row">
-          <div class="col-md-3">
+          <div class="col-md-2">
+            <div class="filter-group">
+              <label for="warehouseFilter" class="filter-label">
+                <i class="bi bi-building me-1"></i>
+                Warehouse
+              </label>
+              <div class="filter-select-wrapper">
+                <select class="form-select filter-select" id="warehouseFilter">
+                  <option value="">All Warehouses</option>
+                  <!-- Will be populated dynamically -->
+                </select>
+                <div class="filter-select-arrow">
+                  <i class="bi bi-chevron-down"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-2">
             <div class="filter-group">
               <label for="searchZone">Search Zones</label>
               <input type="text" class="form-control" id="searchZone" placeholder="Search by zone, type, or location...">
@@ -592,38 +1111,62 @@
           </div>
           <div class="col-md-2">
             <div class="filter-group">
-              <label for="statusFilter">Status</label>
-              <select class="form-select" id="statusFilter">
-                <option value="">All Status</option>
-                <option value="optimal">Optimal</option>
-                <option value="needs-improvement">Needs Improvement</option>
-                <option value="critical">Critical</option>
-              </select>
+              <label for="statusFilter" class="filter-label">
+                <i class="bi bi-check-circle me-1"></i>
+                Status
+              </label>
+              <div class="filter-select-wrapper">
+                <select class="form-select filter-select" id="statusFilter">
+                  <option value="">All Status</option>
+                  <option value="optimal">Optimal</option>
+                  <option value="needs-improvement">Needs Improvement</option>
+                  <option value="critical">Critical</option>
+                </select>
+                <div class="filter-select-arrow">
+                  <i class="bi bi-chevron-down"></i>
+                </div>
+              </div>
             </div>
           </div>
           <div class="col-md-2">
             <div class="filter-group">
-              <label for="typeFilter">Zone Type</label>
-              <select class="form-select" id="typeFilter">
-                <option value="">All Types</option>
-                <option value="receiving">Receiving</option>
-                <option value="storage">Storage</option>
-                <option value="picking">Picking</option>
-                <option value="shipping">Shipping</option>
-                <option value="returns">Returns</option>
-              </select>
+              <label for="typeFilter" class="filter-label">
+                <i class="bi bi-grid-3x3 me-1"></i>
+                Zone Type
+              </label>
+              <div class="filter-select-wrapper">
+                <select class="form-select filter-select" id="typeFilter">
+                  <option value="">All Types</option>
+                  <option value="receiving">Receiving</option>
+                  <option value="storage">Storage</option>
+                  <option value="picking">Picking</option>
+                  <option value="shipping">Shipping</option>
+                  <option value="returns">Returns</option>
+                </select>
+                <div class="filter-select-arrow">
+                  <i class="bi bi-chevron-down"></i>
+                </div>
+              </div>
             </div>
           </div>
-          <div class="col-md-3">
+          <div class="col-md-2">
             <div class="filter-group">
-              <label for="capacityRange">Capacity Range</label>
-              <select class="form-select" id="capacityRange">
-                <option value="">All Capacities</option>
-                <option value="0-25">0-25%</option>
-                <option value="26-50">26-50%</option>
-                <option value="51-75">51-75%</option>
-                <option value="76-100">76-100%</option>
-              </select>
+              <label for="capacityRange" class="filter-label">
+                <i class="bi bi-bar-chart me-1"></i>
+                Capacity Range
+              </label>
+              <div class="filter-select-wrapper">
+                <select class="form-select filter-select" id="capacityRange">
+                  <option value="">All Capacities</option>
+                  <option value="0-25">0-25%</option>
+                  <option value="26-50">26-50%</option>
+                  <option value="51-75">51-75%</option>
+                  <option value="76-100">76-100%</option>
+                </select>
+                <div class="filter-select-arrow">
+                  <i class="bi bi-chevron-down"></i>
+                </div>
+              </div>
             </div>
           </div>
           <div class="col-md-2">
@@ -645,26 +1188,8 @@
             <small>Total Area: <span id="totalArea">15,000 sq ft</span></small>
           </div>
         </div>
-        <div class="warehouse-map">
-          <div class="zone-item zone-receiving" onclick="selectZone('receiving')">
-            Receiving<br><small>85% Capacity</small>
-          </div>
-          <div class="zone-item zone-storage" onclick="selectZone('storage')">
-            Storage<br><small>72% Capacity</small>
-          </div>
-          <div class="zone-item zone-picking" onclick="selectZone('picking')">
-            Picking<br><small>45% Capacity</small>
-          </div>
-          <div class="zone-item zone-shipping" onclick="selectZone('shipping')">
-            Shipping<br><small>68% Capacity</small>
-          </div>
-          <div class="zone-item zone-returns" onclick="selectZone('returns')">
-            Returns<br><small>30% Capacity</small>
-          </div>
-          <div class="text-center">
-            <i class="bi bi-layout-wtf text-muted" style="font-size: 3rem;"></i>
-            <p class="text-muted mt-2">Interactive Warehouse Layout<br><small>Click on zones for detailed information</small></p>
-          </div>
+        <div class="warehouse-map" id="warehouseMap">
+          <!-- Zones will be dynamically loaded here -->
         </div>
       </div>
 
@@ -693,75 +1218,8 @@
                   <th>Actions</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><strong>A-1</strong></td>
-                  <td>Main Receiving</td>
-                  <td><span class="badge bg-primary">Receiving</span></td>
-                  <td>2,500</td>
-                  <td>100 pallets</td>
-                  <td>85 pallets (85%)</td>
-                  <td>92%</td>
-                  <td><span class="status-badge status-needs-improvement">Needs Improvement</span></td>
-                  <td>2025-01-10</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('A-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('A-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('A-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('A-1')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>B-1</strong></td>
-                  <td>High-Value Storage</td>
-                  <td><span class="badge bg-success">Storage</span></td>
-                  <td>3,000</td>
-                  <td>200 units</td>
-                  <td>144 units (72%)</td>
-                  <td>88%</td>
-                  <td><span class="status-badge status-optimal">Optimal</span></td>
-                  <td>2025-01-12</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('B-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('B-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('B-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('B-1')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>C-1</strong></td>
-                  <td>Fast Pick Zone</td>
-                  <td><span class="badge bg-info">Picking</span></td>
-                  <td>1,800</td>
-                  <td>150 SKUs</td>
-                  <td>68 SKUs (45%)</td>
-                  <td>95%</td>
-                  <td><span class="status-badge status-optimal">Optimal</span></td>
-                  <td>2025-01-14</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('C-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('C-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('C-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('C-1')"></i>
-                  </td>
-                </tr>
-                <tr>
-                  <td><strong>D-1</strong></td>
-                  <td>Shipping Dock</td>
-                  <td><span class="badge bg-warning text-dark">Shipping</span></td>
-                  <td>2,200</td>
-                  <td>80 orders</td>
-                  <td>54 orders (68%)</td>
-                  <td>78%</td>
-                  <td><span class="status-badge status-critical">Critical</span></td>
-                  <td>2025-01-08</td>
-                  <td class="item-actions">
-                    <i class="bi bi-eye" title="View Details" onclick="viewZone('D-1')"></i>
-                    <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('D-1')"></i>
-                    <i class="bi bi-pencil" title="Edit" onclick="editZone('D-1')"></i>
-                    <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('D-1')"></i>
-                  </td>
-                </tr>
+              <tbody id="zonesTableBody">
+                <!-- Zones will be dynamically loaded here -->
               </tbody>
             </table>
           </div>
@@ -769,43 +1227,8 @@
       </div>
 
       <!-- Statistics Cards -->
-      <div class="row mt-4">
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-layout-wtf text-primary fs-1"></i>
-              <h4 class="mt-2">12</h4>
-              <p class="text-muted mb-0">Total Zones</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-check-circle text-success fs-1"></i>
-              <h4 class="mt-2">8</h4>
-              <p class="text-muted mb-0">Optimized Zones</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-exclamation-triangle text-warning fs-1"></i>
-              <h4 class="mt-2">3</h4>
-              <p class="text-muted mb-0">Need Attention</p>
-            </div>
-          </div>
-        </div>
-        <div class="col-md-3">
-          <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-              <i class="bi bi-speedometer2 text-info fs-1"></i>
-              <h4 class="mt-2">87%</h4>
-              <p class="text-muted mb-0">Avg. Efficiency</p>
-            </div>
-          </div>
-        </div>
+      <div class="row mt-4" id="statsCards">
+        <!-- Statistics will be dynamically loaded here -->
       </div>
 
       <!-- Optimization Recommendations -->
@@ -821,42 +1244,13 @@
               </div>
             </div>
             <div class="card-body">
-              <div class="row">
-                <div class="col-md-4">
-                  <div class="text-center p-3 border rounded">
-                    <i class="bi bi-exclamation-triangle text-warning fs-2"></i>
-                    <h6 class="mt-2">High Priority</h6>
-                    <p class="text-muted mb-1">Immediate attention required</p>
-                    <div class="fw-bold text-warning">Shipping Dock D-1</div>
-                    <small class="text-muted">Efficiency dropped to 78% - consider layout restructure</small>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="text-center p-3 border rounded">
-                    <i class="bi bi-info-circle text-info fs-2"></i>
-                    <h6 class="mt-2">Medium Priority</h6>
-                    <p class="text-muted mb-1">Optimization opportunities</p>
-                    <div class="fw-bold text-info">Receiving Zone A-1</div>
-                    <small class="text-muted">Consider expanding capacity or improving flow</small>
-                  </div>
-                </div>
-                <div class="col-md-4">
-                  <div class="text-center p-3 border rounded">
-                    <i class="bi bi-check-circle text-success fs-2"></i>
-                    <h6 class="mt-2">Good Performance</h6>
-                    <p class="text-muted mb-1">Maintaining efficiency</p>
-                    <div class="fw-bold text-success">8 zones performing well</div>
-                    <small class="text-muted">Continue current optimization strategies</small>
-                  </div>
-                </div>
+              <div class="row" id="recommendationsContainer">
+                <!-- Recommendations will be dynamically loaded here -->
               </div>
               <div class="mt-3">
                 <div class="d-flex justify-content-between align-items-center">
                   <span class="fw-bold">Quick Actions:</span>
                   <div>
-                    <button class="btn btn-sm btn-outline-primary me-2" onclick="window.open('Inventory_Master_Data.html', '_blank')">
-                      <i class="bi bi-box-seam me-1"></i>View Inventory Impact
-                    </button>
                     <button class="btn btn-sm btn-outline-success" onclick="generateOptimizationReport()">
                       <i class="bi bi-file-earmark-text me-1"></i>Generate Report
                     </button>
@@ -871,78 +1265,2774 @@
   </div>
 </div>
 
+<!-- New Zone Modal -->
+<div class="modal fade" id="newZoneModal" tabindex="-1" aria-labelledby="newZoneModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="newZoneModalLabel">Create New Zone</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="newZoneForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="zoneId" class="form-label">Zone ID *</label>
+                <input type="text" class="form-control" id="zoneId" required>
+              </div>
+              <div class="mb-3">
+                <label for="zoneName" class="form-label">Zone Name *</label>
+                <input type="text" class="form-control" id="zoneName" required>
+              </div>
+              <div class="mb-3">
+                <label for="warehouseId" class="form-label">Warehouse *</label>
+                <select class="form-select" id="warehouseId" required>
+                  <option value="">Select Warehouse</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="zoneType" class="form-label">Zone Type *</label>
+                <select class="form-select" id="zoneType" required>
+                  <option value="">Select Type</option>
+                  <option value="Receiving">Receiving</option>
+                  <option value="Storage">Storage</option>
+                  <option value="Picking">Picking</option>
+                  <option value="Shipping">Shipping</option>
+                  <option value="Returns">Returns</option>
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="areaSqft" class="form-label">Area (sq ft)</label>
+                <input type="number" class="form-control" id="areaSqft">
+              </div>
+              <div class="mb-3">
+                <label for="capacity" class="form-label">Capacity</label>
+                <input type="number" class="form-control" id="capacity">
+              </div>
+              <div class="mb-3">
+                <label for="capacityUnit" class="form-label">Capacity Unit</label>
+                <input type="text" class="form-control" id="capacityUnit" placeholder="e.g., pallets, units, SKUs">
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveNewZone()">Create Zone</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Zone Details Modal -->
+<div class="modal fade" id="zoneDetailsModal" tabindex="-1" aria-labelledby="zoneDetailsModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="zoneDetailsModalLabel">Zone Details</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="zoneDetailsContent">
+        <!-- Zone details will be loaded here -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="editZoneFromModal()">Edit Zone</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Zone Modal -->
+<div class="modal fade" id="editZoneModal" tabindex="-1" aria-labelledby="editZoneModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="editZoneModalLabel">Edit Zone</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <form id="editZoneForm">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editZoneId" class="form-label">Zone ID</label>
+                <input type="text" class="form-control" id="editZoneId" readonly>
+              </div>
+              <div class="mb-3">
+                <label for="editZoneName" class="form-label">Zone Name</label>
+                <input type="text" class="form-control" id="editZoneName" required>
+              </div>
+              <div class="mb-3">
+                <label for="editWarehouseId" class="form-label">Warehouse</label>
+                <select class="form-select" id="editWarehouseId" required>
+                  <!-- Will be populated dynamically -->
+                </select>
+              </div>
+              <div class="mb-3">
+                <label for="editZoneType" class="form-label">Zone Type</label>
+                <select class="form-select" id="editZoneType" required>
+                  <option value="receiving">Receiving</option>
+                  <option value="storage">Storage</option>
+                  <option value="picking">Picking</option>
+                  <option value="shipping">Shipping</option>
+                  <option value="returns">Returns</option>
+                </select>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label for="editAreaSqft" class="form-label">Area (sq ft)</label>
+                <input type="number" class="form-control" id="editAreaSqft">
+              </div>
+              <div class="mb-3">
+                <label for="editCapacity" class="form-label">Capacity</label>
+                <input type="number" class="form-control" id="editCapacity">
+              </div>
+              <div class="mb-3">
+                <label for="editCapacityUnit" class="form-label">Capacity Unit</label>
+                <input type="text" class="form-control" id="editCapacityUnit" placeholder="e.g., pallets, units, SKUs">
+              </div>
+              <div class="mb-3">
+                <label for="editCurrentUsage" class="form-label">Current Usage</label>
+                <input type="number" class="form-control" id="editCurrentUsage" min="0">
+              </div>
+              <div class="mb-3">
+                <label for="editEfficiency" class="form-label">Efficiency (%)</label>
+                <input type="number" class="form-control" id="editEfficiency" min="0" max="100">
+              </div>
+              <div class="mb-3">
+                <label for="editStatus" class="form-label">Status</label>
+                <select class="form-select" id="editStatus">
+                  <option value="active">Active</option>
+                  <option value="optimal">Optimal</option>
+                  <option value="needs-improvement">Needs Improvement</option>
+                  <option value="critical">Critical</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="saveZoneEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // Global variables
+  let zonesData = [];
+  let warehousesData = [];
+  let currentZoneId = null;
+  let realTimeInterval = null;
+  let lastUpdateTime = null;
+  let isRealTimeEnabled = true;
+  
+  // Real-time configuration
+  const REAL_TIME_CONFIG = {
+    zones: 30000,        // 30 seconds
+    warehouses: 60000,   // 1 minute
+    stats: 45000,        // 45 seconds
+    recommendations: 90000, // 1.5 minutes
+    notifications: 15000,   // 15 seconds
+    inventory: 60000,    // 1 minute
+    orderShipments: 30000, // 30 seconds
+    scanHistory: 45000   // 45 seconds
+  };
+  
+  // Utility function to safely get element value
+  function getElementValue(elementId, defaultValue = '') {
+    const element = document.getElementById(elementId);
+    return element ? element.value : defaultValue;
+  }
+  
+  // Utility function to safely get element
+  function getElement(elementId) {
+    return document.getElementById(elementId);
+  }
+  
+  // Quick warehouse change handler
+  function quickWarehouseChange() {
+    const quickSelect = document.getElementById('quickWarehouseSelect');
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    
+    if (quickSelect && warehouseFilter) {
+      // Add loading state
+      quickSelect.classList.add('select-loading');
+      
+      // Update the main filter
+      warehouseFilter.value = quickSelect.value;
+      
+      // Trigger filter application
+      applyFilters().finally(() => {
+        // Remove loading state
+        quickSelect.classList.remove('select-loading');
+      });
+    }
+  }
+  
+  // Enhanced warehouse selection with visual feedback
+  function enhanceWarehouseSelection() {
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    const quickSelect = document.getElementById('quickWarehouseSelect');
+    
+    if (warehouseFilter) {
+      warehouseFilter.addEventListener('change', function() {
+        // Add visual feedback
+        this.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          this.style.transform = 'scale(1)';
+        }, 200);
+        
+        // Sync with quick select if it exists
+        if (quickSelect) {
+          quickSelect.value = this.value;
+        }
+      });
+    }
+    
+    if (quickSelect) {
+      quickSelect.addEventListener('change', function() {
+        // Add visual feedback
+        this.style.transform = 'scale(1.02)';
+        setTimeout(() => {
+          this.style.transform = 'scale(1)';
+        }, 200);
+      });
+    }
+  }
+  
+  // Refresh shipping statistics for a specific zone
+  async function refreshShippingStats(zoneId) {
+    try {
+      // Fetch updated shipping stats
+      const response = await fetch('/api/shipping-zone-stats');
+      const result = await response.json();
+      
+      if (result.success) {
+        // Update the shipping stats section
+        const stats = result.data;
+        const refreshBtn = event.target.closest('button');
+        const shippingSection = refreshBtn.closest('.col-12').querySelector('.row:first-child');
+        
+        // Update overall statistics
+        const overallStats = shippingSection.querySelector('.col-md-6:first-child .stats-grid');
+        overallStats.innerHTML = `
+          <div class="stat-item">
+            <span class="stat-label">Total Shipments:</span>
+            <span class="stat-value">${stats.overall.total_shipments || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Shipped:</span>
+            <span class="stat-value text-success">${stats.overall.shipped_count || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Processing:</span>
+            <span class="stat-value text-warning">${stats.overall.processing_count || 0}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Delivered:</span>
+            <span class="stat-value text-info">${stats.overall.delivered_count || 0}</span>
+          </div>
+        `;
+        
+        // Update performance metrics
+        const performanceStats = shippingSection.querySelector('.col-md-6:last-child .stats-grid');
+        performanceStats.innerHTML = `
+          <div class="stat-item">
+            <span class="stat-label">Avg Processing:</span>
+            <span class="stat-value">${Math.round(stats.overall.avg_processing_days || 0)} days</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg Transit:</span>
+            <span class="stat-value">${Math.round(stats.overall.avg_transit_days || 0)} days</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Total Value:</span>
+            <span class="stat-value">$${(stats.overall.total_value || 0).toLocaleString()}</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Avg Order Value:</span>
+            <span class="stat-value">$${Math.round(stats.overall.avg_order_value || 0)}</span>
+          </div>
+        `;
+        
+        // Update recent shipments table
+        const recentShipmentsTable = refreshBtn.closest('.col-12').querySelector('.table tbody');
+        recentShipmentsTable.innerHTML = (stats.recent || []).map(shipment => `
+          <tr>
+            <td><strong>${shipment.order_id}</strong></td>
+            <td>${shipment.product_name || 'N/A'}</td>
+            <td>${shipment.quantity || 0}</td>
+            <td><span class="badge bg-${getShipmentStatusColor(shipment.status)}">${shipment.status}</span></td>
+            <td>${shipment.order_date ? new Date(shipment.order_date).toLocaleDateString() : 'N/A'}</td>
+            <td>${shipment.ship_date ? new Date(shipment.ship_date).toLocaleDateString() : 'N/A'}</td>
+            <td>$${(shipment.total_value || 0).toLocaleString()}</td>
+          </tr>
+        `).join('');
+        
+        // Show success message
+        showNotification('Shipping statistics refreshed successfully!', 'success');
+      } else {
+        showNotification('Failed to refresh shipping statistics', 'error');
+      }
+    } catch (error) {
+      console.error('Error refreshing shipping stats:', error);
+      showNotification('Error refreshing shipping statistics', 'error');
+    }
+  }
+  
+  // Show notification function
+  function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `alert alert-${type === 'error' ? 'danger' : type} alert-dismissible fade show position-fixed`;
+    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    notification.innerHTML = `
+      ${message}
+      <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.remove();
+      }
+    }, 5000);
+  }
+
   // Set current date
   document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
 
-  // Sample functions for interactivity
-  function createNewZone() {
-    alert('Create New Zone functionality would be implemented here');
+  // Initialize the page
+  document.addEventListener('DOMContentLoaded', function() {
+    console.log('Page loaded, initializing...');
+    
+    // Initial data load
+    initializeData();
+    
+    // Start real-time updates
+    startRealTimeUpdates();
+    
+    // Enhance warehouse selection experience
+    setTimeout(() => {
+      enhanceWarehouseSelection();
+    }, 1000); // Wait for elements to be populated
+    
+    // Add real-time controls
+    addRealTimeControls();
+  });
+  
+  // Cleanup when page is unloaded
+  window.addEventListener('beforeunload', function() {
+    if (realTimeInterval) {
+      clearInterval(realTimeInterval);
+      realTimeInterval = null;
+    }
+    console.log('Real-time updates stopped');
+  });
+  
+  // Pause real-time updates when page is hidden
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      if (realTimeInterval) {
+        clearInterval(realTimeInterval);
+        realTimeInterval = null;
+      }
+      console.log('Real-time updates paused (page hidden)');
+    } else {
+      if (isRealTimeEnabled && !realTimeInterval) {
+        startRealTimeUpdates();
+        console.log('Real-time updates resumed (page visible)');
+      }
+    }
+  });
+  
+  // Initialize all data
+  async function initializeData() {
+    try {
+      console.log('Initializing data...');
+      
+      // Load all data in parallel for faster initialization
+      const promises = [
+        loadZones(),
+        loadWarehouses(),
+        loadZoneStats(),
+        loadRecommendations(),
+        loadNotifications(),
+        loadInventoryOverview(),
+        loadOrderShipmentStats(),
+        loadScanHistory()
+      ];
+      
+      await Promise.all(promises);
+      
+      console.log('All data initialized successfully');
+      lastUpdateTime = new Date();
+      updateLastUpdateIndicator();
+      
+    } catch (error) {
+      console.error('Error initializing data:', error);
+    }
   }
-
-  function optimizeLayout() {
-    alert('Layout Optimization functionality would be implemented here');
+  
+  // Start real-time updates
+  function startRealTimeUpdates() {
+    if (realTimeInterval) {
+      clearInterval(realTimeInterval);
+    }
+    
+    realTimeInterval = setInterval(() => {
+      if (isRealTimeEnabled) {
+        performRealTimeUpdates();
+      }
+    }, 10000); // Check every 10 seconds
+    
+    console.log('Real-time updates started');
   }
-
-  function analyzeTraffic() {
-    alert('Traffic Analysis functionality would be implemented here');
+  
+  // Perform real-time updates
+  async function performRealTimeUpdates() {
+    try {
+      const currentTime = new Date();
+      
+      // Update zones if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.zones) {
+        await loadZones();
+      }
+      
+      // Update warehouses if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.warehouses) {
+        await loadWarehouses();
+      }
+      
+      // Update stats if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.stats) {
+        await loadZoneStats();
+      }
+      
+      // Update recommendations if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.recommendations) {
+        await loadRecommendations();
+      }
+      
+      // Update notifications if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.notifications) {
+        await loadNotifications();
+      }
+      
+      // Update inventory if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.inventory) {
+        await loadInventoryOverview();
+      }
+      
+      // Update order shipments if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.orderShipments) {
+        await loadOrderShipmentStats();
+      }
+      
+      // Update scan history if needed
+      if (!lastUpdateTime || (currentTime - lastUpdateTime) >= REAL_TIME_CONFIG.scanHistory) {
+        await loadScanHistory();
+      }
+      
+      lastUpdateTime = currentTime;
+      updateLastUpdateIndicator();
+      
+    } catch (error) {
+      console.error('Error during real-time updates:', error);
+    }
   }
-
-  function generateHeatmap() {
-    alert('Heat Map Generation functionality would be implemented here');
+  
+  // Add real-time controls to the page
+  function addRealTimeControls() {
+    // Add real-time status bar
+    const statusBar = document.createElement('div');
+    statusBar.className = 'real-time-status-bar';
+    statusBar.innerHTML = `
+      <div class="container-fluid">
+        <div class="row align-items-center">
+          <div class="col-md-6">
+            <div class="d-flex align-items-center">
+              <div class="real-time-indicator ${isRealTimeEnabled ? 'active' : 'inactive'}"></div>
+              <span class="ms-2 text-white">
+                <i class="bi bi-radio-button-on me-1"></i>
+                Real-time Updates: <strong>${isRealTimeEnabled ? 'ON' : 'OFF'}</strong>
+              </span>
+            </div>
+          </div>
+          <div class="col-md-6 text-end">
+            <div class="d-flex align-items-center justify-content-end">
+              <small class="text-white-50 me-3">
+                Last Update: <span id="lastUpdateTime">Just now</span>
+              </small>
+              <button class="btn btn-sm btn-outline-light me-2" onclick="toggleRealTime()">
+                <i class="bi bi-${isRealTimeEnabled ? 'pause' : 'play'}"></i>
+                ${isRealTimeEnabled ? 'Pause' : 'Resume'}
+              </button>
+              <button class="btn btn-sm btn-outline-light" onclick="forceRefresh()">
+                <i class="bi bi-arrow-clockwise"></i>
+                Refresh Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Insert at the top of the page
+    const topPanel = document.querySelector('.top-panel');
+    if (topPanel) {
+      topPanel.parentNode.insertBefore(statusBar, topPanel);
+    }
   }
-
-  function exportLayout() {
-    alert('Export Layout functionality would be implemented here');
+  
+  // Toggle real-time updates
+  function toggleRealTime() {
+    isRealTimeEnabled = !isRealTimeEnabled;
+    
+    if (isRealTimeEnabled) {
+      startRealTimeUpdates();
+      showNotification('Real-time updates resumed', 'success');
+    } else {
+      if (realTimeInterval) {
+        clearInterval(realTimeInterval);
+        realTimeInterval = null;
+      }
+      showNotification('Real-time updates paused', 'warning');
+    }
+    
+    // Update UI
+    updateRealTimeIndicator();
+    updateRealTimeControls();
   }
-
-  function selectZone(zoneType) {
-    alert('Selected zone: ' + zoneType + '. Detailed view would be implemented here.');
+  
+  // Force refresh all data
+  async function forceRefresh() {
+    try {
+      showNotification('Refreshing all data...', 'info');
+      
+      // Disable real-time temporarily
+      const wasEnabled = isRealTimeEnabled;
+      isRealTimeEnabled = false;
+      
+      // Refresh all data
+      await initializeData();
+      
+      // Re-enable if it was enabled before
+      if (wasEnabled) {
+        isRealTimeEnabled = true;
+        startRealTimeUpdates();
+      }
+      
+      showNotification('All data refreshed successfully!', 'success');
+      
+    } catch (error) {
+      console.error('Error during force refresh:', error);
+      showNotification('Error refreshing data', 'error');
+    }
   }
-
-  function viewZone(id) {
-    alert('View zone details for: ' + id);
+  
+  // Update real-time indicator
+  function updateRealTimeIndicator() {
+    const indicator = document.querySelector('.real-time-indicator');
+    if (indicator) {
+      indicator.className = `real-time-indicator ${isRealTimeEnabled ? 'active' : 'inactive'}`;
+    }
   }
-
-  function optimizeZone(id) {
-    if (confirm('Optimize zone ' + id + '? This may take a few minutes.')) {
-      alert('Zone ' + id + ' optimization started');
+  
+  // Update real-time controls
+  function updateRealTimeControls() {
+    const toggleBtn = document.querySelector('button[onclick="toggleRealTime()"]');
+    if (toggleBtn) {
+      toggleBtn.innerHTML = `
+        <i class="bi bi-${isRealTimeEnabled ? 'pause' : 'play'}"></i>
+        ${isRealTimeEnabled ? 'Pause' : 'Resume'}
+      `;
+    }
+    
+    const statusText = document.querySelector('.real-time-status-bar .text-white strong');
+    if (statusText) {
+      statusText.textContent = isRealTimeEnabled ? 'ON' : 'OFF';
+    }
+  }
+  
+  // Update last update indicator
+  function updateLastUpdateIndicator() {
+    const lastUpdateElement = document.getElementById('lastUpdateTime');
+    if (lastUpdateElement && lastUpdateTime) {
+      const timeDiff = Date.now() - lastUpdateTime.getTime();
+      if (timeDiff < 60000) { // Less than 1 minute
+        lastUpdateElement.textContent = 'Just now';
+      } else if (timeDiff < 3600000) { // Less than 1 hour
+        const minutes = Math.floor(timeDiff / 60000);
+        lastUpdateElement.textContent = `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+      } else {
+        const hours = Math.floor(timeDiff / 3600000);
+        lastUpdateElement.textContent = `${hours} hour${hours > 1 ? 's' : ''} ago`;
+      }
+    }
+  }
+  
+  // Update notification badge with real-time data
+  function updateNotificationBadge(notifications) {
+    const unreadCount = notifications.filter(n => !n.read).length;
+    
+    // Create or update notification badge in the top panel
+    let badge = document.querySelector('.notification-badge');
+    if (!badge) {
+      badge = document.createElement('div');
+      badge.className = 'notification-badge';
+      badge.innerHTML = `
+        <div class="position-relative">
+          <i class="bi bi-bell text-white fs-5"></i>
+          ${unreadCount > 0 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">${unreadCount}</span>` : ''}
+        </div>
+      `;
+      
+      // Add to top panel
+      const topPanel = document.querySelector('.top-panel');
+      if (topPanel) {
+        const badgeContainer = topPanel.querySelector('.d-flex.justify-content-between');
+        if (badgeContainer) {
+          badgeContainer.appendChild(badge);
+        }
+      }
+    } else {
+      // Update existing badge
+      badge.innerHTML = `
+        <div class="position-relative">
+          <i class="bi bi-bell text-white fs-5"></i>
+          ${unreadCount > 0 ? `<span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">${unreadCount}</span>` : ''}
+        </div>
+      `;
+    }
+  }
+  
+  // Update inventory overview with real-time data
+  function updateInventoryOverview(data) {
+    // Create or update inventory overview section
+    let inventorySection = document.querySelector('.inventory-overview-section');
+    if (!inventorySection) {
+      inventorySection = document.createElement('div');
+      inventorySection.className = 'inventory-overview-section mt-4';
+      inventorySection.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-box me-2"></i>Real-time Inventory Overview</h6>
+          </div>
+          <div class="card-body">
+            <div class="row" id="inventoryOverviewCards">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert after the recommendations section
+      const recommendationsSection = document.querySelector('.row.mt-4');
+      if (recommendationsSection) {
+        recommendationsSection.parentNode.insertBefore(inventorySection, recommendationsSection.nextSibling);
+      }
+    }
+    
+    // Update inventory cards
+    const cardsContainer = inventorySection.querySelector('#inventoryOverviewCards');
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `
+        <div class="col-md-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Items</h6>
+              <h3>${data.total_items || 0}</h3>
+              <small>${data.total_categories || 0} Categories</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">In Stock</h6>
+              <h3>${data.in_stock || 0}</h3>
+              <small>${data.in_stock_percentage || 0}% Available</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Low Stock</h6>
+              <h3>${data.low_stock || 0}</h3>
+              <small>Requires Attention</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-danger text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Out of Stock</h6>
+              <h3>${data.out_of_stock || 0}</h3>
+              <small>Needs Restocking</small>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  // Update order shipment overview with real-time data
+  function updateOrderShipmentOverview(data) {
+    // Create or update order shipment overview section
+    let shipmentSection = document.querySelector('.order-shipment-overview-section');
+    if (!shipmentSection) {
+      shipmentSection = document.createElement('div');
+      shipmentSection.className = 'order-shipment-overview-section mt-4';
+      shipmentSection.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-truck me-2"></i>Real-time Order Shipment Overview</h6>
+          </div>
+          <div class="card-body">
+            <div class="row" id="orderShipmentOverviewCards">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert after the inventory overview section
+      const inventorySection = document.querySelector('.inventory-overview-section');
+      if (inventorySection) {
+        inventorySection.parentNode.insertBefore(shipmentSection, inventorySection.nextSibling);
+      }
+    }
+    
+    // Update shipment cards
+    const cardsContainer = shipmentSection.querySelector('#orderShipmentOverviewCards');
+    if (cardsContainer) {
+      cardsContainer.innerHTML = `
+        <div class="col-md-3">
+          <div class="card bg-info text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Orders</h6>
+              <h3>${data.total_orders || 0}</h3>
+              <small>All Time</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Shipped</h6>
+              <h3>${data.shipped_orders || 0}</h3>
+              <small>${data.shipped_percentage || 0}% Success Rate</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-warning text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Processing</h6>
+              <h3>${data.processing_orders || 0}</h3>
+              <small>In Progress</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Value</h6>
+              <h3>$${(data.total_value || 0).toLocaleString()}</h3>
+              <small>Orders Value</small>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+  }
+  
+  // Update scan history overview with real-time data
+  function updateScanHistoryOverview(data) {
+    // Create or update scan history overview section
+    let scanSection = document.querySelector('.scan-history-overview-section');
+    if (!scanSection) {
+      scanSection = document.createElement('div');
+      scanSection.className = 'scan-history-overview-section mt-4';
+      scanSection.innerHTML = `
+        <div class="card border-0 shadow-sm">
+          <div class="card-header bg-white">
+            <h6 class="mb-0 fw-bold"><i class="bi bi-upc-scan me-2"></i>Real-time Scan Activity</h6>
+          </div>
+          <div class="card-body">
+            <div class="row" id="scanHistoryOverviewCards">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Insert after the order shipment overview section
+      const shipmentSection = document.querySelector('.order-shipment-overview-section');
+      if (shipmentSection) {
+        shipmentSection.parentNode.insertBefore(scanSection, shipmentSection.nextSibling);
+      }
+    }
+    
+    // Update scan history cards
+    const cardsContainer = scanSection.querySelector('#scanHistoryOverviewCards');
+    if (cardsContainer) {
+      const recentScans = data.recent_scans || [];
+      const todayScans = data.today_scans || 0;
+      const totalScans = data.total_scans || 0;
+      
+      cardsContainer.innerHTML = `
+        <div class="col-md-3">
+          <div class="card bg-secondary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Total Scans</h6>
+              <h3>${totalScans}</h3>
+              <small>All Time</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-primary text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Today's Scans</h6>
+              <h3>${todayScans}</h3>
+              <small>${new Date().toLocaleDateString()}</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-info text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Recent Activity</h6>
+              <h3>${recentScans.length}</h3>
+              <small>Last 10 Scans</small>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-3">
+          <div class="card bg-success text-white">
+            <div class="card-body text-center">
+              <h6 class="card-title">Success Rate</h6>
+              <h3>${data.success_rate || 0}%</h3>
+              <small>Successful Scans</small>
+            </div>
+          </div>
+        </div>
+      `;
     }
   }
 
-  function editZone(id) {
-    alert('Edit zone: ' + id);
+  // Load zones from database
+  async function loadZones() {
+    try {
+      const response = await fetch('/api/zones');
+      const result = await response.json();
+      if (result.success) {
+        zonesData = result.data;
+        renderZonesTable();
+        renderWarehouseMap();
+        updateTotalZones();
+      }
+    } catch (error) {
+      console.error('Error loading zones:', error);
+    }
   }
 
-  function viewAnalytics(id) {
-    alert('View analytics for zone: ' + id);
+  // Load warehouses from database
+  async function loadWarehouses() {
+    try {
+      console.log('Loading warehouses...');
+      const response = await fetch('/api/warehouses');
+      const result = await response.json();
+      if (result.success) {
+        warehousesData = result.data;
+        console.log('Warehouses loaded:', warehousesData);
+        populateWarehouseSelect();
+      }
+    } catch (error) {
+      console.error('Error loading warehouses:', error);
+    }
   }
 
-  function applyFilters() {
-    const searchTerm = document.getElementById('searchZone').value;
-    const status = document.getElementById('statusFilter').value;
-    const type = document.getElementById('typeFilter').value;
-    const capacity = document.getElementById('capacityRange').value;
+  // Load zone statistics
+  async function loadZoneStats() {
+    try {
+      const response = await fetch('/api/zones/stats');
+      const result = await response.json();
+      if (result.success) {
+        renderStatsCards(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading zone stats:', error);
+    }
+  }
+
+  // Load optimization recommendations
+  async function loadRecommendations() {
+    try {
+      const response = await fetch('/api/zones');
+      const result = await response.json();
+      if (result.success) {
+        renderRecommendations(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading recommendations:', error);
+    }
+  }
+  
+  // Load notifications from database
+  async function loadNotifications() {
+    try {
+      const response = await fetch('/api/notifications');
+      const result = await response.json();
+      if (result.success) {
+        updateNotificationBadge(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading notifications:', error);
+    }
+  }
+  
+  // Load inventory overview from database
+  async function loadInventoryOverview() {
+    try {
+      const response = await fetch('/api/stock/overview');
+      const result = await response.json();
+      if (result.success) {
+        updateInventoryOverview(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading inventory overview:', error);
+    }
+  }
+  
+  // Load order shipment statistics from database
+  async function loadOrderShipmentStats() {
+    try {
+      const response = await fetch('/api/order-shipments/stats');
+      const result = await response.json();
+      if (result.success) {
+        updateOrderShipmentOverview(result.data);
+      }
+    } catch (error) {
+      console.error('Error loading order shipment stats:', error);
+    }
+  }
+  
+  // Load scan history from database
+  async function loadScanHistory() {
+    try {
+      const response = await fetch('/api/scan-history');
+      const result = await response.json();
+      if (result.success) {
+        updateScanHistoryOverview(result.data);
+      }
+    } catch (error) {
+        console.error('Error loading scan history:', error);
+    }
+  }
+
+  // Render zones table
+  function renderZonesTable() {
+    const tbody = document.getElementById('zonesTableBody');
+    if (!tbody) return;
+
+    tbody.innerHTML = '';
+    zonesData.forEach(zone => {
+      const row = document.createElement('tr');
+      row.innerHTML = `
+        <td><strong>${zone.zone_id}</strong></td>
+        <td>${zone.zone_name}</td>
+        <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+        <td>${zone.area_sqft || '-'}</td>
+        <td>${zone.capacity || '-'} ${zone.capacity_unit || ''}</td>
+        <td>${zone.current_usage || 0} ${zone.capacity_unit || ''} (${Math.round((zone.current_usage / zone.capacity) * 100) || 0}%)</td>
+        <td>${zone.efficiency || 0}%</td>
+        <td><span class="status-badge status-${zone.status}">${formatStatus(zone.status)}</span></td>
+        <td>${zone.last_optimized || '-'}</td>
+        <td class="item-actions">
+          <i class="bi bi-eye" title="View Details" onclick="viewZone('${zone.zone_id}')"></i>
+          <i class="bi bi-gear" title="Optimize" onclick="optimizeZone('${zone.zone_id}')"></i>
+          <i class="bi bi-pencil" title="Edit" onclick="editZone('${zone.zone_id}')"></i>
+          <i class="bi bi-graph-up" title="Analytics" onclick="viewAnalytics('${zone.zone_id}')"></i>
+        </td>
+      `;
+      tbody.appendChild(row);
+    });
+  }
+
+  // Render warehouse map
+  function renderWarehouseMap() {
+    const mapContainer = document.getElementById('warehouseMap');
+    if (!mapContainer) return;
+
+    mapContainer.innerHTML = '';
     
-    // Filter functionality would be implemented here
-    console.log('Applying filters:', { searchTerm, status, type, capacity });
+    if (zonesData.length === 0) {
+      mapContainer.innerHTML = `
+        <div class="text-center">
+          <i class="bi bi-layout-wtf text-muted" style="font-size: 3rem;"></i>
+          <p class="text-muted mt-2">No zones found<br><small>Create zones to see the warehouse layout</small></p>
+        </div>
+      `;
+      return;
+    }
+
+    // Calculate positions for zones
+    const positions = calculateZonePositions(zonesData.length);
+    
+    zonesData.forEach((zone, index) => {
+      const zoneElement = document.createElement('div');
+      zoneElement.className = 'zone-item';
+      zoneElement.style.position = 'absolute';
+      zoneElement.style.top = positions[index].top + 'px';
+      zoneElement.style.left = positions[index].left + 'px';
+      zoneElement.style.background = getZoneTypeColor(zone.zone_type) === 'primary' ? 'var(--primary-color)' :
+                                   getZoneTypeColor(zone.zone_type) === 'success' ? 'var(--success-color)' :
+                                   getZoneTypeColor(zone.zone_type) === 'info' ? 'var(--pie-color3)' :
+                                   getZoneTypeColor(zone.zone_type) === 'warning' ? 'var(--warning-color)' :
+                                   'var(--secondary-color)';
+      zoneElement.onclick = () => selectZone(zone.zone_id);
+      zoneElement.innerHTML = `
+        ${zone.zone_name}<br><small>${Math.round((zone.current_usage / zone.capacity) * 100) || 0}% Capacity</small>
+      `;
+      mapContainer.appendChild(zoneElement);
+    });
+
+    // Add interactive layout text
+    const textElement = document.createElement('div');
+    textElement.className = 'text-center';
+    textElement.style.position = 'absolute';
+    textElement.style.bottom = '20px';
+    textElement.style.left = '50%';
+    textElement.style.transform = 'translateX(-50%)';
+    textElement.innerHTML = `
+      <i class="bi bi-layout-wtf text-muted" style="font-size: 3rem;"></i>
+      <p class="text-muted mt-2">Interactive Warehouse Layout<br><small>Click on zones for detailed information</small></p>
+    `;
+    mapContainer.appendChild(textElement);
+  }
+
+  // Calculate positions for zones in the warehouse map
+  function calculateZonePositions(zoneCount) {
+    const positions = [];
+    const mapWidth = 600; // Approximate map width
+    const mapHeight = 300; // Approximate map height
+    
+    if (zoneCount === 1) {
+      positions.push({ top: mapHeight / 2 - 30, left: mapWidth / 2 - 60 });
+    } else if (zoneCount === 2) {
+      positions.push({ top: mapHeight / 2 - 30, left: 50 });
+      positions.push({ top: mapHeight / 2 - 30, left: mapWidth - 170 });
+    } else if (zoneCount === 3) {
+      positions.push({ top: 30, left: 50 });
+      positions.push({ top: mapHeight / 2 - 30, left: mapWidth / 2 - 60 });
+      positions.push({ top: mapHeight - 90, left: 50 });
+    } else if (zoneCount === 4) {
+      positions.push({ top: 30, left: 50 });
+      positions.push({ top: 30, left: mapWidth - 170 });
+      positions.push({ top: mapHeight - 90, left: 50 });
+      positions.push({ top: mapHeight - 90, left: mapWidth - 170 });
+    } else {
+      // For 5+ zones, use a grid layout
+      const cols = Math.ceil(Math.sqrt(zoneCount));
+      const rows = Math.ceil(zoneCount / cols);
+      const cellWidth = mapWidth / cols;
+      const cellHeight = mapHeight / rows;
+      
+      for (let i = 0; i < zoneCount; i++) {
+        const row = Math.floor(i / cols);
+        const col = i % cols;
+        positions.push({
+          top: row * cellHeight + cellHeight / 2 - 30,
+          left: col * cellWidth + cellWidth / 2 - 60
+        });
+      }
+    }
+    
+    return positions;
+  }
+
+  // Render statistics cards
+  function renderStatsCards(stats) {
+    const container = document.getElementById('statsCards');
+    if (!container) return;
+
+    container.innerHTML = `
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-layout-wtf text-primary fs-1"></i>
+            <h4 class="mt-2">${stats.total_zones || 0}</h4>
+            <p class="text-muted mb-0">Total Zones</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-check-circle text-success fs-1"></i>
+            <h4 class="mt-2">${stats.optimized_zones || 0}</h4>
+            <p class="text-muted mb-0">Optimized Zones</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-exclamation-triangle text-warning fs-1"></i>
+            <h4 class="mt-2">${stats.need_attention || 0}</h4>
+            <p class="text-muted mb-0">Need Attention</p>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+          <div class="card-body text-center">
+            <i class="bi bi-speedometer2 text-info fs-1"></i>
+            <h4 class="mt-2">${Math.round(stats.avg_efficiency || 0)}%</h4>
+            <p class="text-muted mb-0">Avg. Efficiency</p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  // Render recommendations
+  function renderRecommendations(zones) {
+    const container = document.getElementById('recommendationsContainer');
+    if (!container) return;
+
+    const criticalZones = zones.filter(z => z.status === 'critical');
+    const needsImprovement = zones.filter(z => z.status === 'needs_improvement');
+    const optimalZones = zones.filter(z => z.status === 'optimal');
+
+    container.innerHTML = `
+      <div class="col-md-4">
+        <div class="text-center p-3 border rounded">
+          <i class="bi bi-exclamation-triangle text-warning fs-2"></i>
+          <h6 class="mt-2">High Priority</h6>
+          <p class="text-muted mb-1">Immediate attention required</p>
+          <div class="fw-bold text-warning">${criticalZones.length} zones critical</div>
+          <small class="text-muted">${criticalZones.length > 0 ? criticalZones[0].zone_name : 'No critical zones'}</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-center p-3 border rounded">
+          <i class="bi bi-info-circle text-info fs-2"></i>
+          <h6 class="mt-2">Medium Priority</h6>
+          <p class="text-muted mb-1">Optimization opportunities</p>
+          <div class="fw-bold text-info">${needsImprovement.length} zones need improvement</div>
+          <small class="text-muted">${needsImprovement.length > 0 ? needsImprovement[0].zone_name : 'No zones need improvement'}</small>
+        </div>
+      </div>
+      <div class="col-md-4">
+        <div class="text-center p-3 border rounded">
+          <i class="bi bi-check-circle text-success fs-2"></i>
+          <h6 class="mt-2">Good Performance</h6>
+          <p class="text-muted mb-1">Maintaining efficiency</p>
+          <div class="fw-bold text-success">${optimalZones.length} zones performing well</div>
+          <small class="text-muted">Continue current optimization strategies</small>
+        </div>
+      </div>
+    `;
+  }
+
+  // Helper functions
+  function getZoneTypeColor(type) {
+    const colors = {
+      'Receiving': 'primary',
+      'Storage': 'success',
+      'Picking': 'info',
+      'Shipping': 'warning',
+      'Returns': 'secondary'
+    };
+    return colors[type] || 'secondary';
+  }
+
+  function formatStatus(status) {
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+  
+  function getShipmentStatusColor(status) {
+    const colors = {
+      'processing': 'warning',
+      'shipped': 'info',
+      'delivered': 'success',
+      'cancelled': 'danger',
+      'pending': 'secondary'
+    };
+    return colors[status] || 'secondary';
+  }
+
+  function updateTotalZones() {
+    const totalZonesElement = document.getElementById('totalZones');
+    if (totalZonesElement) {
+      totalZonesElement.textContent = zonesData.length;
+    }
+  }
+
+  function populateWarehouseSelect() {
+    console.log('Populating warehouse selects...');
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    const newZoneWarehouseSelect = document.getElementById('warehouseId');
+    const editWarehouseSelect = document.getElementById('editWarehouseId');
+    const quickWarehouseSelect = document.getElementById('quickWarehouseSelect');
+    
+    console.log('Warehouse filter element:', warehouseFilter);
+    console.log('New zone warehouse select element:', newZoneWarehouseSelect);
+    console.log('Edit warehouse select element:', editWarehouseSelect);
+    console.log('Quick warehouse select element:', quickWarehouseSelect);
+    
+    // Populate warehouse filter
+    if (warehouseFilter) {
+      console.log('Populating warehouse filter...');
+      warehouseFilter.innerHTML = '<option value="">All Warehouses</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        warehouseFilter.appendChild(option);
+      });
+      
+      // If there's only one warehouse, select it by default
+      if (warehousesData.length === 1) {
+        warehouseFilter.value = warehousesData[0].warehouse_id;
+        console.log('Auto-selected warehouse:', warehousesData[0].warehouse_id);
+        // Trigger filter application
+        setTimeout(() => applyFilters(), 100);
+      }
+    } else {
+      console.error('Warehouse filter element not found!');
+    }
+    
+    // Populate new zone warehouse select
+    if (newZoneWarehouseSelect) {
+      newZoneWarehouseSelect.innerHTML = '<option value="">Select Warehouse</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        newZoneWarehouseSelect.appendChild(option);
+      });
+    }
+    
+    // Populate edit zone warehouse select
+    if (editWarehouseSelect) {
+      editWarehouseSelect.innerHTML = '<option value="">Select Warehouse</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        editWarehouseSelect.appendChild(option);
+      });
+    }
+    
+    // Populate quick warehouse select
+    if (quickWarehouseSelect) {
+      quickWarehouseSelect.innerHTML = '<option value="">Select Warehouse</option>';
+      warehousesData.forEach(warehouse => {
+        const option = document.createElement('option');
+        option.value = warehouse.warehouse_id;
+        option.textContent = warehouse.warehouse_name;
+        quickWarehouseSelect.appendChild(option);
+      });
+      
+      // If there's only one warehouse, select it by default
+      if (warehousesData.length === 1) {
+        quickWarehouseSelect.value = warehousesData[0].warehouse_id;
+      }
+    }
+  }
+
+  // Create new zone function
+  function createNewZone() {
+    const modal = new bootstrap.Modal(document.getElementById('newZoneModal'));
+    modal.show();
+  }
+
+  async function optimizeLayout() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
+      alert('Please select a warehouse first to optimize its layout.');
+      return;
+    }
+    
+    if (confirm('This will analyze and optimize the layout for warehouse: ' + warehouseSelect.options[warehouseSelect.selectedIndex].text + '\n\nThis may take a few moments. Continue?')) {
+      try {
+        // Call the optimization API
+        const response = await fetch(`/api/warehouses/${warehouseId}/optimize`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Display optimization results
+          displayOptimizationResults(result.data);
+          
+          // Refresh the data
+          await loadZones();
+          await loadZoneStats();
+          await loadRecommendations();
+          
+          alert('Warehouse layout optimization completed successfully!');
+        } else {
+          alert('Error during optimization: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Error optimizing layout:', error);
+        alert('Error during optimization. Please try again.');
+      }
+    }
+  }
+  
+  function displayOptimizationResults(results) {
+    // Create a modal to display optimization results
+    const modalHtml = `
+      <div class="modal fade" id="optimizationResultsModal" tabindex="-1" aria-labelledby="optimizationResultsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="optimizationResultsModalLabel">
+                <i class="bi bi-gear-fill text-primary"></i> 
+                Layout Optimization Results - ${results.warehouse_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Zones Analyzed</h6>
+                      <h3 class="text-primary">${results.zones_analyzed}</h3>
+                      <small class="text-muted">${new Date(results.optimization_date).toLocaleDateString()}</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">High Priority Issues</h6>
+                      <h3 class="text-danger">${results.recommendations.filter(r => r.priority === 'high').length}</h3>
+                      <small class="text-muted">Requires immediate attention</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-lightbulb text-warning"></i> Zone-Specific Recommendations</h6>
+                  <div class="accordion" id="zoneRecommendationsAccordion">
+                    ${results.recommendations.map((rec, index) => `
+                      <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading${index}">
+                          <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                            <span class="badge bg-${rec.priority === 'high' ? 'danger' : rec.priority === 'medium' ? 'warning' : 'success'} me-2">${rec.priority.toUpperCase()}</span>
+                            ${rec.zone_name} (${rec.zone_id})
+                          </button>
+                        </h2>
+                        <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#zoneRecommendationsAccordion">
+                          <div class="card-body">
+                            <p><strong>Current Efficiency:</strong> ${rec.current_efficiency}%</p>
+                            ${rec.recommendations.map(rec => `<p class="mb-1"><i class="bi bi-arrow-right text-primary"></i> ${rec}</p>`).join('')}
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              
+              ${results.efficiency_improvements.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-graph-up text-success"></i> Overall Efficiency Improvements</h6>
+                    <ul class="list-group">
+                      ${results.efficiency_improvements.map(imp => `<li class="list-group-item"><i class="bi bi-check-circle text-success me-2"></i>${imp}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${results.traffic_flow_suggestions.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-arrow-left-right text-info"></i> Traffic Flow Suggestions</h6>
+                    <ul class="list-group">
+                      ${results.traffic_flow_suggestions.map(sug => `<li class="list-group-item"><i class="bi bi-arrow-right text-info me-2"></i>${sug}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              ` : ''}
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-pie-chart text-secondary"></i> Space Utilization Summary</h6>
+                  <div class="row">
+                    ${Object.entries(results.space_utilization).map(([zoneId, util]) => `
+                      <div class="col-md-4 mb-2">
+                        <div class="card">
+                          <div class="card-body p-2 text-center">
+                            <small class="text-muted">${zoneId}</small>
+                            <div class="progress mt-1" style="height: 8px;">
+                              <div class="progress-bar bg-${util.status === 'high' ? 'danger' : util.status === 'medium' ? 'warning' : 'success'}" 
+                                   style="width: ${util.current}%"></div>
+                            </div>
+                            <small class="text-muted">${util.current}%</small>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportOptimizationReport()">
+                <i class="bi bi-download"></i> Export Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('optimizationResultsModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('optimizationResultsModal'));
+    modal.show();
+  }
+
+  async function analyzeTraffic() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
+      alert('Please select a warehouse first to analyze traffic patterns.');
+      return;
+    }
+    
+    if (confirm('This will analyze traffic patterns for warehouse: ' + warehouseSelect.options[warehouseSelect.selectedIndex].text + '\n\nThis may take a few moments. Continue?')) {
+      try {
+        // Call the traffic analysis API
+        const response = await fetch(`/api/warehouses/${warehouseId}/analyze-traffic`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Display traffic analysis results
+          displayTrafficAnalysisResults(result.data);
+          alert('Traffic analysis completed successfully!');
+        } else {
+          alert('Error during traffic analysis: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Error analyzing traffic:', error);
+        alert('Error during traffic analysis. Please try again.');
+      }
+    }
+  }
+  
+  function displayTrafficAnalysisResults(results) {
+    // Create a modal to display traffic analysis results
+    const modalHtml = `
+      <div class="modal fade" id="trafficAnalysisModal" tabindex="-1" aria-labelledby="trafficAnalysisModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="trafficAnalysisModalLabel">
+                <i class="bi bi-graph-up text-info"></i> 
+                Traffic Analysis Results - ${results.warehouse_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Total Zones</h6>
+                      <h3 class="text-primary">${results.total_zones}</h3>
+                      <small class="text-muted">${new Date(results.analysis_date).toLocaleDateString()}</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Traffic Patterns</h6>
+                      <h3 class="text-info">${Object.keys(results.traffic_patterns).length}</h3>
+                      <small class="text-muted">Flow paths analyzed</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Bottlenecks</h6>
+                      <h3 class="text-danger">${results.bottlenecks.length}</h3>
+                      <small class="text-muted">Requires attention</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Suggestions</h6>
+                      <h3 class="text-success">${results.optimization_suggestions.length}</h3>
+                      <small class="text-muted">Optimization tips</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-arrow-left-right text-primary"></i> Traffic Flow Patterns</h6>
+                  <div class="row">
+                    ${Object.entries(results.traffic_patterns).map(([flow, data]) => `
+                      <div class="col-md-6 mb-3">
+                        <div class="card ${data.efficiency_score < 70 ? 'border-danger' : data.efficiency_score < 85 ? 'border-warning' : 'border-success'}">
+                          <div class="card-header d-flex justify-content-between align-items-center">
+                            <strong>${data.description}</strong>
+                            <span class="badge bg-${data.efficiency_score < 70 ? 'danger' : data.efficiency_score < 85 ? 'warning' : 'success'}">${data.efficiency_score}%</span>
+                          </div>
+                          <div class="card-body">
+                            <p><strong>Zones Involved:</strong> ${data.zones_involved}</p>
+                            <p><strong>Efficiency Score:</strong> ${data.efficiency_score}%</p>
+                            <div class="progress mb-2" style="height: 8px;">
+                              <div class="progress-bar bg-${data.efficiency_score < 70 ? 'danger' : data.efficiency_score < 85 ? 'warning' : 'success'}" 
+                                   style="width: ${data.efficiency_score}%"></div>
+                            </div>
+                            <h6>Recommendations:</h6>
+                            <ul class="mb-0">
+                              ${data.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              
+              ${results.bottlenecks.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-exclamation-triangle text-danger"></i> Identified Bottlenecks</h6>
+                    <div class="alert alert-danger">
+                      <ul class="mb-0">
+                        ${results.bottlenecks.map(bottleneck => `
+                          <li><strong>${bottleneck.description}</strong> (${bottleneck.efficiency_score}% efficiency)
+                            <ul>
+                              ${bottleneck.suggestions.map(sug => `<li>${sug}</li>`).join('')}
+                            </ul>
+                          </li>
+                        `).join('')}
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${results.optimization_suggestions.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-lightbulb text-warning"></i> Optimization Suggestions</h6>
+                    <ul class="list-group">
+                      ${results.optimization_suggestions.map(sug => `<li class="list-group-item"><i class="bi bi-check-circle text-success me-2"></i>${sug}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              ` : ''}
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-diagram-3 text-secondary"></i> Zone Flow Analysis</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Zone</th>
+                          <th>Type</th>
+                          <th>Flow Efficiency</th>
+                          <th>Connected Zones</th>
+                          <th>Issues</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${results.zone_flow_analysis.map(zone => `
+                          <tr>
+                            <td><strong>${zone.zone_name}</strong><br><small class="text-muted">${zone.zone_id}</small></td>
+                            <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+                            <td>
+                              <div class="progress" style="height: 6px;">
+                                <div class="progress-bar bg-${zone.flow_efficiency < 50 ? 'danger' : zone.flow_efficiency < 75 ? 'warning' : 'success'}" 
+                                     style="width: ${zone.flow_efficiency}%"></div>
+                              </div>
+                              <small>${zone.flow_efficiency}%</small>
+                            </td>
+                            <td>${zone.connected_zones.length}</td>
+                            <td>${zone.flow_issues.length > 0 ? zone.flow_issues.join(', ') : 'None'}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportTrafficReport()">
+                <i class="bi bi-download"></i> Export Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('trafficAnalysisModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('trafficAnalysisModal'));
+    modal.show();
+  }
+  
+  async function generateHeatmap() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
+      alert('Please select a warehouse first to generate a heatmap.');
+      return;
+    }
+    
+    // Show heatmap type selection modal
+    const heatmapTypeModal = `
+      <div class="modal fade" id="heatmapTypeModal" tabindex="-1" aria-labelledby="heatmapTypeModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="heatmapTypeModalLabel">
+                <i class="bi bi-thermometer-half text-warning"></i> Select Heatmap Type
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Choose the type of heatmap to generate:</label>
+                <select class="form-select" id="heatmapTypeSelect">
+                  <option value="utilization">Capacity Utilization</option>
+                  <option value="efficiency">Zone Efficiency</option>
+                  <option value="activity">Zone Activity</option>
+                </select>
+              </div>
+              <div class="alert alert-info">
+                <small>
+                  <strong>Capacity Utilization:</strong> Shows how full each zone is<br>
+                  <strong>Zone Efficiency:</strong> Shows performance efficiency scores<br>
+                  <strong>Zone Activity:</strong> Shows recent activity levels
+                </small>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" onclick="generateHeatmapWithType()">
+                <i class="bi bi-thermometer-half"></i> Generate Heatmap
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('heatmapTypeModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', heatmapTypeModal);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('heatmapTypeModal'));
+    modal.show();
+  }
+  
+  async function generateHeatmapWithType() {
+    const heatmapType = document.getElementById('heatmapTypeSelect').value;
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    const warehouseId = warehouseSelect.value;
+    
+    // Close the type selection modal
+    bootstrap.Modal.getInstance(document.getElementById('heatmapTypeModal')).hide();
+    
+    try {
+      // Call the heatmap generation API
+      const response = await fetch(`/api/warehouses/${warehouseId}/heatmap`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ heatmapType })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Display heatmap results
+        displayHeatmapResults(result.data);
+        alert('Heatmap generated successfully!');
+      } else {
+        alert('Error generating heatmap: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error generating heatmap:', error);
+      alert('Error generating heatmap. Please try again.');
+    }
+  }
+  
+  function displayHeatmapResults(results) {
+    // Create a modal to display heatmap results
+    const modalHtml = `
+      <div class="modal fade" id="heatmapResultsModal" tabindex="-1" aria-labelledby="heatmapResultsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="heatmapResultsModalLabel">
+                <i class="bi bi-thermometer-half text-warning"></i> 
+                ${results.heatmap_type.charAt(0).toUpperCase() + results.heatmap_type.slice(1)} Heatmap - ${results.warehouse_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Zones Analyzed</h6>
+                      <h3 class="text-primary">${results.zones.length}</h3>
+                      <small class="text-muted">${new Date(results.generated_date).toLocaleDateString()}</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Heatmap Type</h6>
+                      <h3 class="text-warning">${results.heatmap_type.charAt(0).toUpperCase() + results.heatmap_type.slice(1)}</h3>
+                      <small class="text-muted">Analysis metric</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-palette text-secondary"></i> Color Scale Legend</h6>
+                  <div class="row">
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #ff0000; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">High (80-100%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #ffa500; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Medium-High (60-79%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #ffff00; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Medium (40-59%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #00ff00; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Medium-Low (20-39%)</small>
+                    </div>
+                    <div class="col-md-2 text-center">
+                      <div style="width: 30px; height: 30px; background-color: #0000ff; margin: 0 auto; border-radius: 4px;"></div>
+                      <small class="text-muted">Low (0-19%)</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-lightbulb text-info"></i> Key Insights</h6>
+                  <ul class="list-group">
+                    ${results.insights.map(insight => `<li class="list-group-item"><i class="bi bi-info-circle text-info me-2"></i>${insight}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-grid-3x3-gap text-primary"></i> Zone Heatmap Data</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <thead>
+                        <tr>
+                          <th>Zone</th>
+                          <th>Type</th>
+                          <th>Heat Value</th>
+                          <th>Color</th>
+                          <th>Area (sq ft)</th>
+                          <th>Capacity</th>
+                          <th>Current Usage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${results.zones.map(zone => `
+                          <tr>
+                            <td><strong>${zone.zone_name}</strong><br><small class="text-muted">${zone.zone_id}</small></td>
+                            <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+                            <td>
+                              <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" style="width: ${zone.heat_value}%; background-color: ${zone.color};"></div>
+                              </div>
+                              <small>${zone.heat_value}%</small>
+                            </td>
+                            <td>
+                              <div style="width: 20px; height: 20px; background-color: ${zone.color}; border-radius: 3px;"></div>
+                            </td>
+                            <td>${zone.area_sqft || 'N/A'}</td>
+                            <td>${zone.capacity || 'N/A'}</td>
+                            <td>${zone.current_usage || 'N/A'}</td>
+                          </tr>
+                        `).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportHeatmapReport()">
+                <i class="bi bi-download"></i> Export Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('heatmapResultsModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('heatmapResultsModal'));
+    modal.show();
+  }
+  
+  async function exportLayout() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    // Check if warehouses are loaded
+    if (warehousesData.length === 0) {
+      alert('Warehouses are still loading. Please wait a moment and try again.');
+      return;
+    }
+    
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      // If no warehouse is selected but there's only one, auto-select it
+      if (warehousesData.length === 1) {
+        warehouseSelect.value = warehousesData[0].warehouse_id;
+        warehouseSelect.dispatchEvent(new Event('change'));
+        return; // This will trigger the function again with the selected warehouse
+      }
+      alert('Please select a warehouse first to export its layout.');
+      return;
+    }
+    
+    // Show export format selection modal
+    const exportFormatModal = `
+      <div class="modal fade" id="exportFormatModal" tabindex="-1" aria-labelledby="exportFormatModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="exportFormatModalLabel">
+                <i class="bi bi-download text-success"></i> Select Export Format
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="mb-3">
+                <label class="form-label">Choose the export format:</label>
+                <select class="form-select" id="exportFormatSelect">
+                  <option value="json">JSON (Structured Data)</option>
+                  <option value="csv">CSV (Spreadsheet)</option>
+                  <option value="txt">Text Report</option>
+                </select>
+              </div>
+              <div class="alert alert-info">
+                <small>
+                  <strong>JSON:</strong> Best for data processing and integration<br>
+                  <strong>CSV:</strong> Best for spreadsheet analysis<br>
+                  <strong>Text:</strong> Best for human reading and reporting
+                </small>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="button" class="btn btn-primary" onclick="exportLayoutWithFormat()">
+                <i class="bi bi-download"></i> Export Layout
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('exportFormatModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', exportFormatModal);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('exportFormatModal'));
+    modal.show();
+  }
+  
+  async function exportLayoutWithFormat() {
+    const exportFormat = document.getElementById('exportFormatSelect').value;
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    if (!warehouseSelect) {
+      alert('Warehouse filter not found. Please refresh the page.');
+      return;
+    }
+    
+    const warehouseId = warehouseSelect.value;
+    
+    // Close the format selection modal
+    bootstrap.Modal.getInstance(document.getElementById('exportFormatModal')).hide();
+    
+    try {
+      // Call the layout export API
+      const response = await fetch(`/api/warehouses/${warehouseId}/export`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ exportFormat })
+      });
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        // Handle the export based on format
+        if (exportFormat === 'json') {
+          downloadJSON(result.data, `warehouse_layout_${result.data.export_info.warehouse_name.replace(/\s+/g, '_')}.json`);
+        } else if (exportFormat === 'csv') {
+          downloadCSV(result.data, `warehouse_layout_${result.data.export_info.warehouse_name.replace(/\s+/g, '_')}.csv`);
+        } else {
+          downloadTextReport(result.data, `warehouse_layout_${result.data.export_info.warehouse_name.replace(/\s+/g, '_')}.txt`);
+        }
+        
+        alert('Layout exported successfully!');
+      } else {
+        alert('Error exporting layout: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error exporting layout:', error);
+      alert('Error exporting layout. Please try again.');
+    }
+  }
+
+  // Save new zone
+  async function saveNewZone() {
+    const form = document.getElementById('newZoneForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+
+    const zoneData = {
+      zone_id: document.getElementById('zoneId').value,
+      zone_name: document.getElementById('zoneName').value,
+      warehouse_id: document.getElementById('warehouseId').value,
+      zone_type: document.getElementById('zoneType').value,
+      area_sqft: parseInt(document.getElementById('areaSqft').value) || null,
+      capacity: parseInt(document.getElementById('capacity').value) || null,
+      capacity_unit: document.getElementById('capacityUnit').value || null
+    };
+
+    try {
+      const response = await fetch('/api/zones', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(zoneData)
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('Zone created successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('newZoneModal')).hide();
+        form.reset();
+        await loadZones();
+        await loadZoneStats();
+        await loadRecommendations();
+      } else {
+        alert('Error creating zone: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error creating zone:', error);
+      alert('Error creating zone. Please try again.');
+    }
+  }
+
+  // Select zone from map
+  function selectZone(zoneId) {
+    currentZoneId = zoneId;
+    viewZone(zoneId);
+  }
+
+  // View zone details
+  async function viewZone(id) {
+    try {
+      const response = await fetch(`/api/zones/${id}`);
+      const result = await response.json();
+      if (result.success) {
+        const zone = result.data;
+        const modal = new bootstrap.Modal(document.getElementById('zoneDetailsModal'));
+        
+        document.getElementById('zoneDetailsModalLabel').textContent = `Zone Details - ${zone.zone_name}`;
+        
+        // Check if this is a shipping zone to show shipping information
+        let shippingInfo = '';
+        if (zone.zone_type === 'shipping') {
+          try {
+            const shippingResponse = await fetch('/api/shipping-zone-stats');
+            const shippingResult = await shippingResponse.json();
+            if (shippingResult.success) {
+              const stats = shippingResult.data;
+              shippingInfo = `
+                <div class="row mt-4">
+                  <div class="col-12">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                      <h6 class="text-primary mb-0"><i class="bi bi-truck me-2"></i>Shipping Operations</h6>
+                      <button class="btn btn-sm btn-outline-primary" onclick="refreshShippingStats('${zone.zone_id}')">
+                        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+                      </button>
+                    </div>
+                    <div class="row">
+                      <div class="col-md-6">
+                        <div class="shipping-stats-card">
+                          <h6>Overall Statistics</h6>
+                          <div class="stats-grid">
+                            <div class="stat-item">
+                              <span class="stat-label">Total Shipments:</span>
+                              <span class="stat-value">${stats.overall.total_shipments || 0}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Shipped:</span>
+                              <span class="stat-value text-success">${stats.overall.shipped_count || 0}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Processing:</span>
+                              <span class="stat-value text-warning">${stats.overall.processing_count || 0}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Delivered:</span>
+                              <span class="stat-value text-info">${stats.overall.delivered_count || 0}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="shipping-stats-card">
+                          <h6>Performance Metrics</h6>
+                          <div class="stats-grid">
+                            <div class="stat-item">
+                              <span class="stat-label">Avg Processing:</span>
+                              <span class="stat-value">${Math.round(stats.overall.avg_processing_days || 0)} days</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Avg Transit:</span>
+                              <span class="stat-value">${Math.round(stats.overall.avg_transit_days || 0)} days</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Total Value:</span>
+                              <span class="stat-value">$${(stats.overall.total_value || 0).toLocaleString()}</span>
+                            </div>
+                            <div class="stat-item">
+                              <span class="stat-label">Avg Order Value:</span>
+                              <span class="stat-value">$${Math.round(stats.overall.avg_order_value || 0)}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="row mt-3">
+                      <div class="col-12">
+                        <div class="shipping-stats-card">
+                          <h6>Recent Shipments</h6>
+                          <div class="table-responsive">
+                            <table class="table table-sm table-hover">
+                              <thead>
+                                <tr>
+                                  <th>Order ID</th>
+                                  <th>Product</th>
+                                  <th>Quantity</th>
+                                  <th>Status</th>
+                                  <th>Order Date</th>
+                                  <th>Ship Date</th>
+                                  <th>Value</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                ${(stats.recent || []).map(shipment => `
+                                  <tr>
+                                    <td><strong>${shipment.order_id}</strong></td>
+                                    <td>${shipment.product_name || 'N/A'}</td>
+                                    <td>${shipment.quantity || 0}</td>
+                                    <td><span class="badge bg-${getShipmentStatusColor(shipment.status)}">${shipment.status}</span></td>
+                                    <td>${shipment.order_date ? new Date(shipment.order_date).toLocaleDateString() : 'N/A'}</td>
+                                    <td>${shipment.ship_date ? new Date(shipment.ship_date).toLocaleDateString() : 'N/A'}</td>
+                                    <td>$${(shipment.total_value || 0).toLocaleString()}</td>
+                                  </tr>
+                                `).join('')}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+          } catch (shippingError) {
+            console.error('Error loading shipping stats:', shippingError);
+            shippingInfo = `
+              <div class="row mt-4">
+                <div class="col-12">
+                  <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    Unable to load shipping statistics at this time.
+                  </div>
+                </div>
+              </div>
+            `;
+          }
+        }
+        
+        document.getElementById('zoneDetailsContent').innerHTML = `
+          <div class="row">
+            <div class="col-md-6">
+              <h6>Basic Information</h6>
+              <p><strong>Zone ID:</strong> ${zone.zone_id}</p>
+              <p><strong>Zone Name:</strong> ${zone.zone_name}</p>
+              <p><strong>Warehouse:</strong> ${zone.warehouse_name || zone.warehouse_id}</p>
+              <p><strong>Type:</strong> <span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></p>
+            </div>
+            <div class="col-md-6">
+              <h6>Capacity & Usage</h6>
+              <p><strong>Area:</strong> ${zone.area_sqft || 'N/A'} sq ft</p>
+              <p><strong>Capacity:</strong> ${zone.capacity || 'N/A'} ${zone.capacity_unit || ''}</p>
+              <p><strong>Current Usage:</strong> ${zone.current_usage || 0} ${zone.capacity_unit || ''}</p>
+              <p><strong>Usage Percentage:</strong> ${Math.round((zone.current_usage / zone.capacity) * 100) || 0}%</p>
+            </div>
+          </div>
+          <div class="row mt-3">
+            <div class="col-md-6">
+              <h6>Performance</h6>
+              <p><strong>Efficiency:</strong> ${zone.efficiency || 0}%</p>
+              <p><strong>Status:</strong> <span class="status-badge status-${zone.status}">${formatStatus(zone.status)}</span></p>
+              <p><strong>Last Optimized:</strong> ${zone.last_optimized || 'Never'}</p>
+            </div>
+            <div class="col-md-6">
+              <h6>Timestamps</h6>
+              <p><strong>Created:</strong> ${new Date(zone.created_at).toLocaleDateString()}</p>
+              <p><strong>Last Updated:</strong> ${new Date(zone.updated_at).toLocaleDateString()}</p>
+            </div>
+          </div>
+          ${shippingInfo}
+        `;
+        
+        modal.show();
+      } else {
+        alert('Error loading zone details: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error viewing zone:', error);
+      alert('Error loading zone details. Please try again.');
+    }
+  }
+
+  // Optimize zone
+  async function optimizeZone(id) {
+    if (confirm('Optimize zone ' + id + '? This may take a few minutes.')) {
+      try {
+        // Update last optimized date
+        const response = await fetch(`/api/zones/${id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            last_optimized: new Date().toISOString().split('T')[0]
+          })
+        });
+
+        const result = await response.json();
+        if (result.success) {
+          alert('Zone ' + id + ' optimization started and date updated');
+          await loadZones();
+          await loadZoneStats();
+        } else {
+          alert('Error updating zone: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Error optimizing zone:', error);
+        alert('Error optimizing zone. Please try again.');
+      }
+    }
+  }
+
+  // Edit zone
+  function editZone(id) {
+    // Load zone data and populate edit form
+    loadZoneForEdit(id);
+  }
+  
+  async function loadZoneForEdit(zoneId) {
+    try {
+      const response = await fetch(`/api/zones/${zoneId}`);
+      const result = await response.json();
+      
+      if (result.success) {
+        const zone = result.data;
+        
+        // Populate the edit form
+        document.getElementById('editZoneId').value = zone.zone_id;
+        document.getElementById('editZoneName').value = zone.zone_name;
+        document.getElementById('editWarehouseId').value = zone.warehouse_id;
+        document.getElementById('editZoneType').value = zone.zone_type;
+        document.getElementById('editAreaSqft').value = zone.area_sqft || '';
+        document.getElementById('editCapacity').value = zone.capacity || '';
+        document.getElementById('editCapacityUnit').value = zone.capacity_unit || '';
+        document.getElementById('editCurrentUsage').value = zone.current_usage || '';
+        document.getElementById('editEfficiency').value = zone.efficiency || '';
+        document.getElementById('editStatus').value = zone.status || 'active';
+        
+        // Show the edit modal
+        const modal = new bootstrap.Modal(document.getElementById('editZoneModal'));
+        modal.show();
+      } else {
+        alert('Error loading zone for editing: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error loading zone for editing:', error);
+      alert('Error loading zone for editing. Please try again.');
+    }
+  }
+  
+  async function saveZoneEdit() {
+    const form = document.getElementById('editZoneForm');
+    if (!form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    
+    const zoneId = document.getElementById('editZoneId').value;
+    const zoneData = {
+      zone_name: document.getElementById('editZoneName').value,
+      warehouse_id: document.getElementById('editWarehouseId').value,
+      zone_type: document.getElementById('editZoneType').value,
+      area_sqft: parseInt(document.getElementById('editAreaSqft').value) || null,
+      capacity: parseInt(document.getElementById('editCapacity').value) || null,
+      capacity_unit: document.getElementById('editCapacityUnit').value || null,
+      current_usage: parseInt(document.getElementById('editCurrentUsage').value) || 0,
+      efficiency: parseInt(document.getElementById('editEfficiency').value) || 0,
+      status: document.getElementById('editStatus').value
+    };
+    
+    try {
+      const response = await fetch(`/api/zones/${zoneId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(zoneData)
+      });
+      
+      const result = await response.json();
+      if (result.success) {
+        alert('Zone updated successfully!');
+        bootstrap.Modal.getInstance(document.getElementById('editZoneModal')).hide();
+        await loadZones();
+        await loadZoneStats();
+        await loadRecommendations();
+      } else {
+        alert('Error updating zone: ' + result.message);
+      }
+    } catch (error) {
+      console.error('Error updating zone:', error);
+      alert('Error updating zone. Please try again.');
+    }
+  }
+
+  // Edit zone from modal
+  function editZoneFromModal() {
+    // This would open an edit form
+    alert('Edit functionality would be implemented here');
+  }
+
+  // View analytics
+  function viewAnalytics(id) {
+    // Find the zone data
+    const zone = zonesData.find(z => z.zone_id === id);
+    if (!zone) {
+      alert('Zone not found');
+      return;
+    }
+    
+    // Create analytics modal
+    const analyticsModal = `
+      <div class="modal fade" id="zoneAnalyticsModal" tabindex="-1" aria-labelledby="zoneAnalyticsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="zoneAnalyticsModalLabel">
+                <i class="bi bi-graph-up text-success"></i> 
+                Zone Analytics - ${zone.zone_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Efficiency</h6>
+                      <h3 class="text-${zone.efficiency >= 80 ? 'success' : zone.efficiency >= 60 ? 'warning' : 'danger'}">${zone.efficiency || 0}%</h3>
+                      <small class="text-muted">Performance score</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Utilization</h6>
+                      <h3 class="text-${zone.capacity && zone.current_usage ? ((zone.current_usage / zone.capacity) * 100 > 80 ? 'danger' : (zone.current_usage / zone.capacity) * 100 > 60 ? 'warning' : 'success') : 'secondary'}">${zone.capacity && zone.current_usage ? Math.round((zone.current_usage / zone.capacity) * 100) : 0}%</h3>
+                      <small class="text-muted">Capacity usage</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Area</h6>
+                      <h3 class="text-primary">${zone.area_sqft || 'N/A'}</h3>
+                      <small class="text-muted">Square feet</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-3">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Status</h6>
+                      <h3 class="text-${zone.status === 'optimal' ? 'success' : zone.status === 'needs-improvement' ? 'warning' : zone.status === 'critical' ? 'danger' : 'secondary'}">${zone.status || 'N/A'}</h3>
+                      <small class="text-muted">Current status</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-chart-line text-info"></i> Performance Metrics</h6>
+                  <div class="table-responsive">
+                    <table class="table table-sm">
+                      <tbody>
+                        <tr>
+                          <td><strong>Zone ID:</strong></td>
+                          <td>${zone.zone_id}</td>
+                          <td><strong>Zone Type:</strong></td>
+                          <td><span class="badge bg-${getZoneTypeColor(zone.zone_type)}">${zone.zone_type}</span></td>
+                        </tr>
+                        <tr>
+                          <td><strong>Capacity:</strong></td>
+                          <td>${zone.capacity || 'N/A'} ${zone.capacity_unit || ''}</td>
+                          <td><strong>Current Usage:</strong></td>
+                          <td>${zone.current_usage || 'N/A'} ${zone.capacity_unit || ''}</td>
+                        </tr>
+                        <tr>
+                          <td><strong>Last Optimized:</strong></td>
+                          <td>${zone.last_optimized || 'Never'}</td>
+                          <td><strong>Created:</strong></td>
+                          <td>${zone.created_at ? new Date(zone.created_at).toLocaleDateString() : 'N/A'}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-lightbulb text-warning"></i> Recommendations</h6>
+                  <ul class="list-group">
+                    ${generateZoneRecommendations(zone).map(rec => `<li class="list-group-item"><i class="bi bi-arrow-right text-primary me-2"></i>${rec}</li>`).join('')}
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportZoneAnalytics()">
+                <i class="bi bi-download"></i> Export Analytics
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('zoneAnalyticsModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', analyticsModal);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('zoneAnalyticsModal'));
+    modal.show();
+  }
+  
+  function generateZoneRecommendations(zone) {
+    const recommendations = [];
+    
+    if (zone.efficiency < 70) {
+      recommendations.push('Zone efficiency is below optimal. Consider process optimization and training.');
+    }
+    
+    if (zone.capacity && zone.current_usage) {
+      const utilization = (zone.current_usage / zone.capacity) * 100;
+      if (utilization > 90) {
+        recommendations.push('Zone is over-utilized. Consider redistributing inventory or expanding capacity.');
+      } else if (utilization < 30) {
+        recommendations.push('Zone is under-utilized. Consider consolidating with other zones or reallocating space.');
+      }
+    }
+    
+    if (zone.status === 'critical') {
+      recommendations.push('Zone status is critical. Immediate attention and optimization required.');
+    }
+    
+    if (!zone.last_optimized) {
+      recommendations.push('Zone has never been optimized. Schedule optimization analysis.');
+    }
+    
+    if (recommendations.length === 0) {
+      recommendations.push('Zone is performing well. Continue monitoring and maintenance.');
+    }
+    
+    return recommendations;
+  }
+  
+  function exportZoneAnalytics() {
+    const modal = document.getElementById('zoneAnalyticsModal');
+    if (!modal) {
+      alert('No analytics data to export.');
+      return;
+    }
+    
+    const zoneName = document.getElementById('zoneAnalyticsModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `ZONE ANALYTICS REPORT\n`;
+    report += `=====================\n\n`;
+    report += `Zone: ${zoneName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add performance metrics
+    const metrics = modal.querySelectorAll('.card-body h3');
+    const labels = modal.querySelectorAll('.card-title');
+    
+    report += `PERFORMANCE METRICS:\n`;
+    report += `===================\n`;
+    for (let i = 0; i < metrics.length; i++) {
+      report += `${labels[i].textContent}: ${metrics[i].textContent}\n`;
+    }
+    
+    // Add recommendations
+    const recommendations = modal.querySelectorAll('.list-group-item');
+    if (recommendations.length > 0) {
+      report += `\nRECOMMENDATIONS:\n`;
+      report += `================\n`;
+      recommendations.forEach((rec, index) => {
+        report += `${index + 1}. ${rec.textContent.trim()}\n`;
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `zone_analytics_${zoneName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Zone analytics report exported successfully!');
+  }
+
+  // Apply filters to zones
+  async function applyFilters() {
+    const warehouseId = getElementValue('warehouseFilter', '');
+    const searchTerm = getElementValue('searchZone', '');
+    const status = getElementValue('statusFilter', '');
+    const type = getElementValue('typeFilter', '');
+    const capacity = getElementValue('capacityRange', '');
+    
+    try {
+      const params = new URLSearchParams();
+      if (warehouseId) params.append('warehouse_id', warehouseId);
+      if (searchTerm) params.append('search', searchTerm);
+      if (status) params.append('status', status);
+      if (type) params.append('zone_type', type);
+      
+      const response = await fetch(`/api/zones?${params.toString()}`);
+      const result = await response.json();
+      if (result.success) {
+        zonesData = result.data;
+        renderZonesTable();
+        renderWarehouseMap();
+        updateTotalZones();
+      }
+    } catch (error) {
+      console.error('Error applying filters:', error);
+    }
   }
 
   // Search functionality
   document.getElementById('searchZone').addEventListener('input', function(e) {
-    // Real-time search functionality would be implemented here
-    console.log('Searching for:', e.target.value);
+    // Debounce search to avoid too many API calls
+    clearTimeout(this.searchTimeout);
+    this.searchTimeout = setTimeout(() => {
+      applyFilters();
+    }, 300);
   });
 
-  function refreshRecommendations() {
-    alert('Optimization recommendations refreshed');
-    // In a real application, this would fetch updated data from the server
+  // Filter change event listeners
+  document.addEventListener('DOMContentLoaded', function() {
+    // Add event listeners for filter changes
+    const warehouseFilter = document.getElementById('warehouseFilter');
+    const statusFilter = document.getElementById('statusFilter');
+    const typeFilter = document.getElementById('typeFilter');
+    const capacityFilter = document.getElementById('capacityRange');
+    
+    if (warehouseFilter) {
+      warehouseFilter.addEventListener('change', applyFilters);
+    }
+    if (statusFilter) {
+      statusFilter.addEventListener('change', applyFilters);
+    }
+    if (typeFilter) {
+      typeFilter.addEventListener('change', applyFilters);
+    }
+    if (capacityFilter) {
+      capacityFilter.addEventListener('change', applyFilters);
+    }
+  });
+
+  // Refresh recommendations
+  async function refreshRecommendations() {
+    try {
+      await loadRecommendations();
+      alert('Optimization recommendations refreshed');
+    } catch (error) {
+      console.error('Error refreshing recommendations:', error);
+      alert('Error refreshing recommendations');
+    }
   }
 
   function generateOptimizationReport() {
     alert('Generating optimization report...');
     // In a real application, this would generate and download a report
+  }
+  
+  function exportOptimizationReport() {
+    // Get the current optimization results from the modal
+    const modal = document.getElementById('optimizationResultsModal');
+    if (!modal) {
+      alert('No optimization results to export.');
+      return;
+    }
+    
+    // Create a simple text report
+    const warehouseName = document.getElementById('optimizationResultsModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `WAREHOUSE LAYOUT OPTIMIZATION REPORT\n`;
+    report += `=====================================\n\n`;
+    report += `Warehouse: ${warehouseName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add zone recommendations
+    const recommendations = modal.querySelectorAll('.accordion-item');
+    if (recommendations.length > 0) {
+      report += `ZONE RECOMMENDATIONS:\n`;
+      report += `====================\n`;
+      recommendations.forEach((rec, index) => {
+        const zoneName = rec.querySelector('.accordion-button').textContent.trim();
+        const priority = rec.querySelector('.badge').textContent;
+        const efficiency = rec.querySelector('.card-body p').textContent;
+        const recs = Array.from(rec.querySelectorAll('.card-body p:not(:first-child)')).map(p => p.textContent.trim());
+        
+        report += `\n${index + 1}. ${zoneName}\n`;
+        report += `   Priority: ${priority}\n`;
+        report += `   ${efficiency}\n`;
+        report += `   Recommendations:\n`;
+        recs.forEach(r => report += `     - ${r}\n`);
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `warehouse_optimization_${warehouseName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Optimization report exported successfully!');
   }
 
   function markAllAsRead() {
@@ -968,6 +4058,207 @@
     if (confirm('Are you sure you want to sign out?')) {
       alert('Signing out...');
     }
+  }
+
+  // Export functions
+  function exportTrafficReport() {
+    const modal = document.getElementById('trafficAnalysisModal');
+    if (!modal) {
+      alert('No traffic analysis results to export.');
+      return;
+    }
+    
+    const warehouseName = document.getElementById('trafficAnalysisModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `WAREHOUSE TRAFFIC ANALYSIS REPORT\n`;
+    report += `=====================================\n\n`;
+    report += `Warehouse: ${warehouseName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add traffic patterns
+    const trafficPatterns = modal.querySelectorAll('.card-header strong');
+    if (trafficPatterns.length > 0) {
+      report += `TRAFFIC FLOW PATTERNS:\n`;
+      report += `======================\n`;
+      trafficPatterns.forEach((pattern, index) => {
+        const card = pattern.closest('.card');
+        const efficiency = card.querySelector('.badge').textContent;
+        const zonesInvolved = card.querySelector('p').textContent;
+        const recommendations = Array.from(card.querySelectorAll('li')).map(li => li.textContent);
+        
+        report += `\n${index + 1}. ${pattern.textContent}\n`;
+        report += `   Efficiency: ${efficiency}\n`;
+        report += `   ${zonesInvolved}\n`;
+        report += `   Recommendations:\n`;
+        recommendations.forEach(rec => report += `     - ${rec}\n`);
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `traffic_analysis_${warehouseName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Traffic analysis report exported successfully!');
+  }
+  
+  function exportHeatmapReport() {
+    const modal = document.getElementById('heatmapResultsModal');
+    if (!modal) {
+      alert('No heatmap results to export.');
+      return;
+    }
+    
+    const warehouseName = document.getElementById('heatmapResultsModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `WAREHOUSE HEATMAP REPORT\n`;
+    report += `=========================\n\n`;
+    report += `Warehouse: ${warehouseName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add zone data
+    const zoneRows = modal.querySelectorAll('tbody tr');
+    if (zoneRows.length > 0) {
+      report += `ZONE HEATMAP DATA:\n`;
+      report += `==================\n`;
+      zoneRows.forEach((row, index) => {
+        const cells = row.querySelectorAll('td');
+        const zoneName = cells[0].querySelector('strong').textContent;
+        const zoneId = cells[0].querySelector('small').textContent;
+        const zoneType = cells[1].textContent;
+        const heatValue = cells[2].querySelector('small').textContent;
+        const area = cells[4].textContent;
+        const capacity = cells[5].textContent;
+        const usage = cells[6].textContent;
+        
+        report += `\n${index + 1}. ${zoneName} (${zoneId})\n`;
+        report += `   Type: ${zoneType}\n`;
+        report += `   Heat Value: ${heatValue}\n`;
+        report += `   Area: ${area}\n`;
+        report += `   Capacity: ${capacity}\n`;
+        report += `   Current Usage: ${usage}\n`;
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `heatmap_${warehouseName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Heatmap report exported successfully!');
+  }
+  
+  // Download utility functions
+  function downloadJSON(data, filename) {
+    const jsonString = JSON.stringify(data, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+  
+  function downloadCSV(data, filename) {
+    let csvContent = '';
+    
+    // Add export info
+    csvContent += 'Export Info\n';
+    csvContent += `Warehouse ID,${data.export_info.warehouse_id}\n`;
+    csvContent += `Warehouse Name,${data.export_info.warehouse_name}\n`;
+    csvContent += `Export Date,${data.export_info.export_date}\n`;
+    csvContent += `Total Zones,${data.export_info.total_zones}\n`;
+    csvContent += `Total Area,${data.export_info.total_area}\n\n`;
+    
+    // Add layout summary
+    csvContent += 'Layout Summary\n';
+    csvContent += `Zone Types,${Object.entries(data.layout_summary.zone_types).map(([type, count]) => `${type}: ${count}`).join('; ')}\n`;
+    csvContent += `Total Capacity,${data.layout_summary.capacity_summary.total_capacity}\n`;
+    csvContent += `Total Usage,${data.layout_summary.capacity_summary.total_usage}\n`;
+    csvContent += `Average Utilization,${data.layout_summary.capacity_summary.average_utilization}%\n`;
+    csvContent += `Average Efficiency,${data.layout_summary.efficiency_summary.average_efficiency}%\n`;
+    csvContent += `Optimal Zones,${data.layout_summary.efficiency_summary.optimal_zones}\n`;
+    csvContent += `Needs Improvement,${data.layout_summary.efficiency_summary.needs_improvement_zones}\n`;
+    csvContent += `Critical Zones,${data.layout_summary.efficiency_summary.critical_zones}\n\n`;
+    
+    // Add zones data
+    csvContent += 'Zones Data\n';
+    csvContent += 'Zone ID,Zone Name,Warehouse ID,Zone Type,Area (sq ft),Capacity,Capacity Unit,Current Usage,Efficiency,Status,Last Optimized,Created At,Updated At\n';
+    
+    data.zones.forEach(zone => {
+      csvContent += `${zone.zone_id},${zone.zone_name},${zone.warehouse_id},${zone.zone_type},${zone.area_sqft || ''},${zone.capacity || ''},${zone.capacity_unit || ''},${zone.current_usage || ''},${zone.efficiency || ''},${zone.status || ''},${zone.last_optimized || ''},${zone.created_at || ''},${zone.updated_at || ''}\n`;
+    });
+    
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+  }
+  
+  function downloadTextReport(data, filename) {
+    let report = `WAREHOUSE LAYOUT EXPORT REPORT\n`;
+    report += `================================\n\n`;
+    report += `Export Information:\n`;
+    report += `- Warehouse ID: ${data.export_info.warehouse_id}\n`;
+    report += `- Warehouse Name: ${data.export_info.warehouse_name}\n`;
+    report += `- Export Date: ${data.export_info.export_date}\n`;
+    report += `- Total Zones: ${data.export_info.total_zones}\n`;
+    report += `- Total Area: ${data.export_info.total_area} sq ft\n\n`;
+    
+    report += `Layout Summary:\n`;
+    report += `- Zone Types: ${Object.entries(data.layout_summary.zone_types).map(([type, count]) => `${type}: ${count}`).join(', ')}\n`;
+    report += `- Total Capacity: ${data.layout_summary.capacity_summary.total_capacity}\n`;
+    report += `- Total Usage: ${data.layout_summary.capacity_summary.total_usage}\n`;
+    report += `- Average Utilization: ${data.layout_summary.capacity_summary.average_utilization}%\n`;
+    report += `- Average Efficiency: ${data.layout_summary.efficiency_summary.average_efficiency}%\n`;
+    report += `- Optimal Zones: ${data.layout_summary.efficiency_summary.optimal_zones}\n`;
+    report += `- Needs Improvement: ${data.layout_summary.efficiency_summary.needs_improvement_zones}\n`;
+    report += `- Critical Zones: ${data.layout_summary.efficiency_summary.critical_zones}\n\n`;
+    
+    report += `Zones Details:\n`;
+    report += `==============\n`;
+    data.zones.forEach((zone, index) => {
+      report += `\n${index + 1}. ${zone.zone_name} (${zone.zone_id})\n`;
+      report += `   Type: ${zone.zone_type}\n`;
+      report += `   Area: ${zone.area_sqft || 'N/A'} sq ft\n`;
+      report += `   Capacity: ${zone.capacity || 'N/A'} ${zone.capacity_unit || ''}\n`;
+      report += `   Current Usage: ${zone.current_usage || 'N/A'}\n`;
+      report += `   Efficiency: ${zone.efficiency || 'N/A'}%\n`;
+      report += `   Status: ${zone.status || 'N/A'}\n`;
+      report += `   Last Optimized: ${zone.last_optimized || 'Never'}\n`;
+    });
+    
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   }
 </script>
 </body>

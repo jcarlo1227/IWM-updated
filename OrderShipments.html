@@ -570,10 +570,7 @@
             <i class="bi bi-file-earmark-text"></i>
             Reports
           </button>
-          <button class="btn" onclick="viewInventoryImpact()">
-            <i class="bi bi-box-seam"></i>
-            Inventory Impact
-          </button>
+
         </div>
       </div>
 
@@ -1102,15 +1099,7 @@
     a.click();
   }
 
-  function viewInventoryImpact() {
-    const totals = new Map();
-    ordersData.forEach(o => {
-      const key = `${o.product_name || 'Unknown Product'}`;
-      totals.set(key, (totals.get(key) || 0) + (o.quantity || 0));
-    });
-    const lines = Array.from(totals.entries()).map(([k,v]) => `- ${k}: ${v}`);
-    alert(`Inventory Impact (deductions by product):\n\n${lines.join('\n') || 'No data'}`);
-  }
+
 
   // Notifications and user helpers
   async function loadNotifications() {

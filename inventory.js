@@ -3,7 +3,15 @@ const database = require('./database');
 // Initialize inventory table
 const initializeInventoryTable = async () => {
   try {
-    const sql = await database.sql();
+    // Use the more robust connection method
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, skipping inventory table creation');
+      return;
+    }
+    
+    console.log('✅ Database connection verified for inventory table creation');
+    
     await sql`
       CREATE TABLE IF NOT EXISTS inventory_items (
         id SERIAL PRIMARY KEY,
@@ -117,6 +125,39 @@ const initializeInventoryTable = async () => {
       ON CONFLICT (warehouse_id) DO NOTHING;
     `;
     console.log('✅ Warehouse inserted');
+
+    // Create zones table
+    await sql`
+      CREATE TABLE IF NOT EXISTS zones (
+        id SERIAL PRIMARY KEY,
+        zone_id VARCHAR(50) UNIQUE NOT NULL,
+        zone_name VARCHAR(255) NOT NULL,
+        warehouse_id VARCHAR(50) REFERENCES warehouses(warehouse_id) ON DELETE CASCADE,
+        zone_type VARCHAR(100) NOT NULL,
+        area_sqft INTEGER,
+        capacity INTEGER,
+        capacity_unit VARCHAR(50),
+        current_usage INTEGER DEFAULT 0,
+        efficiency DECIMAL(5,2) DEFAULT 0,
+        status VARCHAR(50) DEFAULT 'active',
+        last_optimized DATE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
+    console.log('✅ Zones table created/verified');
+
+    // Insert default zones
+    await sql`
+      INSERT INTO zones (zone_id, zone_name, warehouse_id, zone_type, area_sqft, capacity, capacity_unit, current_usage, efficiency, status, last_optimized) VALUES
+        ('Z-001', 'Main Receiving', 'WH001', 'Receiving', 2500, 100, 'pallets', 85, 92.0, 'needs_improvement', '2025-01-10'),
+        ('Z-002', 'High-Value Storage', 'WH001', 'Storage', 3000, 200, 'units', 144, 88.0, 'optimal', '2025-01-12'),
+        ('Z-003', 'Fast Pick Zone', 'WH001', 'Picking', 1800, 150, 'SKUs', 68, 95.0, 'optimal', '2025-01-14'),
+        ('Z-004', 'Shipping Dock', 'WH001', 'Shipping', 2200, 80, 'orders', 54, 78.0, 'critical', '2025-01-08'),
+        ('Z-005', 'Returns Processing', 'WH001', 'Returns', 1200, 50, 'items', 15, 85.0, 'optimal', '2025-01-15')
+      ON CONFLICT (zone_id) DO NOTHING;
+    `;
+    console.log('✅ Default zones inserted');
   } catch (err) {
     console.error('❌ Error inserting default data:', err);
     throw err;
@@ -126,7 +167,15 @@ const initializeInventoryTable = async () => {
 // Initialize order shipments table
 const initializeOrderShipmentsTable = async () => {
   try {
-    const sql = await database.sql();
+    // Use the more robust connection method
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, skipping order shipments table creation');
+      return;
+    }
+    
+    console.log('✅ Database connection verified for order shipments table creation');
+    
     // Ensure core tables exist
     await sql`
       CREATE TABLE IF NOT EXISTS businesses (
@@ -159,6 +208,9 @@ const initializeOrderShipmentsTable = async () => {
         quantity INTEGER
       )
     `;
+    
+    // Ensure shipping_date column exists (migration for existing databases)
+    await sql`ALTER TABLE production_planning ADD COLUMN IF NOT EXISTS shipping_date DATE`;
 
     const createPPTriggerFunction = `
       CREATE OR REPLACE FUNCTION insert_pp_after_orders_insert()
@@ -362,30 +414,69 @@ const initializeOrderShipmentsTable = async () => {
 
 // Insert shipments for processed production plans not yet in shipments
 const syncProcessedPlansIntoShipments = async () => {
-  const sql = await database.sql();
-  // Only run if production_planning table exists
-  const t = await sql`SELECT to_regclass('public.production_planning') AS reg`;
-  if (!t.length || !t[0].reg) return;
-  const queryText = `
-    INSERT INTO order_shipments (
-      order_id, product_id, product_name, quantity,
-      status, order_date, ship_date, updated_at
-    )
-    SELECT
-      pp.order_id,
-      pp.product_id,
-      pp.product_name,
-      pp.quantity,
-      'processed' AS status,
-      pp.planned_date AS order_date,
-      pp.shipping_date AS ship_date,
-      CURRENT_TIMESTAMP
-    FROM production_planning pp
-    WHERE pp.status = 'processed'
-      AND NOT EXISTS (
-        SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
-      )`;
-  await sql(queryText);
+  try {
+    const sql = await database.sql();
+    // Only run if production_planning table exists
+    const t = await sql`SELECT to_regclass('public.production_planning') AS reg`;
+    if (!t.length || !t[0].reg) return;
+    
+    // Check if shipping_date column exists
+    const hasShippingDate = await sql`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'production_planning' 
+      AND column_name = 'shipping_date'
+    `;
+    
+    if (hasShippingDate.length > 0) {
+      // Use shipping_date if it exists
+      const queryText = `
+        INSERT INTO order_shipments (
+          order_id, product_id, product_name, quantity,
+          status, order_date, ship_date, updated_at
+        )
+        SELECT
+          pp.order_id,
+          pp.product_id,
+          pp.product_name,
+          pp.quantity,
+          'processed' AS status,
+          pp.planned_date AS order_date,
+          pp.shipping_date AS ship_date,
+          CURRENT_TIMESTAMP
+        FROM production_planning pp
+        WHERE pp.status = 'processed'
+          AND NOT EXISTS (
+            SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
+          )`;
+      await sql(queryText);
+    } else {
+      // Fallback: use planned_date for both order_date and ship_date
+      const queryText = `
+        INSERT INTO order_shipments (
+          order_id, product_id, product_name, quantity,
+          status, order_date, ship_date, updated_at
+        )
+        SELECT
+          pp.order_id,
+          pp.product_id,
+          pp.product_name,
+          pp.quantity,
+          'processed' AS status,
+          pp.planned_date AS order_date,
+          pp.planned_date AS ship_date,
+          CURRENT_TIMESTAMP
+        FROM production_planning pp
+        WHERE pp.status = 'processed'
+          AND NOT EXISTS (
+            SELECT 1 FROM order_shipments os WHERE os.order_id::text = pp.order_id::text
+          )`;
+      await sql(queryText);
+    }
+  } catch (error) {
+    console.error('Error in syncProcessedPlansIntoShipments:', error);
+    // Don't throw error, just log it to prevent startup failure
+  }
 };
 
 // Get all inventory items with optional filters
@@ -601,7 +692,12 @@ const deleteMultipleInventoryItems = async (ids) => {
 // Get all categories
 const getAllCategories = async () => {
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning empty categories');
+      return [];
+    }
+    
     const result = await sql`
       SELECT category_id, category_name 
       FROM categories 
@@ -610,14 +706,20 @@ const getAllCategories = async () => {
     return result;
   } catch (err) {
     console.error('Error fetching categories:', err);
-    throw err;
+    // Return empty array instead of throwing to prevent crashes
+    return [];
   }
 };
 
 // Get all warehouses
 const getAllWarehouses = async () => {
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning empty warehouses');
+      return [];
+    }
+    
     const result = await sql`
       SELECT * FROM warehouses
       ORDER BY warehouse_name
@@ -626,14 +728,25 @@ const getAllWarehouses = async () => {
     return result;
   } catch (err) {
     console.error('Error fetching warehouses:', err);
-    throw err;
+    // Return empty array instead of throwing to prevent crashes
+    return [];
   }
 };
 
 // Get inventory statistics
 const getInventoryStats = async () => {
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning default inventory stats');
+      return {
+        totalItems: 0,
+        activeItems: 0,
+        lowStockItems: 0,
+        totalValue: 0
+      };
+    }
+    
     const totalItems = await sql`SELECT COUNT(*) as count FROM inventory_items`;
     const activeItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE status = 'active'`;
     const lowStockItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE total_quantity < 10`;
@@ -651,7 +764,13 @@ const getInventoryStats = async () => {
     };
   } catch (err) {
     console.error('Error fetching inventory statistics:', err);
-    throw err;
+    // Return default values instead of throwing to prevent crashes
+    return {
+      totalItems: 0,
+      activeItems: 0,
+      lowStockItems: 0,
+      totalValue: 0
+    };
   }
 };
 
@@ -659,7 +778,7 @@ const getInventoryStats = async () => {
 const getStockOverview = async (options = {}) => {
   const threshold = Number(options.threshold) || 50;
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
     if (!sql) {
       return {
         totalItems: 0,
@@ -840,6 +959,84 @@ const getOrderShipmentById = async (id) => {
     return result[0] || null;
   } catch (err) {
     console.error('Error fetching order shipment:', err);
+    throw err;
+  }
+};
+
+// Get shipping statistics for shipping dock zones
+const getShippingZoneStats = async () => {
+  try {
+    const sql = await database.sql();
+    
+    // Get overall shipping statistics
+    const overallStats = await sql`
+      SELECT 
+        COUNT(*) as total_shipments,
+        COUNT(CASE WHEN status = 'shipped' THEN 1 END) as shipped_count,
+        COUNT(CASE WHEN status = 'processing' THEN 1 END) as processing_count,
+        COUNT(CASE WHEN status = 'delivered' THEN 1 END) as delivered_count,
+        COUNT(CASE WHEN status = 'cancelled' THEN 1 END) as cancelled_count,
+        AVG(CASE WHEN ship_date IS NOT NULL AND order_date IS NOT NULL 
+            THEN EXTRACT(EPOCH FROM (ship_date - order_date))/86400 END) as avg_processing_days,
+        AVG(CASE WHEN delivery_date IS NOT NULL AND ship_date IS NOT NULL 
+            THEN EXTRACT(EPOCH FROM (delivery_date - ship_date))/86400 END) as avg_transit_days,
+        SUM(total_value) as total_value,
+        AVG(total_value) as avg_order_value
+      FROM order_shipments
+      WHERE status != 'cancelled'
+    `;
+    
+    // Get recent shipments
+    const recentShipments = await sql`
+      SELECT 
+        order_id,
+        product_name,
+        quantity,
+        status,
+        order_date,
+        ship_date,
+        delivery_date,
+        tracking_number,
+        total_value
+      FROM order_shipments
+      WHERE status != 'cancelled'
+      ORDER BY updated_at DESC
+      LIMIT 10
+    `;
+    
+    // Get shipments by status
+    const statusBreakdown = await sql`
+      SELECT 
+        status,
+        COUNT(*) as count,
+        AVG(total_value) as avg_value
+      FROM order_shipments
+      WHERE status != 'cancelled'
+      GROUP BY status
+      ORDER BY count DESC
+    `;
+    
+    // Get daily shipping volume for the last 7 days
+    const dailyVolume = await sql`
+      SELECT 
+        DATE(order_date) as date,
+        COUNT(*) as shipments,
+        SUM(total_value) as total_value
+      FROM order_shipments
+      WHERE order_date >= CURRENT_DATE - INTERVAL '7 days'
+        AND status != 'cancelled'
+      GROUP BY DATE(order_date)
+      ORDER BY date DESC
+    `;
+    
+    return {
+      overall: overallStats[0] || {},
+      recent: recentShipments || [],
+      statusBreakdown: statusBreakdown || [],
+      dailyVolume: dailyVolume || []
+    };
+  } catch (err) {
+    console.error('Error fetching shipping zone stats:', err);
     throw err;
   }
 };
@@ -1040,6 +1237,705 @@ const updateOrderShipmentStatus = async (id, status, options = {}) => {
   }
 };
 
+// Zone management functions
+const getAllZones = async (filters = {}) => {
+  try {
+    const sql = await database.sql();
+    
+    // First, let's check if the zones table exists and has data
+    const tableCheck = await sql`SELECT COUNT(*) as count FROM zones`;
+    console.log('Zones table check:', tableCheck[0]);
+    
+    let queryText = `
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE 1=1
+    `;
+    
+    const params = [];
+    
+    if (filters.warehouse_id) {
+      params.push(filters.warehouse_id);
+      queryText += ` AND z.warehouse_id = $${params.length}`;
+    }
+    if (filters.zone_type) {
+      params.push(filters.zone_type);
+      queryText += ` AND z.zone_type = $${params.length}`;
+    }
+    if (filters.status) {
+      params.push(filters.status);
+      queryText += ` AND z.status = $${params.length}`;
+    }
+    if (filters.search) {
+      const searchTerm = `%${filters.search}%`;
+      params.push(searchTerm);
+      queryText += ` AND (z.zone_name ILIKE $${params.length}`;
+      params.push(searchTerm);
+      queryText += ` OR z.zone_id ILIKE $${params.length})`;
+    }
+    
+    queryText += ` ORDER BY z.zone_id`;
+    
+    console.log('Query:', queryText);
+    console.log('Params:', params);
+    
+    const result = await sql(queryText, params);
+    console.log('Query result:', result);
+    return result;
+  } catch (err) {
+    console.error('Error fetching zones:', err);
+    throw err;
+  }
+};
+
+const getZoneById = async (zoneId) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.zone_id = ${zoneId}
+    `;
+    return result[0] || null;
+  } catch (err) {
+    console.error('Error fetching zone by ID:', err);
+    throw err;
+  }
+};
+
+const createZone = async (zoneData) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      INSERT INTO zones (
+        zone_id, zone_name, warehouse_id, zone_type, area_sqft, 
+        capacity, capacity_unit, current_usage, efficiency, status
+      ) VALUES (
+        ${zoneData.zone_id}, ${zoneData.zone_name}, ${zoneData.warehouse_id}, 
+        ${zoneData.zone_type}, ${zoneData.area_sqft}, ${zoneData.capacity}, 
+        ${zoneData.capacity_unit}, ${zoneData.current_usage || 0}, 
+        ${zoneData.efficiency || 0}, ${zoneData.status || 'active'}
+      ) RETURNING *
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error creating zone:', err);
+    throw err;
+  }
+};
+
+const updateZone = async (zoneId, zoneData) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      UPDATE zones SET
+        zone_name = ${zoneData.zone_name},
+        warehouse_id = ${zoneData.warehouse_id},
+        zone_type = ${zoneData.zone_type},
+        area_sqft = ${zoneData.area_sqft},
+        capacity = ${zoneData.capacity},
+        capacity_unit = ${zoneData.capacity_unit},
+        current_usage = ${zoneData.current_usage},
+        efficiency = ${zoneData.efficiency},
+        status = ${zoneData.status},
+        last_optimized = ${zoneData.last_optimized || null},
+        updated_at = CURRENT_TIMESTAMP
+      WHERE zone_id = ${zoneId}
+      RETURNING *
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error updating zone:', err);
+    throw err;
+  }
+};
+
+const deleteZone = async (zoneId) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      DELETE FROM zones WHERE zone_id = ${zoneId} RETURNING *
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error deleting zone:', err);
+    throw err;
+  }
+};
+
+const getZoneStats = async () => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT 
+        COUNT(*) as total_zones,
+        COUNT(CASE WHEN status = 'optimal' THEN 1 END) as optimized_zones,
+        COUNT(CASE WHEN status IN ('needs_improvement', 'critical') THEN 1 END) as need_attention,
+        AVG(efficiency) as avg_efficiency
+      FROM zones
+    `;
+    return result[0];
+  } catch (err) {
+    console.error('Error fetching zone stats:', err);
+    throw err;
+  }
+};
+
+const getZonesByWarehouse = async (warehouseId) => {
+  try {
+    const sql = await database.sql();
+    const result = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
+    `;
+    return result;
+  } catch (err) {
+    console.error('Error fetching zones by warehouse:', err);
+    throw err;
+  }
+};
+
+// Warehouse layout optimization functions
+const optimizeWarehouseLayout = async (warehouseId) => {
+  try {
+    const sql = await database.sql();
+    
+    // Get all zones for the warehouse
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
+    `;
+    
+    if (zones.length === 0) {
+      throw new Error('No zones found for this warehouse');
+    }
+    
+    // Get warehouse information
+    const warehouse = await sql`
+      SELECT * FROM warehouses WHERE warehouse_id = ${warehouseId}
+    `;
+    
+    if (warehouse.length === 0) {
+      throw new Error('Warehouse not found');
+    }
+    
+    const optimizationResults = {
+      warehouse_id: warehouseId,
+      warehouse_name: warehouse[0].warehouse_name,
+      optimization_date: new Date().toISOString(),
+      zones_analyzed: zones.length,
+      recommendations: [],
+      efficiency_improvements: [],
+      space_utilization: {},
+      traffic_flow_suggestions: []
+    };
+    
+    // Analyze zone efficiency and generate recommendations
+    for (const zone of zones) {
+      const zoneAnalysis = await analyzeZoneEfficiency(zone);
+      optimizationResults.recommendations.push(zoneAnalysis);
+      
+      // Calculate space utilization
+      if (zone.area_sqft && zone.capacity) {
+        const utilization = (zone.current_usage / zone.capacity) * 100;
+        optimizationResults.space_utilization[zone.zone_id] = {
+          current: Math.round(utilization),
+          status: utilization > 80 ? 'high' : utilization > 60 ? 'medium' : 'low'
+        };
+      }
+    }
+    
+    // Generate overall warehouse recommendations
+    const overallRecommendations = await generateOverallRecommendations(zones, warehouse[0]);
+    optimizationResults.efficiency_improvements = overallRecommendations.efficiency;
+    optimizationResults.traffic_flow_suggestions = overallRecommendations.traffic;
+    
+    // Update last_optimized for all zones
+    await sql`
+      UPDATE zones 
+      SET last_optimized = CURRENT_DATE, 
+          updated_at = CURRENT_TIMESTAMP 
+      WHERE warehouse_id = ${warehouseId}
+    `;
+    
+    return {
+      success: true,
+      data: optimizationResults
+    };
+    
+  } catch (err) {
+    console.error('Error optimizing warehouse layout:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
+const analyzeZoneEfficiency = async (zone) => {
+  const analysis = {
+    zone_id: zone.zone_id,
+    zone_name: zone.zone_name,
+    current_efficiency: zone.efficiency || 0,
+    recommendations: [],
+    priority: 'low'
+  };
+  
+  // Analyze capacity utilization
+  if (zone.capacity && zone.current_usage) {
+    const utilization = (zone.current_usage / zone.capacity) * 100;
+    
+    if (utilization > 90) {
+      analysis.recommendations.push('Zone is over-utilized. Consider redistributing inventory or expanding capacity.');
+      analysis.priority = 'high';
+    } else if (utilization < 30) {
+      analysis.recommendations.push('Zone is under-utilized. Consider consolidating with other zones or reallocating space.');
+      analysis.priority = 'medium';
+    }
+  }
+  
+  // Analyze efficiency score
+  if (zone.efficiency < 70) {
+    analysis.recommendations.push('Zone efficiency is below optimal. Review processes and layout.');
+    analysis.priority = 'high';
+  }
+  
+  // Analyze zone type optimization
+  if (zone.zone_type === 'storage' && zone.current_usage > 0) {
+    analysis.recommendations.push('Consider implementing ABC analysis for storage optimization.');
+  }
+  
+  return analysis;
+};
+
+const generateOverallRecommendations = async (zones, warehouse) => {
+  const recommendations = {
+    efficiency: [],
+    traffic: []
+  };
+  
+  // Calculate overall warehouse metrics
+  const totalZones = zones.length;
+  const activeZones = zones.filter(z => z.status === 'active').length;
+  const highUtilizationZones = zones.filter(z => {
+    if (z.capacity && z.current_usage) {
+      return (z.current_usage / z.capacity) * 100 > 80;
+    }
+    return false;
+  }).length;
+  
+  // Efficiency recommendations
+  if (highUtilizationZones > totalZones * 0.3) {
+    recommendations.efficiency.push('High number of over-utilized zones detected. Consider warehouse expansion or zone reallocation.');
+  }
+  
+  if (activeZones < totalZones * 0.8) {
+    recommendations.efficiency.push('Many inactive zones detected. Review zone status and consider consolidation.');
+  }
+  
+  // Traffic flow recommendations
+  const storageZones = zones.filter(z => z.zone_type === 'storage');
+  const pickingZones = zones.filter(z => z.zone_type === 'picking');
+  const shippingZones = zones.filter(z => z.zone_type === 'shipping');
+  
+  if (storageZones.length > 0 && pickingZones.length > 0) {
+    recommendations.traffic.push('Ensure storage zones are positioned close to picking zones for efficient order fulfillment.');
+  }
+  
+  if (pickingZones.length > 0 && shippingZones.length > 0) {
+    recommendations.traffic.push('Optimize path from picking zones to shipping zones to minimize travel time.');
+  }
+  
+  return recommendations;
+};
+
+// Traffic analysis functions
+const analyzeWarehouseTraffic = async (warehouseId) => {
+  try {
+    const sql = await database.sql();
+    
+    // Get zones with traffic patterns
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_type, z.zone_id
+    `;
+    
+    if (zones.length === 0) {
+      throw new Error('No zones found for this warehouse');
+    }
+    
+    const trafficAnalysis = {
+      warehouse_id: warehouseId,
+      warehouse_name: zones[0].warehouse_name,
+      analysis_date: new Date().toISOString(),
+      total_zones: zones.length,
+      traffic_patterns: {},
+      bottlenecks: [],
+      optimization_suggestions: [],
+      zone_flow_analysis: []
+    };
+    
+    // Analyze zone types and their relationships
+    const zoneTypes = {};
+    zones.forEach(zone => {
+      if (!zoneTypes[zone.zone_type]) {
+        zoneTypes[zone.zone_type] = [];
+      }
+      zoneTypes[zone.zone_type].push(zone);
+    });
+    
+    // Analyze traffic flow between zone types
+    if (zoneTypes.receiving && zoneTypes.storage) {
+      trafficAnalysis.traffic_patterns['receiving_to_storage'] = {
+        description: 'Receiving to Storage Flow',
+        zones_involved: zoneTypes.receiving.length + zoneTypes.storage.length,
+        efficiency_score: calculateFlowEfficiency(zoneTypes.receiving, zoneTypes.storage),
+        recommendations: generateFlowRecommendations('receiving', 'storage')
+      };
+    }
+    
+    if (zoneTypes.storage && zoneTypes.picking) {
+      trafficAnalysis.traffic_patterns['storage_to_picking'] = {
+        description: 'Storage to Picking Flow',
+        zones_involved: zoneTypes.storage.length + zoneTypes.picking.length,
+        efficiency_score: calculateFlowEfficiency(zoneTypes.storage, zoneTypes.picking),
+        recommendations: generateFlowRecommendations('storage', 'picking')
+      };
+    }
+    
+    if (zoneTypes.picking && zoneTypes.shipping) {
+      trafficAnalysis.traffic_patterns['picking_to_shipping'] = {
+        description: 'Picking to Shipping Flow',
+        zones_involved: zoneTypes.picking.length + zoneTypes.shipping.length,
+        efficiency_score: calculateFlowEfficiency(zoneTypes.picking, zoneTypes.shipping),
+        recommendations: generateFlowRecommendations('picking', 'shipping')
+      };
+    }
+    
+    // Identify bottlenecks
+    Object.entries(trafficAnalysis.traffic_patterns).forEach(([flow, data]) => {
+      if (data.efficiency_score < 70) {
+        trafficAnalysis.bottlenecks.push({
+          flow: flow,
+          description: data.description,
+          efficiency_score: data.efficiency_score,
+          impact: 'High',
+          suggestions: data.recommendations
+        });
+      }
+    });
+    
+    // Generate zone-specific flow analysis
+    zones.forEach(zone => {
+      const flowAnalysis = analyzeZoneFlow(zone, zones);
+      trafficAnalysis.zone_flow_analysis.push(flowAnalysis);
+    });
+    
+    // Overall optimization suggestions
+    if (trafficAnalysis.bottlenecks.length > 0) {
+      trafficAnalysis.optimization_suggestions.push('Implement cross-docking to reduce storage time');
+      trafficAnalysis.optimization_suggestions.push('Consider zone reallocation to minimize travel distances');
+      trafficAnalysis.optimization_suggestions.push('Review zone capacity to prevent bottlenecks');
+    }
+    
+    return {
+      success: true,
+      data: trafficAnalysis
+    };
+    
+  } catch (err) {
+    console.error('Error analyzing warehouse traffic:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
+const calculateFlowEfficiency = (sourceZones, targetZones) => {
+  // Calculate efficiency based on zone proximity, capacity, and utilization
+  let totalEfficiency = 0;
+  let count = 0;
+  
+  sourceZones.forEach(source => {
+    targetZones.forEach(target => {
+      if (source.capacity && source.current_usage && target.capacity && target.current_usage) {
+        const sourceUtilization = (source.current_usage / source.capacity) * 100;
+        const targetUtilization = (target.current_usage / target.capacity) * 100;
+        
+        // Efficiency decreases if either zone is over-utilized
+        let efficiency = 100;
+        if (sourceUtilization > 90 || targetUtilization > 90) efficiency -= 30;
+        else if (sourceUtilization > 80 || targetUtilization > 80) efficiency -= 20;
+        else if (sourceUtilization < 20 || targetUtilization < 20) efficiency -= 15;
+        
+        totalEfficiency += efficiency;
+        count++;
+      }
+    });
+  });
+  
+  return count > 0 ? Math.round(totalEfficiency / count) : 0;
+};
+
+const generateFlowRecommendations = (sourceType, targetType) => {
+  const recommendations = [];
+  
+  if (sourceType === 'receiving' && targetType === 'storage') {
+    recommendations.push('Ensure receiving zones are positioned near storage zones');
+    recommendations.push('Implement just-in-time storage to reduce holding time');
+  } else if (sourceType === 'storage' && targetType === 'picking') {
+    recommendations.push('Position high-demand items closer to picking zones');
+    recommendations.push('Consider zone consolidation for frequently picked items');
+  } else if (sourceType === 'picking' && targetType === 'shipping') {
+    recommendations.push('Optimize picking routes to minimize travel time');
+    recommendations.push('Implement batch picking for multiple orders');
+  }
+  
+  return recommendations;
+};
+
+const analyzeZoneFlow = (zone, allZones) => {
+  const analysis = {
+    zone_id: zone.zone_id,
+    zone_name: zone.zone_name,
+    zone_type: zone.zone_type,
+    flow_efficiency: 0,
+    connected_zones: [],
+    flow_issues: []
+  };
+  
+  // Find connected zones based on type
+  const connectedZones = allZones.filter(z => z.zone_id !== zone.zone_id);
+  
+  if (zone.zone_type === 'receiving') {
+    analysis.connected_zones = connectedZones.filter(z => z.zone_type === 'storage');
+  } else if (zone.zone_type === 'storage') {
+    analysis.connected_zones = connectedZones.filter(z => z.zone_type === 'picking');
+  } else if (zone.zone_type === 'picking') {
+    analysis.connected_zones = connectedZones.filter(z => z.zone_type === 'shipping');
+  }
+  
+  // Calculate flow efficiency
+  if (analysis.connected_zones.length > 0) {
+    analysis.flow_efficiency = Math.round((zone.efficiency || 0) * 0.7 + 
+                                        (analysis.connected_zones.length / allZones.length) * 100 * 0.3);
+  }
+  
+  // Identify flow issues
+  if (zone.current_usage && zone.capacity) {
+    const utilization = (zone.current_usage / zone.capacity) * 100;
+    if (utilization > 90) {
+      analysis.flow_issues.push('Zone is over-utilized, creating flow bottlenecks');
+    } else if (utilization < 20) {
+      analysis.flow_issues.push('Zone is under-utilized, inefficient for flow');
+    }
+  }
+  
+  return analysis;
+};
+
+// Heatmap generation functions
+const generateWarehouseHeatmap = async (warehouseId, heatmapType = 'utilization') => {
+  try {
+    const sql = await database.sql();
+    
+    // Get zones for heatmap
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
+    `;
+    
+    if (zones.length === 0) {
+      throw new Error('No zones found for this warehouse');
+    }
+    
+    const heatmapData = {
+      warehouse_id: warehouseId,
+      warehouse_name: zones[0].warehouse_name,
+      generated_date: new Date().toISOString(),
+      heatmap_type: heatmapType,
+      zones: [],
+      color_scale: {},
+      insights: []
+    };
+    
+    // Generate heatmap data based on type
+    zones.forEach(zone => {
+      let heatValue = 0;
+      let color = '#00ff00'; // Green
+      
+      if (heatmapType === 'utilization') {
+        if (zone.capacity && zone.current_usage) {
+          heatValue = Math.round((zone.current_usage / zone.capacity) * 100);
+        }
+      } else if (heatmapType === 'efficiency') {
+        heatValue = zone.efficiency || 0;
+      } else if (heatmapType === 'activity') {
+        // Simulate activity based on last_optimized and efficiency
+        const daysSinceOptimized = zone.last_optimized ? 
+          Math.floor((new Date() - new Date(zone.last_optimized)) / (1000 * 60 * 60 * 24)) : 30;
+        heatValue = Math.max(0, 100 - (daysSinceOptimized * 2));
+      }
+      
+      // Assign color based on heat value
+      if (heatValue >= 80) color = '#ff0000'; // Red
+      else if (heatValue >= 60) color = '#ffa500'; // Orange
+      else if (heatValue >= 40) color = '#ffff00'; // Yellow
+      else if (heatValue >= 20) color = '#00ff00'; // Green
+      else color = '#0000ff'; // Blue
+      
+      heatmapData.zones.push({
+        zone_id: zone.zone_id,
+        zone_name: zone.zone_name,
+        zone_type: zone.zone_type,
+        heat_value: heatValue,
+        color: color,
+        area_sqft: zone.area_sqft,
+        capacity: zone.capacity,
+        current_usage: zone.current_usage
+      });
+    });
+    
+    // Generate insights
+    const highHeatZones = heatmapData.zones.filter(z => z.heat_value >= 80);
+    const lowHeatZones = heatmapData.zones.filter(z => z.heat_value <= 20);
+    
+    if (highHeatZones.length > 0) {
+      heatmapData.insights.push(`${highHeatZones.length} zones showing high ${heatmapType} (${heatmapType === 'utilization' ? 'over-utilized' : 'high activity'})`);
+    }
+    
+    if (lowHeatZones.length > 0) {
+      heatmapData.insights.push(`${lowHeatZones.length} zones showing low ${heatmapType} (${heatmapType === 'utilization' ? 'under-utilized' : 'low activity'})`);
+    }
+    
+    // Color scale legend
+    heatmapData.color_scale = {
+      red: 'High (80-100%)',
+      orange: 'Medium-High (60-79%)',
+      yellow: 'Medium (40-59%)',
+      green: 'Medium-Low (20-39%)',
+      blue: 'Low (0-19%)'
+    };
+    
+    return {
+      success: true,
+      data: heatmapData
+    };
+    
+  } catch (err) {
+    console.error('Error generating warehouse heatmap:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
+// Layout export functions
+const exportWarehouseLayout = async (warehouseId, exportFormat = 'json') => {
+  try {
+    const sql = await database.sql();
+    
+    // Get comprehensive warehouse data
+    const warehouse = await sql`
+      SELECT * FROM warehouses WHERE warehouse_id = ${warehouseId}
+    `;
+    
+    if (warehouse.length === 0) {
+      throw new Error('Warehouse not found');
+    }
+    
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
+    `;
+    
+    const layoutData = {
+      export_info: {
+        warehouse_id: warehouseId,
+        warehouse_name: warehouse[0].warehouse_name,
+        export_date: new Date().toISOString(),
+        export_format: exportFormat,
+        total_zones: zones.length,
+        total_area: zones.reduce((sum, z) => sum + (z.area_sqft || 0), 0)
+      },
+      warehouse_details: warehouse[0],
+      zones: zones,
+      layout_summary: {
+        zone_types: {},
+        capacity_summary: {
+          total_capacity: zones.reduce((sum, z) => sum + (z.capacity || 0), 0),
+          total_usage: zones.reduce((sum, z) => sum + (z.current_usage || 0), 0),
+          average_utilization: 0
+        },
+        efficiency_summary: {
+          average_efficiency: 0,
+          optimal_zones: 0,
+          needs_improvement_zones: 0,
+          critical_zones: 0
+        }
+      }
+    };
+    
+    // Calculate summaries
+    const zoneTypes = {};
+    zones.forEach(zone => {
+      if (!zoneTypes[zone.zone_type]) zoneTypes[zone.zone_type] = 0;
+      zoneTypes[zone.zone_type]++;
+    });
+    layoutData.layout_summary.zone_types = zoneTypes;
+    
+    if (layoutData.layout_summary.capacity_summary.total_capacity > 0) {
+      layoutData.layout_summary.capacity_summary.average_utilization = 
+        Math.round((layoutData.layout_summary.capacity_summary.total_usage / 
+                   layoutData.layout_summary.capacity_summary.total_capacity) * 100);
+    }
+    
+    const efficiencies = zones.map(z => z.efficiency || 0).filter(e => e > 0);
+    if (efficiencies.length > 0) {
+      layoutData.layout_summary.efficiency_summary.average_efficiency = 
+        Math.round(efficiencies.reduce((sum, e) => sum + e, 0) / efficiencies.length);
+    }
+    
+    layoutData.layout_summary.efficiency_summary.optimal_zones = 
+      zones.filter(z => z.status === 'optimal').length;
+    layoutData.layout_summary.efficiency_summary.needs_improvement_zones = 
+      zones.filter(z => z.status === 'needs-improvement').length;
+    layoutData.layout_summary.efficiency_summary.critical_zones = 
+      zones.filter(z => z.status === 'critical').length;
+    
+    return {
+      success: true,
+      data: layoutData
+    };
+    
+  } catch (err) {
+    console.error('Error exporting warehouse layout:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
 module.exports = {
   initializeInventoryTable,
   initializeOrderShipmentsTable,
@@ -1063,5 +1959,17 @@ module.exports = {
   getStockOverview,
   getStockByCategory,
   getStockByWarehouse,
-  getRecentOrderShipmentActivity
+  getRecentOrderShipmentActivity,
+  getShippingZoneStats,
+  getAllZones,
+  getZoneById,
+  createZone,
+  updateZone,
+  deleteZone,
+  getZoneStats,
+  getZonesByWarehouse,
+  optimizeWarehouseLayout,
+  analyzeWarehouseTraffic,
+  generateWarehouseHeatmap,
+  exportWarehouseLayout
 };
