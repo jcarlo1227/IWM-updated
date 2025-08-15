@@ -3,11 +3,14 @@ const database = require('./database');
 // Initialize inventory table
 const initializeInventoryTable = async () => {
   try {
-    const sql = await database.sql();
+    // Use the more robust connection method
+    const sql = await database.getWorkingConnection();
     if (!sql) {
       console.log('⚠️ Database not available, skipping inventory table creation');
       return;
     }
+    
+    console.log('✅ Database connection verified for inventory table creation');
     
     await sql`
       CREATE TABLE IF NOT EXISTS inventory_items (
@@ -164,7 +167,15 @@ const initializeInventoryTable = async () => {
 // Initialize order shipments table
 const initializeOrderShipmentsTable = async () => {
   try {
-    const sql = await database.sql();
+    // Use the more robust connection method
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, skipping order shipments table creation');
+      return;
+    }
+    
+    console.log('✅ Database connection verified for order shipments table creation');
+    
     // Ensure core tables exist
     await sql`
       CREATE TABLE IF NOT EXISTS businesses (

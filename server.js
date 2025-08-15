@@ -705,12 +705,18 @@ const startServer = async () => {
     // Try to initialize database, but don't fail if it doesn't work
     try {
       await initializeDatabase();
-      // Check if database is actually available
-      const { isDatabaseAvailable } = require('./database');
-      if (isDatabaseAvailable()) {
-        console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
-      } else {
-        console.log(`⚠️ Database initialization completed but connection not available`);
+      
+      // Check if database is actually working (not just available)
+      const { isDatabaseWorking } = require('./database');
+      try {
+        const isWorking = await isDatabaseWorking();
+        if (isWorking) {
+          console.log(`🗄️ Database: Connected to Neon PostgreSQL`);
+        } else {
+          console.log(`⚠️ Database initialization completed but connection not working`);
+        }
+      } catch (workError) {
+        console.log(`⚠️ Database status check failed: ${workError.message}`);
       }
     } catch (dbError) {
       console.log(`⚠️ Database connection failed, running in mock mode`);
@@ -722,6 +728,16 @@ const startServer = async () => {
       console.log(`   Username: admin`);
       console.log(`   Password: admin`);
     });
+    
+    // Start periodic connection health check
+    const { maintainConnection } = require('./database');
+    setInterval(async () => {
+      try {
+        await maintainConnection();
+      } catch (error) {
+        console.log('⚠️ Periodic connection health check failed:', error.message);
+      }
+    }, 30000); // Check every 30 seconds
   } catch (error) {
     console.error('Failed to start server:', error);
     process.exit(1);

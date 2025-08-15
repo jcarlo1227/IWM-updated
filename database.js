@@ -119,15 +119,31 @@ async function initializeConnection() {
 
 // Get SQL connection
 async function getSql() {
-  if (!sql) {
-    try {
+  try {
+    if (!sql) {
       await initializeConnection();
-    } catch (error) {
-      console.log('⚠️ Failed to initialize database connection, returning null');
-      return null;
     }
+    
+    // Always test the connection before returning it
+    if (sql) {
+      try {
+        await sql`SELECT 1`;
+        return sql;
+      } catch (testError) {
+        console.log('⚠️ Existing connection failed test, reinitializing...');
+        // Reset the connection and try again
+        sql = null;
+        connectionPromise = null;
+        await initializeConnection();
+        return sql;
+      }
+    }
+    
+    return sql;
+  } catch (error) {
+    console.log('⚠️ Failed to get working database connection:', error.message);
+    return null;
   }
-  return sql;
 }
 
 // Check if database is available
@@ -148,6 +164,60 @@ async function isDatabaseWorking() {
     console.log('⚠️ Database connection test failed:', error.message);
     return false;
   }
+}
+
+// Health check and connection maintenance
+async function maintainConnection() {
+  try {
+    if (!sql) {
+      return false;
+    }
+    
+    // Test the connection
+    await sql`SELECT 1`;
+    return true;
+  } catch (error) {
+    console.log('⚠️ Connection health check failed, reinitializing...');
+    
+    // Reset the connection and try to reinitialize
+    try {
+      sql = null;
+      connectionPromise = null;
+      await initializeConnection();
+      return sql !== null;
+    } catch (reinitError) {
+      console.log('❌ Failed to reinitialize connection:', reinitError.message);
+      return false;
+    }
+  }
+}
+
+// Get a working connection with retry
+async function getWorkingConnection(maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const connection = await getSql();
+      if (connection) {
+        // Test the connection
+        await connection`SELECT 1`;
+        return connection;
+      }
+    } catch (error) {
+      console.log(`⚠️ Connection attempt ${attempt}/${maxRetries} failed:`, error.message);
+      
+      if (attempt < maxRetries) {
+        console.log(`🔄 Retrying in 2 seconds...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Reset connection for next attempt
+        sql = null;
+        connectionPromise = null;
+      }
+    }
+  }
+  
+  console.log('❌ Failed to get working connection after all retries');
+  return null;
 }
 
 // Get database status
@@ -246,16 +316,40 @@ const initializeDatabase = async () => {
       console.log('✅ Admin user already exists');
     }
     
-    // Initialize inventory tables
-    const { initializeInventoryTable, initializeOrderShipmentsTable, getAllOrderShipments } = require('./inventory');
-    await initializeInventoryTable();
-    await initializeOrderShipmentsTable();
-    // Trigger initial sync from production_planning (processed) into order_shipments
-    try { 
-      await getAllOrderShipments({}); 
-      console.log('✅ Initial sync from production_planning completed');
-    } catch (e) { 
-      console.warn('⚠️ Initial sync from production_planning skipped:', e?.message); 
+    // Initialize inventory tables with fresh connection
+    try {
+      const { initializeInventoryTable, initializeOrderShipmentsTable, getAllOrderShipments } = require('./inventory');
+      
+      // Get a fresh connection for table creation
+      const freshConnection = await getSql();
+      if (!freshConnection) {
+        console.log('⚠️ No database connection available for table creation');
+        return;
+      }
+      
+      // Test the connection before proceeding
+      try {
+        await freshConnection`SELECT 1`;
+        console.log('✅ Database connection verified for table creation');
+      } catch (testError) {
+        console.log('⚠️ Database connection test failed, skipping table creation:', testError.message);
+        return;
+      }
+      
+      await initializeInventoryTable();
+      await initializeOrderShipmentsTable();
+      
+      // Trigger initial sync from production_planning (processed) into order_shipments
+      try { 
+        await getAllOrderShipments({}); 
+        console.log('✅ Initial sync from production_planning completed');
+      } catch (e) { 
+        console.warn('⚠️ Initial sync from production_planning skipped:', e?.message); 
+      }
+    } catch (tableError) {
+      console.error('❌ Error creating inventory tables:', tableError);
+      // Don't throw here, just log the error and continue
+      console.log('⚠️ Continuing with server startup despite table creation errors');
     }
     
   } catch (err) {
@@ -612,6 +706,8 @@ module.exports = {
   initializeDatabase,
   isDatabaseAvailable,
   isDatabaseWorking,
+  maintainConnection,
+  getWorkingConnection,
   getDatabaseStatus,
   testDatabaseConnection,
   testNetworkConnectivity,
