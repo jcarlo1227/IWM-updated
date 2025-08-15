@@ -1162,8 +1162,185 @@
     modal.show();
   }
 
-  function optimizeLayout() {
-    alert('Layout Optimization functionality would be implemented here');
+  async function optimizeLayout() {
+    // Get the current warehouse ID from the warehouse selector
+    const warehouseSelect = document.getElementById('warehouseFilter');
+    const warehouseId = warehouseSelect.value;
+    
+    if (!warehouseId) {
+      alert('Please select a warehouse first to optimize its layout.');
+      return;
+    }
+    
+    if (confirm('This will analyze and optimize the layout for warehouse: ' + warehouseSelect.options[warehouseSelect.selectedIndex].text + '\n\nThis may take a few moments. Continue?')) {
+      try {
+        // Show loading state
+        const optimizeBtn = document.querySelector('button[onclick="optimizeLayout()"]');
+        const originalText = optimizeBtn.innerHTML;
+        optimizeBtn.innerHTML = '<i class="bi bi-hourglass-split"></i> Optimizing...';
+        optimizeBtn.disabled = true;
+        
+        // Call the optimization API
+        const response = await fetch(`/api/warehouses/${warehouseId}/optimize`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          // Display optimization results
+          displayOptimizationResults(result.data);
+          
+          // Refresh the data
+          await loadZones();
+          await loadZoneStats();
+          await loadRecommendations();
+          
+          alert('Warehouse layout optimization completed successfully!');
+        } else {
+          alert('Error during optimization: ' + result.message);
+        }
+      } catch (error) {
+        console.error('Error optimizing layout:', error);
+        alert('Error during optimization. Please try again.');
+      } finally {
+        // Restore button state
+        const optimizeBtn = document.querySelector('button[onclick="optimizeLayout()"]');
+        optimizeBtn.innerHTML = originalText;
+        optimizeBtn.disabled = false;
+      }
+    }
+  }
+  
+  function displayOptimizationResults(results) {
+    // Create a modal to display optimization results
+    const modalHtml = `
+      <div class="modal fade" id="optimizationResultsModal" tabindex="-1" aria-labelledby="optimizationResultsModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="optimizationResultsModalLabel">
+                <i class="bi bi-gear-fill text-primary"></i> 
+                Layout Optimization Results - ${results.warehouse_name}
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+              <div class="row mb-3">
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">Zones Analyzed</h6>
+                      <h3 class="text-primary">${results.zones_analyzed}</h3>
+                      <small class="text-muted">${new Date(results.optimization_date).toLocaleDateString()}</small>
+                    </div>
+                  </div>
+                </div>
+                <div class="col-md-6">
+                  <div class="card bg-light">
+                    <div class="card-body text-center">
+                      <h6 class="card-title">High Priority Issues</h6>
+                      <h3 class="text-danger">${results.recommendations.filter(r => r.priority === 'high').length}</h3>
+                      <small class="text-muted">Requires immediate attention</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="row mb-3">
+                <div class="col-12">
+                  <h6><i class="bi bi-lightbulb text-warning"></i> Zone-Specific Recommendations</h6>
+                  <div class="accordion" id="zoneRecommendationsAccordion">
+                    ${results.recommendations.map((rec, index) => `
+                      <div class="accordion-item">
+                        <h2 class="accordion-header" id="heading${index}">
+                          <button class="accordion-button ${index === 0 ? '' : 'collapsed'}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}">
+                            <span class="badge bg-${rec.priority === 'high' ? 'danger' : rec.priority === 'medium' ? 'warning' : 'success'} me-2">${rec.priority.toUpperCase()}</span>
+                            ${rec.zone_name} (${rec.zone_id})
+                          </button>
+                        </h2>
+                        <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" data-bs-parent="#zoneRecommendationsAccordion">
+                          <div class="card-body">
+                            <p><strong>Current Efficiency:</strong> ${rec.current_efficiency}%</p>
+                            ${rec.recommendations.map(rec => `<p class="mb-1"><i class="bi bi-arrow-right text-primary"></i> ${rec}</p>`).join('')}
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              
+              ${results.efficiency_improvements.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-graph-up text-success"></i> Overall Efficiency Improvements</h6>
+                    <ul class="list-group">
+                      ${results.efficiency_improvements.map(imp => `<li class="list-group-item"><i class="bi bi-check-circle text-success me-2"></i>${imp}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              ` : ''}
+              
+              ${results.traffic_flow_suggestions.length > 0 ? `
+                <div class="row mb-3">
+                  <div class="col-12">
+                    <h6><i class="bi bi-arrow-left-right text-info"></i> Traffic Flow Suggestions</h6>
+                    <ul class="list-group">
+                      ${results.traffic_flow_suggestions.map(sug => `<li class="list-group-item"><i class="bi bi-arrow-right text-info me-2"></i>${sug}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              ` : ''}
+              
+              <div class="row">
+                <div class="col-12">
+                  <h6><i class="bi bi-pie-chart text-secondary"></i> Space Utilization Summary</h6>
+                  <div class="row">
+                    ${Object.entries(results.space_utilization).map(([zoneId, util]) => `
+                      <div class="col-md-4 mb-2">
+                        <div class="card">
+                          <div class="card-body p-2 text-center">
+                            <small class="text-muted">${zoneId}</small>
+                            <div class="progress mt-1" style="height: 8px;">
+                              <div class="progress-bar bg-${util.status === 'high' ? 'danger' : util.status === 'medium' ? 'warning' : 'success'}" 
+                                   style="width: ${util.current}%"></div>
+                            </div>
+                            <small class="text-muted">${util.current}%</small>
+                          </div>
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+              <button type="button" class="btn btn-primary" onclick="exportOptimizationReport()">
+                <i class="bi bi-download"></i> Export Report
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    // Remove existing modal if any
+    const existingModal = document.getElementById('optimizationResultsModal');
+    if (existingModal) {
+      existingModal.remove();
+    }
+    
+    // Add modal to DOM
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    // Show the modal
+    const modal = new bootstrap.Modal(document.getElementById('optimizationResultsModal'));
+    modal.show();
   }
 
   function analyzeTraffic() {
@@ -1377,6 +1554,56 @@
   function generateOptimizationReport() {
     alert('Generating optimization report...');
     // In a real application, this would generate and download a report
+  }
+  
+  function exportOptimizationReport() {
+    // Get the current optimization results from the modal
+    const modal = document.getElementById('optimizationResultsModal');
+    if (!modal) {
+      alert('No optimization results to export.');
+      return;
+    }
+    
+    // Create a simple text report
+    const warehouseName = document.getElementById('optimizationResultsModalLabel').textContent.split(' - ')[1];
+    const date = new Date().toLocaleDateString();
+    
+    let report = `WAREHOUSE LAYOUT OPTIMIZATION REPORT\n`;
+    report += `=====================================\n\n`;
+    report += `Warehouse: ${warehouseName}\n`;
+    report += `Generated: ${date}\n\n`;
+    
+    // Add zone recommendations
+    const recommendations = modal.querySelectorAll('.accordion-item');
+    if (recommendations.length > 0) {
+      report += `ZONE RECOMMENDATIONS:\n`;
+      report += `====================\n`;
+      recommendations.forEach((rec, index) => {
+        const zoneName = rec.querySelector('.accordion-button').textContent.trim();
+        const priority = rec.querySelector('.badge').textContent;
+        const efficiency = rec.querySelector('.card-body p').textContent;
+        const recs = Array.from(rec.querySelectorAll('.card-body p:not(:first-child)')).map(p => p.textContent.trim());
+        
+        report += `\n${index + 1}. ${zoneName}\n`;
+        report += `   Priority: ${priority}\n`;
+        report += `   ${efficiency}\n`;
+        report += `   Recommendations:\n`;
+        recs.forEach(r => report += `     - ${r}\n`);
+      });
+    }
+    
+    // Create and download the file
+    const blob = new Blob([report], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `warehouse_optimization_${warehouseName.replace(/\s+/g, '_')}_${date.replace(/\//g, '-')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+    
+    alert('Optimization report exported successfully!');
   }
 
   function markAllAsRead() {

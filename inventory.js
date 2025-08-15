@@ -1265,14 +1265,174 @@ const getZonesByWarehouse = async (warehouseId) => {
   try {
     const sql = await database.sql();
     const result = await sql`
-      SELECT * FROM zones WHERE warehouse_id = ${warehouseId}
-      ORDER BY zone_id
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
     `;
     return result;
   } catch (err) {
     console.error('Error fetching zones by warehouse:', err);
     throw err;
   }
+};
+
+// Warehouse layout optimization functions
+const optimizeWarehouseLayout = async (warehouseId) => {
+  try {
+    const sql = await database.sql();
+    
+    // Get all zones for the warehouse
+    const zones = await sql`
+      SELECT z.*, w.warehouse_name 
+      FROM zones z 
+      LEFT JOIN warehouses w ON z.warehouse_id = w.warehouse_id 
+      WHERE z.warehouse_id = ${warehouseId}
+      ORDER BY z.zone_id
+    `;
+    
+    if (zones.length === 0) {
+      throw new Error('No zones found for this warehouse');
+    }
+    
+    // Get warehouse information
+    const warehouse = await sql`
+      SELECT * FROM warehouses WHERE warehouse_id = ${warehouseId}
+    `;
+    
+    if (warehouse.length === 0) {
+      throw new Error('Warehouse not found');
+    }
+    
+    const optimizationResults = {
+      warehouse_id: warehouseId,
+      warehouse_name: warehouse[0].warehouse_name,
+      optimization_date: new Date().toISOString(),
+      zones_analyzed: zones.length,
+      recommendations: [],
+      efficiency_improvements: [],
+      space_utilization: {},
+      traffic_flow_suggestions: []
+    };
+    
+    // Analyze zone efficiency and generate recommendations
+    for (const zone of zones) {
+      const zoneAnalysis = await analyzeZoneEfficiency(zone);
+      optimizationResults.recommendations.push(zoneAnalysis);
+      
+      // Calculate space utilization
+      if (zone.area_sqft && zone.capacity) {
+        const utilization = (zone.current_usage / zone.capacity) * 100;
+        optimizationResults.space_utilization[zone.zone_id] = {
+          current: Math.round(utilization),
+          status: utilization > 80 ? 'high' : utilization > 60 ? 'medium' : 'low'
+        };
+      }
+    }
+    
+    // Generate overall warehouse recommendations
+    const overallRecommendations = await generateOverallRecommendations(zones, warehouse[0]);
+    optimizationResults.efficiency_improvements = overallRecommendations.efficiency;
+    optimizationResults.traffic_flow_suggestions = overallRecommendations.traffic;
+    
+    // Update last_optimized for all zones
+    await sql`
+      UPDATE zones 
+      SET last_optimized = CURRENT_DATE, 
+          updated_at = CURRENT_TIMESTAMP 
+      WHERE warehouse_id = ${warehouseId}
+    `;
+    
+    return {
+      success: true,
+      data: optimizationResults
+    };
+    
+  } catch (err) {
+    console.error('Error optimizing warehouse layout:', err);
+    return {
+      success: false,
+      message: err.message
+    };
+  }
+};
+
+const analyzeZoneEfficiency = async (zone) => {
+  const analysis = {
+    zone_id: zone.zone_id,
+    zone_name: zone.zone_name,
+    current_efficiency: zone.efficiency || 0,
+    recommendations: [],
+    priority: 'low'
+  };
+  
+  // Analyze capacity utilization
+  if (zone.capacity && zone.current_usage) {
+    const utilization = (zone.current_usage / zone.capacity) * 100;
+    
+    if (utilization > 90) {
+      analysis.recommendations.push('Zone is over-utilized. Consider redistributing inventory or expanding capacity.');
+      analysis.priority = 'high';
+    } else if (utilization < 30) {
+      analysis.recommendations.push('Zone is under-utilized. Consider consolidating with other zones or reallocating space.');
+      analysis.priority = 'medium';
+    }
+  }
+  
+  // Analyze efficiency score
+  if (zone.efficiency < 70) {
+    analysis.recommendations.push('Zone efficiency is below optimal. Review processes and layout.');
+    analysis.priority = 'high';
+  }
+  
+  // Analyze zone type optimization
+  if (zone.zone_type === 'storage' && zone.current_usage > 0) {
+    analysis.recommendations.push('Consider implementing ABC analysis for storage optimization.');
+  }
+  
+  return analysis;
+};
+
+const generateOverallRecommendations = async (zones, warehouse) => {
+  const recommendations = {
+    efficiency: [],
+    traffic: []
+  };
+  
+  // Calculate overall warehouse metrics
+  const totalZones = zones.length;
+  const activeZones = zones.filter(z => z.status === 'active').length;
+  const highUtilizationZones = zones.filter(z => {
+    if (z.capacity && z.current_usage) {
+      return (z.current_usage / z.capacity) * 100 > 80;
+    }
+    return false;
+  }).length;
+  
+  // Efficiency recommendations
+  if (highUtilizationZones > totalZones * 0.3) {
+    recommendations.efficiency.push('High number of over-utilized zones detected. Consider warehouse expansion or zone reallocation.');
+  }
+  
+  if (activeZones < totalZones * 0.8) {
+    recommendations.efficiency.push('Many inactive zones detected. Review zone status and consider consolidation.');
+  }
+  
+  // Traffic flow recommendations
+  const storageZones = zones.filter(z => z.zone_type === 'storage');
+  const pickingZones = zones.filter(z => z.zone_type === 'picking');
+  const shippingZones = zones.filter(z => z.zone_type === 'shipping');
+  
+  if (storageZones.length > 0 && pickingZones.length > 0) {
+    recommendations.traffic.push('Ensure storage zones are positioned close to picking zones for efficient order fulfillment.');
+  }
+  
+  if (pickingZones.length > 0 && shippingZones.length > 0) {
+    recommendations.traffic.push('Optimize path from picking zones to shipping zones to minimize travel time.');
+  }
+  
+  return recommendations;
 };
 
 module.exports = {
@@ -1305,5 +1465,6 @@ module.exports = {
   updateZone,
   deleteZone,
   getZoneStats,
-  getZonesByWarehouse
+  getZonesByWarehouse,
+  optimizeWarehouseLayout
 };

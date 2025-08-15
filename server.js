@@ -45,7 +45,8 @@ const {
   updateZone,
   deleteZone,
   getZoneStats,
-  getZonesByWarehouse
+  getZonesByWarehouse,
+  optimizeWarehouseLayout
 } = require('./inventory');
 require('dotenv').config();
 
@@ -888,6 +889,17 @@ app.get('/api/zones/warehouse/:warehouseId', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('Error fetching zones by warehouse:', error);
     res.status(500).json({ success: false, message: 'Failed to fetch zones by warehouse' });
+  }
+});
+
+// Warehouse layout optimization endpoint
+app.post('/api/warehouses/:warehouseId/optimize', requireAuth, async (req, res) => {
+  try {
+    const result = await optimizeWarehouseLayout(req.params.warehouseId);
+    res.json(result);
+  } catch (error) {
+    console.error('Error optimizing warehouse layout:', error);
+    res.status(500).json({ success: false, message: error.message });
   }
 });
 
