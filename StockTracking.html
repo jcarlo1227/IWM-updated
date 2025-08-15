@@ -1055,6 +1055,7 @@ document.addEventListener('DOMContentLoaded', function() {
     renderTable();
   }
   updateTotalItems();
+  fetchUser(); // Add fetchUser call
   // Stock tracking dynamic data
   loadStockTracking();
   // periodic refresh to keep values updated
@@ -1288,6 +1289,27 @@ function updateTotalItems() {
 
 // Stock Tracking: Fetch and render helpers
 const API_BASE = '/api';
+
+async function apiCall(endpoint, options = {}) {
+  try {
+    const response = await fetch(`${API_BASE}${endpoint}`, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('API call failed:', error);
+    throw error;
+  }
+}
 
 async function loadStockTracking() {
   try {
@@ -1578,6 +1600,41 @@ document.addEventListener('keydown', function(e) {
     }
   }
 });
+
+// User functions
+async function fetchUser() {
+  try {
+    const response = await apiCall('/user');
+    if (response.success && response.data) {
+      displayUser(response.data);
+    }
+  } catch (error) {
+    console.error('Failed to fetch user:', error);
+  }
+}
+
+function displayUser(user) {
+  // Display username (capitalize first letter)
+  const username = user.username.charAt(0).toUpperCase() + user.username.slice(1);
+  document.getElementById('userName').textContent = username;
+
+  // Set user avatar initials
+  const initials = username.substring(0, 2).toUpperCase();
+  const userAvatar = document.getElementById('userAvatar');
+  if (userAvatar) {
+    userAvatar.textContent = initials;
+  }
+
+  // Update dropdown elements as well
+  const userFullNameDropdown = document.getElementById('userFullNameDropdown');
+  const userEmailDropdown = document.getElementById('userEmailDropdown');
+  if (userFullNameDropdown) {
+    userFullNameDropdown.textContent = username;
+  }
+  if (userEmailDropdown) {
+    userEmailDropdown.textContent = `${user.username}@foxcontrolhub.com`;
+  }
+}
 </script>
 </body>
 </html>
