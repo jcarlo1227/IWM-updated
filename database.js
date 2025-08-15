@@ -220,6 +220,25 @@ async function getWorkingConnection(maxRetries = 3) {
   return null;
 }
 
+// Retry wrapper for database operations
+async function retryOperation(operation, maxRetries = 3, delay = 1000) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      console.log(`⚠️ Operation attempt ${attempt}/${maxRetries} failed:`, error.message);
+      
+      if (attempt < maxRetries) {
+        console.log(`🔄 Retrying in ${delay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay = Math.min(delay * 1.5, 5000); // Increase delay up to 5 seconds
+      } else {
+        throw error; // Re-throw on final attempt
+      }
+    }
+  }
+}
+
 // Get database status
 function getDatabaseStatus() {
   return {
@@ -231,7 +250,7 @@ function getDatabaseStatus() {
 
 // Test database connection and create tables
 const testConnection = async () => {
-  const connection = await getSql();
+  const connection = await getWorkingConnection();
   if (!connection) {
     console.log('⚠️ Database not available, skipping table creation');
     return;
@@ -360,7 +379,8 @@ const initializeDatabase = async () => {
 // User authentication functions
 const authenticateUser = async (username, password) => {
   try {
-    // Check if database is available
+    // Try to get a working database connection
+    const sql = await getWorkingConnection();
     if (!sql) {
       console.log('⚠️ Database not available, using mock authentication');
       // Mock authentication for testing when database is not available
@@ -414,6 +434,25 @@ let nextNotificationId = 1;
 // Notification functions
 const createNotification = async (title, message, type = 'info') => {
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, using in-memory notifications');
+      const notification = {
+        id: nextNotificationId++,
+        title,
+        message,
+        type,
+        created_at: new Date().toISOString(),
+        is_read: false
+      };
+      inMemoryNotifications.unshift(notification);
+      // Keep only the latest 20 notifications
+      if (inMemoryNotifications.length > 20) {
+        inMemoryNotifications = inMemoryNotifications.slice(0, 20);
+      }
+      return notification;
+    }
+    
     const result = await sql`
       INSERT INTO notifications (title, message, type, created_at, is_read) 
       VALUES (${title}, ${message}, ${type}, CURRENT_TIMESTAMP, false)
@@ -442,6 +481,12 @@ const createNotification = async (title, message, type = 'info') => {
 
 const getNotifications = async (limit = 10) => {
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, using in-memory notifications');
+      return inMemoryNotifications.slice(0, limit);
+    }
+    
     const result = await sql`
       SELECT id, title, message, type, created_at, is_read 
       FROM notifications 
@@ -458,6 +503,17 @@ const getNotifications = async (limit = 10) => {
 
 const markNotificationAsRead = async (id) => {
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, using in-memory notifications');
+      const notification = inMemoryNotifications.find(n => n.id == id);
+      if (notification) {
+        notification.is_read = true;
+        return true;
+      }
+      return false;
+    }
+    
     await sql`UPDATE notifications SET is_read = true WHERE id = ${id}`;
     return true;
   } catch (err) {
@@ -474,6 +530,15 @@ const markNotificationAsRead = async (id) => {
 
 const markAllNotificationsAsRead = async () => {
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, using in-memory notifications');
+      inMemoryNotifications.forEach(notification => {
+        notification.is_read = true;
+      });
+      return true;
+    }
+    
     await sql`UPDATE notifications SET is_read = true WHERE is_read = false`;
     return true;
   } catch (err) {
@@ -488,6 +553,12 @@ const markAllNotificationsAsRead = async () => {
 
 const getUnreadNotificationCount = async () => {
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, using in-memory notifications');
+      return inMemoryNotifications.filter(n => !n.is_read).length;
+    }
+    
     const result = await sql`SELECT COUNT(*) as count FROM notifications WHERE is_read = false`;
     return result[0].count;
   } catch (err) {
@@ -536,12 +607,13 @@ const saveScanHistory = async (scanData) => {
 };
 
 const getScanHistory = async (limit = 100) => {
-  if (!sql) {
-    console.log('⚠️ Database not available, returning empty scan history');
-    return [];
-  }
-  
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning empty scan history');
+      return [];
+    }
+    
     const result = await sql`
       SELECT * FROM scan_history 
       ORDER BY created_at DESC 
@@ -555,12 +627,13 @@ const getScanHistory = async (limit = 100) => {
 };
 
 const clearScanHistory = async () => {
-  if (!sql) {
-    console.log('⚠️ Database not available, scan history cleared locally only');
-    return true;
-  }
-  
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, scan history cleared locally only');
+      return true;
+    }
+    
     await sql`DELETE FROM scan_history`;
     return true;
   } catch (err) {
@@ -570,12 +643,13 @@ const clearScanHistory = async () => {
 };
 
 const deleteScanHistory = async (scanId) => {
-  if (!sql) {
-    console.log('⚠️ Database not available, scan history deleted locally only');
-    return true;
-  }
-
   try {
+    const sql = await getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, scan history deleted locally only');
+      return true;
+    }
+
     await sql`DELETE FROM scan_history WHERE id = ${scanId}`;
     // PostgreSQL DELETE doesn't return affected rows by default
     const check = await sql`SELECT EXISTS(SELECT 1 FROM scan_history WHERE id = ${scanId})`;
@@ -708,6 +782,7 @@ module.exports = {
   isDatabaseWorking,
   maintainConnection,
   getWorkingConnection,
+  retryOperation,
   getDatabaseStatus,
   testDatabaseConnection,
   testNetworkConnectivity,

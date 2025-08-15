@@ -692,7 +692,12 @@ const deleteMultipleInventoryItems = async (ids) => {
 // Get all categories
 const getAllCategories = async () => {
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning empty categories');
+      return [];
+    }
+    
     const result = await sql`
       SELECT category_id, category_name 
       FROM categories 
@@ -701,14 +706,20 @@ const getAllCategories = async () => {
     return result;
   } catch (err) {
     console.error('Error fetching categories:', err);
-    throw err;
+    // Return empty array instead of throwing to prevent crashes
+    return [];
   }
 };
 
 // Get all warehouses
 const getAllWarehouses = async () => {
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning empty warehouses');
+      return [];
+    }
+    
     const result = await sql`
       SELECT * FROM warehouses
       ORDER BY warehouse_name
@@ -717,14 +728,25 @@ const getAllWarehouses = async () => {
     return result;
   } catch (err) {
     console.error('Error fetching warehouses:', err);
-    throw err;
+    // Return empty array instead of throwing to prevent crashes
+    return [];
   }
 };
 
 // Get inventory statistics
 const getInventoryStats = async () => {
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
+    if (!sql) {
+      console.log('⚠️ Database not available, returning default inventory stats');
+      return {
+        totalItems: 0,
+        activeItems: 0,
+        lowStockItems: 0,
+        totalValue: 0
+      };
+    }
+    
     const totalItems = await sql`SELECT COUNT(*) as count FROM inventory_items`;
     const activeItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE status = 'active'`;
     const lowStockItems = await sql`SELECT COUNT(*) as count FROM inventory_items WHERE total_quantity < 10`;
@@ -742,7 +764,13 @@ const getInventoryStats = async () => {
     };
   } catch (err) {
     console.error('Error fetching inventory statistics:', err);
-    throw err;
+    // Return default values instead of throwing to prevent crashes
+    return {
+      totalItems: 0,
+      activeItems: 0,
+      lowStockItems: 0,
+      totalValue: 0
+    };
   }
 };
 
@@ -750,7 +778,7 @@ const getInventoryStats = async () => {
 const getStockOverview = async (options = {}) => {
   const threshold = Number(options.threshold) || 50;
   try {
-    const sql = await database.sql();
+    const sql = await database.getWorkingConnection();
     if (!sql) {
       return {
         totalItems: 0,
