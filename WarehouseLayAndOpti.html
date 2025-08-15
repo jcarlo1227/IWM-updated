@@ -434,28 +434,18 @@
       <div class="nav-item dropdown me-3">
         <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-bell fs-5"></i>
-          <span class="notification-badge" id="notificationCount">3</span>
+          <span class="notification-badge" id="notificationCount" style="display: none;">0</span>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="notificationDropdown" style="width: 320px;">
           <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
             <h6 class="mb-0">Notifications</h6>
             <button class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">Mark all as read</button>
           </div>
-          <div class="notification-list" style="max-height: 300px; overflow-y: auto;">
-            <div class="notification-item notification-unread" data-id="1">
-              <div class="notification-title">Layout Optimization Complete</div>
-              <div class="notification-text">Zone A-1 optimization has been completed with 15% efficiency improvement</div>
-              <div class="notification-time">30 minutes ago</div>
-            </div>
-            <div class="notification-item notification-unread" data-id="2">
-              <div class="notification-title">Critical Space Alert</div>
-              <div class="notification-text">Receiving zone capacity at 95% - immediate attention required</div>
-              <div class="notification-time">1 hour ago</div>
-            </div>
-            <div class="notification-item notification-unread" data-id="3">
-              <div class="notification-title">New Layout Analysis</div>
-              <div class="notification-text">Weekly layout efficiency report is ready for review</div>
-              <div class="notification-time">2 hours ago</div>
+          <div class="notification-list" id="notificationList" style="max-height: 300px; overflow-y: auto;">
+            <!-- Dynamic notifications will be loaded here -->
+            <div class="text-center py-3" id="noNotifications" style="display: none;">
+              <i class="bi bi-bell-slash text-muted fs-4"></i>
+              <div class="text-muted mt-2">No notifications yet</div>
             </div>
           </div>
           <div class="text-center py-2 border-top">
@@ -468,7 +458,7 @@
       <div class="nav-item dropdown me-3">
         <a class="nav-link position-relative" href="#" id="messageDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
           <i class="bi bi-chat-dots fs-5"></i>
-          <span class="notification-badge" style="background-color: var(--success-color);">1</span>
+          <span class="notification-badge" style="background-color: var(--success-color);">2</span>
         </a>
         <div class="dropdown-menu dropdown-menu-end" aria-labelledby="messageDropdown" style="width: 300px;">
           <div class="d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
@@ -478,10 +468,20 @@
           <div class="notification-list" style="max-height: 250px; overflow-y: auto;">
             <div class="notification-item">
               <div class="d-flex align-items-center">
-                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">WM</div>
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">JD</div>
                 <div class="flex-grow-1">
-                  <div class="notification-title">Warehouse Manager</div>
-                  <div class="notification-text">Can we discuss the new picking zone layout?</div>
+                  <div class="notification-title">John Doe</div>
+                  <div class="notification-text">Can you check the inventory levels for electronics?</div>
+                  <div class="notification-time">5 minutes ago</div>
+                </div>
+              </div>
+            </div>
+            <div class="notification-item">
+              <div class="d-flex align-items-center">
+                <div class="user-avatar me-2" style="width: 24px; height: 24px; font-size: 0.7rem;">SM</div>
+                <div class="flex-grow-1">
+                  <div class="notification-title">Sarah Miller</div>
+                  <div class="notification-text">New shipment arrived at warehouse WH001</div>
                   <div class="notification-time">1 hour ago</div>
                 </div>
               </div>
@@ -491,42 +491,37 @@
       </div>
 
       <!-- User Profile -->
-      <div class="nav-item dropdown">
-        <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-          <div class="user-avatar me-2">JD</div>
-          <div class="d-none d-md-block">
-            <div style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;">John Doe</div>
-            <div style="font-size: 0.75rem; color: var(--body-font); line-height: 1.2;">Administrator</div>
-          </div>
-          <i class="bi bi-chevron-down ms-2"></i>
-        </a>
-        <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
-          <div class="px-3 py-2 border-bottom">
-            <div class="fw-bold">John Doe</div>
-            <div class="text-muted small">john.doe@company.com</div>
-          </div>
-          <a class="dropdown-item" href="#" onclick="showProfileModal()">
-            <i class="bi bi-person me-2"></i>My Profile
-          </a>
-          <a class="dropdown-item" href="#" onclick="showSettingsModal()">
-            <i class="bi bi-gear me-2"></i>Settings
-          </a>
-          <a class="dropdown-item" href="#">
-            <i class="bi bi-question-circle me-2"></i>Help & Support
-          </a>
-          <div class="dropdown-divider"></div>
-          <a class="dropdown-item" href="#" onclick="showActivityLog()">
-            <i class="bi bi-clock-history me-2"></i>Activity Log
-          </a>
-          <a class="dropdown-item" href="#">
-            <i class="bi bi-shield-check me-2"></i>Security
-          </a>
-          <div class="dropdown-divider"></div>
-          <a class="dropdown-item text-danger" href="#" onclick="logout()">
-            <i class="bi bi-box-arrow-right me-2"></i>Sign Out
-          </a>
+    <div class="nav-item dropdown">
+      <a class="nav-link d-flex align-items-center" href="#" id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        <div class="user-avatar me-2" id="userAvatar"></div>
+        <div class="d-none d-md-block">
+          <div id="userName" style="font-size: 0.875rem; font-weight: 600; line-height: 1.2;"></div>
         </div>
-      </div>
+        <i class="bi bi-chevron-down ms-2"></i>
+      </a>
+      <div class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
+        <div class="px-3 py-2 border-bottom">
+          <div class="fw-bold" id="userFullNameDropdown"></div>
+          <div class="text-muted small" id="userEmailDropdown"></div>
+        </div>
+        <a class="dropdown-item" href="#" onclick="showSettingsModal()">
+          <i class="bi bi-gear me-2"></i>Settings
+        </a>
+        <a class="dropdown-item" href="#">
+          <i class="bi bi-question-circle me-2"></i>Help & Support
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item" href="#" onclick="showActivityLog()">
+          <i class="bi bi-clock-history me-2"></i>Activity Log
+        </a>
+        <a class="dropdown-item" href="#">
+          <i class="bi bi-shield-check me-2"></i>Security
+        </a>
+        <div class="dropdown-divider"></div>
+        <a class="dropdown-item text-danger" href="#" onclick="logout()">
+          <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+        </a>
+      </div>  
     </div>
   </div>
 </nav>
@@ -873,6 +868,261 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+  // API Helper Functions
+  const API_BASE = '/api';
+
+  async function apiCall(endpoint, options = {}) {
+    try {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
+        ...options,
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      return await response.json();
+    } catch (error) {
+      console.error('API call failed:', error);
+      throw error;
+    }
+  }
+
+  // Initialize the application
+  document.addEventListener('DOMContentLoaded', function() {
+    fetchUser();
+    loadNotifications();
+    loadNotificationCount();
+  });
+
+  // Notification functions
+  async function loadNotifications() {
+    try {
+      const response = await apiCall('/notifications?limit=none');
+      if (response.success) {
+        displayNotifications(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load notifications:', error);
+    }
+  }
+
+  async function loadNotificationCount() {
+    try {
+      const response = await apiCall('/notifications/count');
+      if (response.success) {
+        updateNotificationCount(response.count);
+      }
+    } catch (error) {
+      console.error('Failed to load notification count:', error);
+    }
+  }
+
+  function displayNotifications(notifications) {
+    const notificationList = document.getElementById('notificationList');
+    const noNotifications = document.getElementById('noNotifications');
+    
+    if (!notifications || notifications.length === 0) {
+      if (noNotifications) noNotifications.style.display = 'block';
+      return;
+    }
+    
+    if (noNotifications) noNotifications.style.display = 'none';
+    
+    // Clear existing notifications
+    notificationList.innerHTML = '';
+    
+    notifications.forEach(notification => {
+      const notificationItem = document.createElement('div');
+      notificationItem.className = `notification-item ${!notification.is_read ? 'notification-unread' : ''}`;
+      notificationItem.setAttribute('data-id', notification.id);
+      
+      // Format the timestamp
+      const timeAgo = formatTimeAgo(new Date(notification.created_at));
+      
+      // Get notification type icon
+      const icon = getNotificationIcon(notification.type);
+      
+      notificationItem.innerHTML = `
+        <div class="d-flex align-items-start">
+          <div class="me-2 mt-1">${icon}</div>
+          <div class="flex-grow-1" onclick="markNotificationAsRead(${notification.id})">
+            <div class="notification-title">${notification.title}</div>
+            <div class="notification-text">${notification.message}</div>
+            <div class="notification-time">${timeAgo}</div>
+          </div>
+          <div class="ms-2">
+            <button class="btn btn-sm btn-outline-danger" onclick="event.stopPropagation(); deleteNotification(${notification.id})" title="Delete notification">
+              <i class="bi bi-trash"></i>
+            </button>
+          </div>
+        </div>
+      `;
+      
+      notificationList.appendChild(notificationItem);
+    });
+    
+    // Add the "no notifications" div back for future use
+    const noNotificationsDiv = document.createElement('div');
+    noNotificationsDiv.className = 'text-center py-3';
+    noNotificationsDiv.id = 'noNotifications';
+    noNotificationsDiv.style.display = 'none';
+    noNotificationsDiv.innerHTML = `
+      <i class="bi bi-bell-slash text-muted fs-4"></i>
+      <div class="text-muted mt-2">No notifications yet</div>
+    `;
+    notificationList.appendChild(noNotificationsDiv);
+  }
+
+  function getNotificationIcon(type) {
+    switch (type) {
+      case 'success':
+        return '<i class="bi bi-check-circle-fill text-success"></i>';
+      case 'warning':
+        return '<i class="bi bi-exclamation-triangle-fill text-warning"></i>';
+      case 'error':
+        return '<i class="bi bi-x-circle-fill text-danger"></i>';
+      case 'info':
+      default:
+        return '<i class="bi bi-info-circle-fill text-primary"></i>';
+    }
+  }
+
+  function formatTimeAgo(date) {
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+    
+    if (diffInSeconds < 60) {
+      return 'Just now';
+    } else if (diffInSeconds < 3600) {
+      const minutes = Math.floor(diffInSeconds / 60);
+      return `${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    } else if (diffInSeconds < 86400) {
+      const hours = Math.floor(diffInSeconds / 3600);
+      return `${hours} hour${hours > 1 ? 's' : ''} ago`;
+    } else {
+      const days = Math.floor(diffInSeconds / 86400);
+      return `${days} day${days > 1 ? 's' : ''} ago`;
+    }
+  }
+
+  function updateNotificationCount(count) {
+    const notificationCount = document.getElementById('notificationCount');
+    if (count > 0) {
+      notificationCount.textContent = count;
+      notificationCount.style.display = 'flex';
+    } else {
+      notificationCount.style.display = 'none';
+    }
+  }
+
+  async function markNotificationAsRead(id) {
+    try {
+      const response = await apiCall(`/notifications/${id}/read`, {
+        method: 'POST'
+      });
+      if (response.success) {
+        // Remove the unread class from the notification
+        const notificationItem = document.querySelector(`[data-id="${id}"]`);
+        if (notificationItem) {
+          notificationItem.classList.remove('notification-unread');
+        }
+        // Reload the notification count
+        loadNotificationCount();
+      }
+    } catch (error) {
+      console.error('Failed to mark notification as read:', error);
+    }
+  }
+
+  async function markAllAsRead() {
+    try {
+      const response = await apiCall('/notifications/read-all', {
+        method: 'POST'
+      });
+      if (response.success) {
+        // Remove unread class from all notifications
+        const unreadNotifications = document.querySelectorAll('.notification-unread');
+        unreadNotifications.forEach(notification => {
+          notification.classList.remove('notification-unread');
+        });
+        
+        // Update notification count
+        updateNotificationCount(0);
+      }
+    } catch (error) {
+      console.error('Failed to mark all notifications as read:', error);
+    }
+  }
+
+  async function deleteNotification(id) {
+    if (!confirm('Are you sure you want to delete this notification?')) {
+      return;
+    }
+    
+    try {
+      const response = await apiCall(`/notifications/${id}`, {
+        method: 'DELETE'
+      });
+      if (response.success) {
+        // Remove the notification from the UI
+        const notificationItem = document.querySelector(`[data-id="${id}"]`);
+        if (notificationItem) {
+          notificationItem.remove();
+        }
+        
+        // Reload notifications and count to ensure consistency
+        loadNotifications();
+        loadNotificationCount();
+      }
+    } catch (error) {
+      console.error('Failed to delete notification:', error);
+      alert('Failed to delete notification. Please try again.');
+    }
+  }
+
+  // User functions
+  async function fetchUser() {
+    try {
+      const response = await apiCall('/user');
+      if (response.success && response.data) {
+        displayUser(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to fetch user:', error);
+    }
+  }
+
+  function displayUser(user) {
+    // Display username (capitalize first letter)
+    const username = user.username.charAt(0).toUpperCase() + user.username.slice(1);
+    const userNameEl = document.getElementById('userName');
+    if (userNameEl) {
+      userNameEl.textContent = username;
+    }
+
+    // Set user avatar initials
+    const initials = username.substring(0, 2).toUpperCase();
+    const userAvatar = document.getElementById('userAvatar');
+    if (userAvatar) {
+      userAvatar.textContent = initials;
+    }
+
+    // Update dropdown elements as well
+    const userFullNameDropdown = document.getElementById('userFullNameDropdown');
+    const userEmailDropdown = document.getElementById('userEmailDropdown');
+    if (userFullNameDropdown) {
+      userFullNameDropdown.textContent = username;
+    }
+    if (userEmailDropdown) {
+      userEmailDropdown.textContent = `${user.username}@foxcontrolhub.com`;
+    }
+  }
+
   // Set current date
   document.getElementById('currentDate').textContent = new Date().toLocaleDateString();
 
