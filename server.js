@@ -52,6 +52,12 @@ const {
   generateWarehouseHeatmap,
   exportWarehouseLayout
 } = require('./inventory');
+
+const {
+  isDatabaseAvailable,
+  getDatabaseStatus
+} = require('./database');
+
 require('dotenv').config();
 
 const app = express();
@@ -972,6 +978,51 @@ app.get('/api/health/db', requireAuth, async (req, res) => {
     res.json({ ok: true, result: r[0]?.ok === 1 });
   } catch (e) {
     res.json({ ok: false, error: e?.message });
+  }
+});
+
+// Enhanced database status endpoint
+app.get('/api/db-status', async (req, res) => {
+  try {
+    const dbStatus = getDatabaseStatus();
+    const isAvailable = isDatabaseAvailable();
+    
+    let connectionInfo = null;
+    if (isAvailable) {
+      try {
+        const sql = await require('./database').sql();
+        const result = await sql`SELECT version()`;
+        connectionInfo = {
+          version: result[0].version,
+          connected: true
+        };
+      } catch (error) {
+        connectionInfo = {
+          error: error.message,
+          connected: false
+        };
+      }
+    }
+    
+    res.json({
+      success: true,
+      database: {
+        available: isAvailable,
+        status: dbStatus,
+        connection: connectionInfo
+      },
+      environment: {
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        nodeEnv: process.env.NODE_ENV || 'development'
+      }
+    });
+  } catch (error) {
+    console.error('Database status check failed:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to check database status',
+      error: error.message
+    });
   }
 });
 

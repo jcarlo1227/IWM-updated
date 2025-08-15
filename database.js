@@ -12,29 +12,68 @@ async function initializeConnection() {
     connectionPromise = (async () => {
       if (process.env.DATABASE_URL) {
         try {
-          console.log('Attempting to connect to database...');
+          console.log('🔌 Attempting to connect to database...');
+          console.log('📡 Database URL format check:', process.env.DATABASE_URL.includes('neon') ? 'Neon format detected' : 'Unknown format');
+          
           const connection = neon(process.env.DATABASE_URL);
-          // Test connection with more detailed error handling
-          try {
-            await connection`SELECT 1`;
-            sql = connection;
-            module.exports.sql = async () => connection;
-            console.log('✅ Database connection initialized successfully');
-            return connection;
-          } catch (testError) {
-            console.error('Connection test failed:', testError.message);
-            throw testError;
+          
+          // Test connection with timeout and retry logic
+          let retries = 3;
+          let lastError = null;
+          
+          while (retries > 0) {
+            try {
+              console.log(`🔄 Connection attempt ${4 - retries}/3...`);
+              await connection`SELECT 1`;
+              sql = connection;
+              module.exports.sql = async () => connection;
+              console.log('✅ Database connection initialized successfully');
+              return connection;
+            } catch (testError) {
+              lastError = testError;
+              retries--;
+              if (retries > 0) {
+                console.log(`⚠️ Connection test failed, retrying in 2 seconds... (${retries} attempts left)`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+              }
+            }
           }
+          
+          // All retries failed
+          console.error('❌ Connection test failed after all retries:', lastError.message);
+          throw lastError;
+          
         } catch (error) {
           console.error('⚠️ Database connection failed:');
           console.error('Error type:', error.name);
           console.error('Error message:', error.message);
           if (error.code) console.error('Error code:', error.code);
           if (error.stack) console.error('Stack trace:', error.stack);
+          
+          // Check if it's a network-related error
+          if (error.message.includes('fetch failed') || error.message.includes('network') || error.message.includes('timeout')) {
+            console.log('💡 This appears to be a network connectivity issue.');
+            console.log('💡 Please check your internet connection and try again.');
+            console.log('💡 If using Neon database, ensure the database is accessible from your network.');
+            console.log('💡 Check if your firewall or antivirus is blocking the connection.');
+            console.log('💡 Try accessing the database from a different network.');
+          }
+          
+          // Check for common Neon database issues
+          if (process.env.DATABASE_URL.includes('neon')) {
+            console.log('💡 Neon database troubleshooting:');
+            console.log('💡 1. Check if your Neon database is active in the dashboard');
+            console.log('💡 2. Verify the connection string is correct');
+            console.log('💡 3. Check if IP restrictions are enabled');
+            console.log('💡 4. Ensure the database password is correct');
+          }
+          
           sql = null;
         }
       } else {
         console.log('⚠️ No DATABASE_URL found, running in mock mode');
+        console.log('💡 To enable database functionality, set the DATABASE_URL environment variable');
+        console.log('💡 Example: DATABASE_URL=postgresql://user:password@host:port/database');
         sql = null;
       }
       return sql;
@@ -51,6 +90,20 @@ async function getSql() {
   return sql;
 }
 
+// Check if database is available
+function isDatabaseAvailable() {
+  return sql !== null;
+}
+
+// Get database status
+function getDatabaseStatus() {
+  return {
+    available: isDatabaseAvailable(),
+    connectionPromise: connectionPromise !== null,
+    hasUrl: !!process.env.DATABASE_URL
+  };
+}
+
 // Test database connection and create tables
 const testConnection = async () => {
   const connection = await getSql();
@@ -65,7 +118,7 @@ const testConnection = async () => {
     console.log(`Database version: ${result[0].version}`);
     
     // Create users table if it doesn't exist
-    await sql`
+    await connection`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username VARCHAR(50) UNIQUE NOT NULL,
@@ -76,7 +129,7 @@ const testConnection = async () => {
     `;
     
     // Create notifications table if it doesn't exist
-    await sql`
+    await connection`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         title VARCHAR(100) NOT NULL,
@@ -88,7 +141,7 @@ const testConnection = async () => {
     `;
     
     // Create scan history table if it doesn't exist
-    await sql`
+    await connection`
       CREATE TABLE IF NOT EXISTS scan_history (
         id SERIAL PRIMARY KEY,
         scanned_code VARCHAR(100) NOT NULL,
@@ -114,14 +167,21 @@ const initializeDatabase = async () => {
   try {
     await testConnection();
     
+    // Get the SQL connection
+    const connection = await getSql();
+    if (!connection) {
+      console.log('⚠️ Database not available, skipping database initialization');
+      return;
+    }
+    
     // Check if admin user exists, if not create it
-    const adminCheck = await sql`SELECT * FROM users WHERE username = 'admin'`;
+    const adminCheck = await connection`SELECT * FROM users WHERE username = 'admin'`;
     
     if (adminCheck.length === 0) {
       const bcrypt = require('bcryptjs');
       const hashedPassword = await bcrypt.hash('admin', 10);
       
-      await sql`
+      await connection`
         INSERT INTO users (username, password, role) 
         VALUES ('admin', ${hashedPassword}, 'admin')
       `;
@@ -151,6 +211,20 @@ const initializeDatabase = async () => {
 // User authentication functions
 const authenticateUser = async (username, password) => {
   try {
+    // Check if database is available
+    if (!sql) {
+      console.log('⚠️ Database not available, using mock authentication');
+      // Mock authentication for testing when database is not available
+      if (username === 'admin' && password === 'admin') {
+        return {
+          id: 1,
+          username: 'admin',
+          role: 'admin'
+        };
+      }
+      return null;
+    }
+    
     const result = await sql`SELECT * FROM users WHERE username = ${username}`;
     
     if (result.length === 0) {
@@ -364,6 +438,35 @@ const deleteScanHistory = async (scanId) => {
 };
 
 
+// Test database connection manually (for debugging)
+async function testDatabaseConnection() {
+  console.log('🧪 Testing database connection...');
+  console.log('Environment variables:');
+  console.log('- DATABASE_URL:', process.env.DATABASE_URL ? 'Set' : 'Not set');
+  console.log('- NODE_ENV:', process.env.NODE_ENV || 'Not set');
+  
+  try {
+    const connection = await getSql();
+    if (connection) {
+      console.log('✅ Database connection successful');
+      const result = await connection`SELECT version()`;
+      console.log('Database version:', result[0].version);
+      return true;
+    } else {
+      console.log('❌ Database connection failed - no connection returned');
+      return false;
+    }
+  } catch (error) {
+    console.error('❌ Database connection test failed:', error);
+    console.error('Error details:', {
+      name: error.name,
+      message: error.message,
+      stack: error.stack
+    });
+    return false;
+  }
+}
+
 module.exports = {
   sql: async () => {
     if (!sql) {
@@ -373,6 +476,9 @@ module.exports = {
   },
   testConnection,
   initializeDatabase,
+  isDatabaseAvailable,
+  getDatabaseStatus,
+  testDatabaseConnection,
   authenticateUser,
   createNotification,
   getNotifications,
