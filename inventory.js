@@ -423,7 +423,7 @@ const syncProcessedPlansIntoShipments = async () => {
   const queryText = `
     INSERT INTO order_shipments (
       order_id, product_id, product_name, quantity,
-      status, order_date, ship_date, updated_at
+      status, order_date, updated_at
     )
     SELECT
       pp.order_id,
@@ -432,7 +432,6 @@ const syncProcessedPlansIntoShipments = async () => {
       pp.quantity,
       'processed' AS status,
       pp.planned_date AS order_date,
-      pp.shipping_date AS ship_date,
       CURRENT_TIMESTAMP
     FROM production_planning pp
     WHERE pp.status = 'processed'
